@@ -82,6 +82,12 @@ module Zui
     private_class_method :normalize_env
 
     def terminate(wait_thread)
+      if RUBY_PLATFORM.match?(/mswin|mingw|cygwin/i)
+        Process.kill("KILL", wait_thread.pid)
+        wait_thread.value
+        return
+      end
+
       Process.kill("TERM", wait_thread.pid)
       Timeout.timeout(1) { wait_thread.value }
     rescue Errno::ESRCH, Errno::ECHILD

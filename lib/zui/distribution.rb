@@ -22,7 +22,11 @@ module Zui
       destination = File.expand_path(destination)
       raise ArgumentError, "bundle destination already exists: #{destination}" if File.exist?(destination)
 
-      platform.macos? ? bundle_macos(project, destination, app_name) : bundle_linux(project, destination, app_name)
+      case platform.os
+      when :linux then bundle_linux(project, destination, app_name)
+      when :macos then bundle_macos(project, destination, app_name)
+      when :windows then bundle_windows(project, destination, app_name)
+      end
       destination
     rescue StandardError
       FileUtils.remove_entry(destination) if destination && File.exist?(destination)
@@ -64,6 +68,17 @@ module Zui
       FileUtils.chmod(0o755, File.join(macos, "run"))
       File.write(File.join(contents, "Info.plist"), info_plist(app_name))
       write_manifest(resources, app_name)
+    end
+
+    def bundle_windows(project, destination, app_name)
+      FileUtils.mkdir_p([File.join(destination, "app"), File.join(destination, "bin"),
+                         File.join(destination, "runtime")])
+      install_application(project, File.join(destination, "app"))
+      install_runtime(File.join(destination, "runtime"))
+      FileUtils.cp(@host.executable, File.join(destination, "bin", "zui-host.exe"))
+      File.write(File.join(destination, "run.rb"), windows_ruby_launcher(app_name))
+      File.write(File.join(destination, "run.cmd"), windows_command_launcher)
+      write_manifest(destination, app_name)
     end
 
     def install_application(source, destination)
@@ -113,6 +128,39 @@ module Zui
           --load-path "$resources/runtime/lib" \
           --name #{shell_quote(app_name)}
       SH
+    end
+
+    def windows_ruby_launcher(app_name)
+      <<~RUBY
+        # frozen_string_literal: true
+
+        require "rbconfig"
+
+        bundle_dir = File.expand_path(__dir__)
+        arguments = [
+          File.join(bundle_dir, "bin", "zui-host.exe"),
+          "--qml-root", File.join(bundle_dir, "runtime", "qml"),
+          "--project", File.join(bundle_dir, "app"),
+          "--program", File.join(bundle_dir, "app", "main.rb"),
+          "--ruby", RbConfig.ruby,
+          "--load-path", File.join(bundle_dir, "runtime", "lib"),
+          "--name", #{app_name.to_s.dump}
+        ]
+        exec(*arguments)
+      RUBY
+    end
+
+    def windows_command_launcher
+      <<~CMD.gsub("\n", "\r\n")
+        @echo off
+        setlocal
+        if defined ZUI_RUBY (
+          "%ZUI_RUBY%" "%~dp0run.rb"
+        ) else (
+          ruby "%~dp0run.rb"
+        )
+        exit /b %ERRORLEVEL%
+      CMD
     end
 
     def info_plist(app_name)

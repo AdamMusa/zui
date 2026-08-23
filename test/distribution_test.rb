@@ -42,6 +42,24 @@ class DistributionTest < Minitest::Test
     end
   end
 
+  def test_windows_bundle_has_native_host_runtime_and_safe_launchers
+    with_project do |project, host|
+      platform = Zui::Platform.new(os: :windows, arch: :x86_64)
+      destination = Zui::Distribution.new(host: FakeHost.new(host), platform:).bundle(project)
+
+      assert File.file?(File.join(destination, "run.cmd"))
+      assert File.file?(File.join(destination, "run.rb"))
+      assert File.file?(File.join(destination, "bin", "zui-host.exe"))
+      assert File.file?(File.join(destination, "app", "main.rb"))
+      assert File.file?(File.join(destination, "runtime", "lib", "zui.rb"))
+      assert File.file?(File.join(destination, "runtime", "qml", "Desktop.qml"))
+      assert_equal "windows", JSON.parse(File.read(File.join(destination, "zui-bundle.json"))).fetch("platform")
+      assert_includes File.read(File.join(destination, "run.cmd")), "%ZUI_RUBY%"
+      assert_includes File.read(File.join(destination, "run.rb")), 'exec(*arguments)'
+      refute_includes File.read(File.join(destination, "run.rb")), "Omarchy"
+    end
+  end
+
   private
 
   def with_project

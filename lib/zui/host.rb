@@ -56,6 +56,8 @@ module Zui
     def platform_help
       if platform.macos?
         "building Zui on macOS requires CMake and Qt 6 (for example: brew install cmake qt)"
+      elsif platform.windows?
+        "building Zui on Windows requires CMake, Qt 6, and a C++17 toolchain (Visual Studio Build Tools or LLVM/MinGW)"
       else
         "building Zui on Linux requires CMake, a C++17 compiler, and Qt 6 Core/Gui/Qml/Quick development packages"
       end
@@ -69,8 +71,19 @@ module Zui
 
     def cached
       cache_root = @environment["XDG_CACHE_HOME"]
-      cache_root = File.expand_path("~/.cache") if cache_root.nil? || cache_root.empty?
+      cache_root = default_cache_root if cache_root.nil? || cache_root.empty?
       File.join(cache_root, "zui", "host", VERSION, platform.id, executable_name)
+    end
+
+    def default_cache_root
+      home = @environment["HOME"] || @environment["USERPROFILE"] || Dir.home
+      if platform.windows?
+        @environment["LOCALAPPDATA"] || @environment["APPDATA"] || File.join(home, "AppData", "Local")
+      elsif platform.macos?
+        File.join(home, "Library", "Caches")
+      else
+        File.join(home, ".cache")
+      end
     end
 
     def executable_name = platform.os == :windows ? "zui-host.exe" : "zui-host"

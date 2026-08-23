@@ -9,7 +9,14 @@
 #include <QQmlContext>
 #include <QQuickStyle>
 
+#ifdef ZUI_HAS_WEBENGINE
+#include <QtWebEngineQuick/qtwebenginequickglobal.h>
+#endif
+
 int main(int argc, char *argv[]) {
+#ifdef ZUI_HAS_WEBENGINE
+  QtWebEngineQuick::initialize();
+#endif
   QGuiApplication application(argc, argv);
   QCoreApplication::setApplicationName(QStringLiteral("Zui"));
   QCoreApplication::setOrganizationName(QStringLiteral("Zui"));
@@ -26,10 +33,15 @@ int main(int argc, char *argv[]) {
   parser.addOption({QStringLiteral("name"), QStringLiteral("Application name"), QStringLiteral("name"), QStringLiteral("Zui Application")});
   parser.process(application);
 
-  const QString qmlRoot = QFileInfo(parser.value(QStringLiteral("qml-root"))).absoluteFilePath();
-  const QString project = QFileInfo(parser.value(QStringLiteral("project"))).absoluteFilePath();
-  const QString program = QFileInfo(parser.value(QStringLiteral("program"))).absoluteFilePath();
-  if (!QFileInfo::exists(QDir(qmlRoot).filePath(QStringLiteral("Desktop.qml"))) || !QFileInfo::exists(program))
+  const QString qmlRootValue = parser.value(QStringLiteral("qml-root"));
+  const QString projectValue = parser.value(QStringLiteral("project"));
+  const QString programValue = parser.value(QStringLiteral("program"));
+  const QString qmlRoot = QFileInfo(qmlRootValue).absoluteFilePath();
+  const QString project = QFileInfo(projectValue).absoluteFilePath();
+  const QString program = QFileInfo(programValue).absoluteFilePath();
+  const QFileInfo desktopFile(QDir(qmlRoot).filePath(QStringLiteral("Desktop.qml")));
+  if (qmlRootValue.isEmpty() || projectValue.isEmpty() || programValue.isEmpty()
+      || !desktopFile.isFile() || !QFileInfo(project).isDir() || !QFileInfo(program).isFile())
     parser.showHelp(64);
 
   ZuiProcess process;
