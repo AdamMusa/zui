@@ -2,7 +2,9 @@ pragma Singleton
 import QtQuick
 
 QtObject {
-  readonly property var none: ({ color: "transparent", widths: ({ top: 0, right: 0, bottom: 0, left: 0 }) })
+  function none() {
+    return ({ color: "transparent", widths: ({ top: 0, right: 0, bottom: 0, left: 0 }) })
+  }
 
   function widths(value) {
     if (typeof value === "object") return value

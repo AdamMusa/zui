@@ -15,6 +15,20 @@ fi
 if command -v cmake >/dev/null 2>&1; then
   cmake -S native -B tmp/build -DCMAKE_BUILD_TYPE=Release
   cmake --build tmp/build --parallel 2
+  if command -v timeout >/dev/null 2>&1; then
+    smoke_status=0
+    QT_QPA_PLATFORM=offscreen timeout 2 tmp/build/zui-host \
+      --qml-root "$repo_dir" \
+      --project "$repo_dir/test/fixtures" \
+      --program "$repo_dir/test/fixtures/smoke_app.rb" \
+      --ruby "$(command -v ruby)" \
+      --load-path "$repo_dir/lib" \
+      --name "Zui Runtime Smoke Test" || smoke_status=$?
+    if [ "$smoke_status" -ne 124 ]; then
+      echo "Zui Qt runtime smoke test failed with status $smoke_status" >&2
+      exit 1
+    fi
+  fi
 fi
 
 (cd vendor/host/linux-x86_64 && sha256sum --check zui-host.sha256)

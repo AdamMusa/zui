@@ -24,9 +24,9 @@ Column {
   property real popupMinHeight: Style.spacing.searchablePopupMinHeight
   property bool hasCursor: false
   signal changed(var values)
-  signal hovered(var value)
+  signal optionHovered(var value)
   spacing: Style.spacing.xs
   Text { visible: root.showLabel && root.label !== ""; text: root.label; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.caption }
-  QQC.Button { text: root.triggerLabel !== "" ? root.triggerLabel : (root.values.length > 0 ? root.values.join(", ") : root.noSelectionText); onClicked: menu.open(); background: Rectangle { color: root.background; radius: Style.cornerRadius; border.color: root.popupBorder } }
+  QQC.Button { hoverEnabled: true; text: root.triggerLabel !== "" ? root.triggerLabel : (root.values.length > 0 ? root.values.join(", ") : root.noSelectionText); onClicked: menu.open(); onHoveredChanged: root.optionHovered(hovered); background: Rectangle { color: root.background; radius: Style.cornerRadius; border.color: root.popupBorder } }
   QQC.Menu { id: menu; Repeater { model: root.options; QQC.MenuItem { required property var modelData; text: String(modelData); checkable: true; checked: root.values.indexOf(String(modelData)) >= 0; onTriggered: { var next = root.values.slice(); var index = next.indexOf(String(modelData)); index >= 0 ? next.splice(index, 1) : next.push(String(modelData)); root.changed(next) } } } }
 }

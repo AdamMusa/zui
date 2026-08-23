@@ -2,7 +2,7 @@ import QtQuick
 import "../Theme"
 
 Rectangle {
-  property var borderSpec: Border.none
+  property var borderSpec: Border.none()
   color: Color.popups.background
   radius: Style.cornerRadius
   border.color: borderSpec && borderSpec.color !== undefined ? borderSpec.color : "transparent"
