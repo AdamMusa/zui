@@ -1,0 +1,22 @@
+#!/bin/sh
+set -eu
+repo_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+cd "$repo_dir"
+
+for test_file in test/*_test.rb examples/*/test/*_test.rb; do
+  ruby -Ilib "$test_file"
+done
+
+if command -v qmllint >/dev/null 2>&1; then
+  qmllint -I . Desktop.qml Service.qml ControlNode.qml Theme/*.qml Controls/*.qml
+  find Components -name '*.qml' -print0 | xargs -0 qmllint -I .
+fi
+
+if command -v cmake >/dev/null 2>&1; then
+  cmake -S native -B tmp/build -DCMAKE_BUILD_TYPE=Release
+  cmake --build tmp/build --parallel 2
+fi
+
+(cd vendor/host/linux-x86_64 && sha256sum --check zui-host.sha256)
+git diff --check
+echo "Zui tests passed."
