@@ -1,30 +1,43 @@
 # Standalone Zui applications
 
-These applications were extracted from the Omarchy UI showcase catalog to verify that Zui is a
-real desktop framework rather than an Omarchy-specific namespace. They contain only Ruby
-application code and assets.
+Every application in this directory is pure Ruby plus application assets. They
+run through Zui's ordinary Qt host on Linux and macOS and contain no Omarchy UI,
+Quickshell, shell imports, or application-owned QML.
 
-- [Nova Pour](nova_pour/) validates images, asynchronous resources, filtering, state, cart
-  simulation, bindings, dialogs, and events.
-- [Lumen Forge](lumen_forge/) validates compiled shaders, GPU effects, pointer uniforms, sliders,
-  charts, timers, and dynamic component trees.
+The complete showcase migration is available app-for-app:
 
-Validate and launch either application:
+- [Restaurant Drinks](restaurant_drinks/) and its refined [Nova Pour](nova_pour/)
+  exercise image loading, filtering, cart state, dialogs, bindings, and order simulation.
+- [Futuristic Dashboard](futuristic_dashboard/) exercises telemetry, charts,
+  particles, GPU effects, navigation, and scheduled state.
+- [Tesla Drive Dashboard](tesla_drive_dashboard/) exercises vehicle simulation,
+  image stacks, canvas maps, local audio, controls, telemetry, and animation.
+- [Shader Studio](shader_studio/) and its refined [Lumen Forge](lumen_forge/)
+  exercise compiled shaders, pointer uniforms, GPU effects, charts, and timers.
+- [Cardiac Health Monitor](cardiac_health_monitor/) exercises medical imagery,
+  ECG visualization, gauges, heatmaps, particles, and interactive state.
+- [Orbital Weather Console](orbital_weather_console/) exercises image-backed
+  weather scenes, forecasts, gauges, charts, and live simulation.
+- [Quantum Market Terminal](quantum_market_terminal/) exercises portfolio state,
+  trading simulation, charts, allocation controls, and transactions.
+- [Smart Home Energy](smart_home_energy/) exercises room imagery, lighting,
+  device state, energy telemetry, and home simulation.
+- [Cinematic Music Studio](cinematic_music_studio/) exercises local/remote media,
+  playback state, fluid drag interaction, playlists, and audio controls.
+
+Launch any example directly:
 
 ```bash
-bin/zui validate examples/nova_pour
-bin/zui launch examples/nova_pour/main.rb
-
-bin/zui validate examples/lumen_forge
-bin/zui launch examples/lumen_forge/main.rb
+zui run examples/tesla_drive_dashboard/main.rb
+zui run examples/cardiac_health_monitor/main.rb
+zui run examples/smart_home_energy/main.rb
 ```
 
-On Linux, generate installable application directories with:
+Package it for the current platform with `zui bundle`:
 
 ```bash
-bin/zui bundle examples/nova_pour
-bin/zui bundle examples/lumen_forge
+zui bundle examples/tesla_drive_dashboard
 ```
 
-Generated bundles are placed under each application's `dist/` directory and intentionally ignored
-by Git.
+Generated bundles are placed under each application's `dist/` directory and
+are intentionally ignored by Git.

@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="820" viewBox="0 0 1200 820">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop stop-color="#07111a"/><stop offset="1" stop-color="#0d202b"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="0" x2="0" y1="0" y2="1">
+      <stop stop-color="#42e8c8" stop-opacity=".26"/><stop offset="1" stop-color="#42e8c8" stop-opacity=".04"/>
+    </linearGradient>
+    <filter id="glow"><feGaussianBlur stdDeviation="8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <rect width="1200" height="820" rx="44" fill="url(#bg)"/>
+  <g fill="none" stroke="#1b4754" opacity=".4">
+    <path d="M80 180H1120M80 330H1120M80 480H1120M80 630H1120"/>
+    <path d="M220 80V740M420 80V740M620 80V740M820 80V740M1020 80V740"/>
+  </g>
+  <path d="M122 375 570 94l504 281v351H122z" fill="#0b1821" stroke="#4be3ca" stroke-width="5" filter="url(#glow)"/>
+  <path d="M158 397 570 138l468 259" fill="none" stroke="#8bf5e4" stroke-width="3" opacity=".75"/>
+  <g fill="url(#glass)" stroke="#2f7981" stroke-width="3">
+    <rect x="172" y="402" width="292" height="272" rx="22"/>
+    <rect x="486" y="402" width="232" height="272" rx="22"/>
+    <rect x="740" y="402" width="250" height="272" rx="22"/>
+    <rect x="396" y="236" width="348" height="136" rx="22"/>
+  </g>
+  <g fill="#dffefa" font-family="sans-serif" font-size="24" font-weight="600">
+    <text x="202" y="448">LIVING</text><text x="516" y="448">KITCHEN</text>
+    <text x="770" y="448">STUDIO</text><text x="426" y="282">SLEEP SUITE</text>
+  </g>
+  <g fill="#42e8c8" filter="url(#glow)">
+    <circle cx="318" cy="548" r="10"/><circle cx="600" cy="548" r="10"/>
+    <circle cx="864" cy="548" r="10"/><circle cx="570" cy="320" r="10"/>
+  </g>
+  <g stroke="#ffd166" stroke-width="4" fill="#18242a">
+    <path d="M384 184h372l92 52H294z"/><path d="M410 199v54M500 199v66M590 199v73M680 199v66M770 199v54" opacity=".8"/>
+  </g>
+  <path d="M104 724h992" stroke="#42e8c8" stroke-width="3" opacity=".65"/>
+  <g fill="#79a7b2" font-family="monospace" font-size="18">
+    <text x="122" y="766">HABITAT DIGITAL TWIN / LIVE CIRCUIT MAP</text>
+    <text x="930" y="766">NET +2.8 kW</text>
+  </g>
+</svg>

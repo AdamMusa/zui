@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="900" viewBox="0 0 900 900">
+  <defs>
+    <radialGradient id="night" cx="50%" cy="42%" r="72%">
+      <stop stop-color="#403080"/><stop offset=".42" stop-color="#161334"/><stop offset="1" stop-color="#050510"/>
+    </radialGradient>
+    <linearGradient id="sun" x1="0" x2="1">
+      <stop stop-color="#ff6eb4"/><stop offset=".5" stop-color="#ffb16e"/><stop offset="1" stop-color="#7eeaff"/>
+    </linearGradient>
+    <filter id="blur"><feGaussianBlur stdDeviation="16"/></filter>
+  </defs>
+  <rect width="900" height="900" rx="60" fill="url(#night)"/>
+  <circle cx="450" cy="350" r="190" fill="url(#sun)" opacity=".96"/>
+  <circle cx="450" cy="350" r="145" fill="#090718"/>
+  <path d="M0 690 130 530l110 100 125-170 114 142 100-82 133 126 88-74 100 118v210H0z" fill="#090814"/>
+  <path d="M0 716c120-50 210-46 328 2s219 48 329-4 176-42 243-4" fill="none" stroke="#ff6eb4" stroke-width="8" opacity=".72"/>
+  <path d="M0 746c140-40 220-20 330 14s210 24 325-12 178-20 245-4" fill="none" stroke="#7eeaff" stroke-width="5" opacity=".6"/>
+  <g fill="#fff" opacity=".72">
+    <circle cx="130" cy="152" r="3"/><circle cx="210" cy="98" r="4"/><circle cx="720" cy="140" r="3"/>
+    <circle cx="778" cy="228" r="5"/><circle cx="92" cy="322" r="4"/><circle cx="654" cy="82" r="3"/>
+  </g>
+  <ellipse cx="450" cy="350" rx="280" ry="44" fill="#ff6eb4" opacity=".16" filter="url(#blur)"/>
+  <text x="70" y="90" fill="#f8f4ff" font-family="sans-serif" font-size="26" letter-spacing="9">NOCTURNE</text>
+  <text x="70" y="850" fill="#9e95bd" font-family="monospace" font-size="18" letter-spacing="4">GLASS HORIZON / SPATIAL MASTER</text>
+</svg>
