@@ -22,13 +22,13 @@ Orange Juice, and Iced Tea, with:
 From this directory with an installed gem:
 
 ```bash
-zui launch main.rb
+zui run main.rb
 ```
 
 From the framework checkout:
 
 ```bash
-../../bin/zui launch main.rb
+../../bin/zui run main.rb
 ```
 
 Run its interaction tests with:

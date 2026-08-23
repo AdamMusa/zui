@@ -5,7 +5,7 @@ require "rbconfig"
 
 module Zui
   class CLI
-    USAGE = "Usage: zui <new NAME|run FILE|launch FILE|validate [DIRECTORY]|bundle [DIRECTORY]|doctor|version>"
+    USAGE = "Usage: zui <new NAME|run FILE|bundle [DIRECTORY]|doctor|version>"
 
     def self.run(arguments, out: $stdout, err: $stderr)
       new(out:, err:).run(arguments.dup)
@@ -21,8 +21,6 @@ module Zui
       case command
       when "new" then new_project(arguments)
       when "run" then run_file(arguments)
-      when "launch" then launch_file(arguments)
-      when "validate" then validate_project(arguments)
       when "bundle" then bundle_project(arguments)
       when "doctor" then doctor(arguments)
       when "version", "--version", "-v" then @out.puts(VERSION); 0
@@ -50,26 +48,8 @@ module Zui
 
     def run_file(arguments)
       file = File.expand_path(arguments.shift || raise(ArgumentError, "run requires a Ruby file"))
-      raise ArgumentError, "Ruby file not found: #{file}" unless File.file?(file)
-      exec(RbConfig.ruby, "-I", File.join(FRAMEWORK_ROOT, "lib"), file, *arguments)
-    end
-
-    def launch_file(arguments)
-      file = File.expand_path(arguments.shift || raise(ArgumentError, "launch requires a Ruby file"))
-      raise ArgumentError, "launch accepts one Ruby file" unless arguments.empty?
-      Runner.new.launch(file)
-    end
-
-    def validate_project(arguments)
-      source = File.expand_path(arguments.shift || Dir.pwd)
-      raise ArgumentError, "validate accepts one directory" unless arguments.empty?
-      result = Validator.new.validate(source)
-      if result.valid?
-        @out.puts("Valid Zui application (surfaces: #{result.surfaces.join(', ')})")
-        return 0
-      end
-      result.errors.each { |error| @err.puts("zui: #{error}") }
-      1
+      raise ArgumentError, "run accepts one Ruby file" unless arguments.empty?
+      Runner.new.run(file)
     end
 
     def bundle_project(arguments)
@@ -77,8 +57,6 @@ module Zui
       destination = option_value(arguments, "--output")
       source = File.expand_path(arguments.shift || Dir.pwd)
       raise ArgumentError, "bundle accepts one directory" unless arguments.empty?
-      result = Validator.new.validate(source)
-      raise ArgumentError, "application validation failed: #{result.errors.join('; ')}" unless result.valid?
       path = Distribution.new.bundle(source, name:, destination:)
       @out.puts("Bundled #{Platform.current.os} application in #{path}")
       0

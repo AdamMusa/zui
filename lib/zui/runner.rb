@@ -10,7 +10,7 @@ module Zui
       @ruby = ruby
     end
 
-    def launch(file, name: nil, environment: ENV.to_h)
+    def run(file, name: nil, environment: ENV.to_h)
       program = File.expand_path(file)
       raise ArgumentError, "Ruby file not found: #{program}" unless File.file?(program)
       executable = @host.executable

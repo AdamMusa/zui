@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "minitest/autorun"
+require "minitest/mock"
 require "open3"
 require "stringio"
 require "tmpdir"
@@ -25,18 +26,35 @@ class CLITest < Minitest::Test
     end
   end
 
-  def test_validate_command_checks_the_render_protocol
-    output = StringIO.new
-    status = Zui::CLI.run(["validate", File.join(__dir__, "fixtures", "smoke_app.rb")], out: output, err: StringIO.new)
-
-    assert_equal 0, status
-    assert_includes output.string, "surfaces: main"
-  end
-
   def test_version_executable_works_without_bundler
     stdout, stderr, status = Open3.capture3(File.join(ROOT, "bin", "zui"), "version")
 
     assert status.success?, stderr
     assert_equal "#{Zui::VERSION}\n", stdout
+  end
+
+  def test_run_opens_the_requested_file_through_the_native_runner
+    requested = nil
+    runner = Object.new
+    runner.define_singleton_method(:run) do |file|
+      requested = file
+      0
+    end
+
+    status = Zui::Runner.stub(:new, runner) do
+      Zui::CLI.run(["run", File.join(__dir__, "fixtures", "smoke_app.rb")],
+                   out: StringIO.new, err: StringIO.new)
+    end
+
+    assert_equal 0, status
+    assert_equal File.join(__dir__, "fixtures", "smoke_app.rb"), requested
+  end
+
+  def test_removed_commands_are_not_public
+    error = StringIO.new
+
+    assert_equal 64, Zui::CLI.run(["validate"], out: StringIO.new, err: error)
+    refute_includes error.string, "validate [DIRECTORY]"
+    assert_equal 64, Zui::CLI.run(["launch"], out: StringIO.new, err: StringIO.new)
   end
 end

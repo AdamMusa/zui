@@ -63,8 +63,7 @@ module Zui
         A native Linux and macOS desktop application written in Ruby with Zui.
 
         ```bash
-        zui validate
-        zui launch main.rb
+        zui run main.rb
         zui bundle
         ```
       MARKDOWN

@@ -10,13 +10,6 @@ class DistributionTest < Minitest::Test
     def executable = path
   end
 
-  def test_validator_builds_a_real_ruby_render_tree
-    result = Zui::Validator.new.validate(File.join(__dir__, "fixtures", "smoke_app.rb"))
-
-    assert result.valid?, result.errors.join("\n")
-    assert_equal ["main"], result.surfaces
-  end
-
   def test_linux_bundle_contains_portable_app_runtime_and_desktop_entry
     with_project do |project, host|
       platform = Zui::Platform.new(os: :linux, arch: :x86_64)

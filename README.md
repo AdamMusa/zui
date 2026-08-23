@@ -40,12 +40,11 @@ end
 gem install zui
 zui new telemetry-console
 cd telemetry-console
-zui validate
-zui launch main.rb
+zui run main.rb
 zui bundle
 ```
 
-`zui launch` uses the bundled host for supported release targets. If a matching host is not
+`zui run` uses the bundled host for supported release targets. If a matching host is not
 bundled, Zui builds and caches it from the checked-in C++ source with CMake and Qt 6.
 
 `zui bundle` produces a Linux application directory on Linux and a standard `.app` bundle on
@@ -55,6 +54,10 @@ on the destination machine; native packages can add them with the distribution's
 system.
 
 See [Platform support](docs/platforms.md) for host requirements and bundle layouts.
+
+Zui has no separate validation command. `run` opens the app directly, and
+`bundle` packages the project directly. Ruby, DSL, protocol, resource, and QML
+errors are reported by the operation that actually encounters them.
 
 ## Architecture
 
