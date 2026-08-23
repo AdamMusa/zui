@@ -1,0 +1,10 @@
+/.bundle/
+/pkg/
+/tmp/
+/dist/
+*.gem
+*.o
+*.so
+*.dylib
+*.dll
+*.exe
