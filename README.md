@@ -11,8 +11,9 @@ This repository is the reusable core. Distribution integrations live at its edge
 - Omarchy plugins and applications use the separate
   [`omarchy-ui`](https://github.com/AdamMusa/omarchy-ui) adapter.
 
-The first extraction commit establishes the portable Ruby API. The standalone renderer, platform
-packagers, and examples are added in subsequent isolated commits.
+Zui ships a standard Qt `ApplicationWindow`, a bidirectional `QProcess` bridge, its own neutral
+theme and controls, and the full built-in component catalog. It has no runtime dependency on
+Quickshell or an Omarchy installation.
 
 ## Core API
 
@@ -20,7 +21,7 @@ packagers, and examples are added in subsequent isolated commits.
 require "zui"
 
 Zui.app do
-  state count: 0
+  state :count, 0
 
   app :main, title: "Counter", width: 640, height: 420 do
     column spacing: 16 do
@@ -32,6 +33,42 @@ Zui.app do
   end
 end
 ```
+
+## Developer workflow
+
+```bash
+gem install zui
+zui new telemetry-console
+cd telemetry-console
+zui validate
+zui launch main.rb
+zui bundle
+```
+
+`zui launch` uses the bundled host for supported release targets. If a matching host is not
+bundled, Zui builds and caches it from the checked-in C++ source with CMake and Qt 6.
+
+`zui bundle` produces a Linux application directory on Linux and a standard `.app` bundle on
+macOS. Each package includes the application, Zui Ruby runtime, QML renderer, component catalog,
+theme, controls, and the native host. Ruby and the required Qt runtime libraries must be available
+on the destination machine; native packages can add them with the distribution's normal dependency
+system.
+
+See [Platform support](docs/platforms.md) for host requirements and bundle layouts.
+
+## Architecture
+
+```text
+Ruby application
+  → Zui DSL/state/events
+  → versioned JSON protocol
+  → native Qt host and process transport
+  → platform-neutral QML renderer
+  → Qt Quick / Controls / Multimedia / optional modules
+```
+
+Every declared component renders as that component or reports an explicit component error. Zui
+does not silently substitute images, alternate controls, or application-specific fallbacks.
 
 ## License
 

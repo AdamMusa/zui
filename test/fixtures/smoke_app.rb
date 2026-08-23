@@ -3,7 +3,7 @@
 require "zui"
 
 Zui.app do
-  state count: 0
+  state :count, 0
 
   app :main, title: "Zui Linux Smoke Test", width: 480, height: 320 do
     card padding: 24, spacing: 12 do

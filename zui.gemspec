@@ -16,7 +16,9 @@ Gem::Specification.new do |spec|
   spec.required_ruby_version = ">= 3.1"
   spec.files = Dir[
     "bin/*", "lib/**/*.rb", "*.qml", "Components/**/*", "Controls/**/*", "Theme/**/*",
-    "native/**/*", "README.md", "LICENSE"
+    "native/**/*", "vendor/host/**/*", "README.md", "LICENSE"
   ]
   spec.require_paths = ["lib"]
+  spec.bindir = "bin"
+  spec.executables = ["zui"]
 end

@@ -12,6 +12,13 @@ require_relative "zui/components"
 require_relative "zui/builder"
 require_relative "zui/application"
 require_relative "zui/source_bundle"
+require_relative "zui/platform"
+require_relative "zui/runtime"
+require_relative "zui/host"
+require_relative "zui/runner"
+require_relative "zui/validator"
+require_relative "zui/generator"
+require_relative "zui/distribution"
 
 module Zui
   VERSION = "0.1.0"

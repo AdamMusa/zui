@@ -1,0 +1,113 @@
+# frozen_string_literal: true
+
+require "json"
+require "rbconfig"
+
+module Zui
+  class CLI
+    USAGE = "Usage: zui <new NAME|run FILE|launch FILE|validate [DIRECTORY]|bundle [DIRECTORY]|doctor|version>"
+
+    def self.run(arguments, out: $stdout, err: $stderr)
+      new(out:, err:).run(arguments.dup)
+    end
+
+    def initialize(out:, err:)
+      @out = out
+      @err = err
+    end
+
+    def run(arguments)
+      command = arguments.shift
+      case command
+      when "new" then new_project(arguments)
+      when "run" then run_file(arguments)
+      when "launch" then launch_file(arguments)
+      when "validate" then validate_project(arguments)
+      when "bundle" then bundle_project(arguments)
+      when "doctor" then doctor(arguments)
+      when "version", "--version", "-v" then @out.puts(VERSION); 0
+      else
+        @err.puts(USAGE)
+        command.nil? ? 0 : 64
+      end
+    rescue Interrupt
+      130
+    rescue ArgumentError, SystemCallError, JSON::ParserError => error
+      @err.puts("zui: #{error.message}")
+      1
+    end
+
+    private
+
+    def new_project(arguments)
+      name = arguments.shift || raise(ArgumentError, "new requires a project name")
+      raise ArgumentError, "new accepts only a project name" unless arguments.empty?
+      destination = File.expand_path(slug(name))
+      Generator.new(path: destination, name:).create
+      @out.puts("Created Zui application in #{destination}")
+      0
+    end
+
+    def run_file(arguments)
+      file = File.expand_path(arguments.shift || raise(ArgumentError, "run requires a Ruby file"))
+      raise ArgumentError, "Ruby file not found: #{file}" unless File.file?(file)
+      exec(RbConfig.ruby, "-I", File.join(FRAMEWORK_ROOT, "lib"), file, *arguments)
+    end
+
+    def launch_file(arguments)
+      file = File.expand_path(arguments.shift || raise(ArgumentError, "launch requires a Ruby file"))
+      raise ArgumentError, "launch accepts one Ruby file" unless arguments.empty?
+      Runner.new.launch(file)
+    end
+
+    def validate_project(arguments)
+      source = File.expand_path(arguments.shift || Dir.pwd)
+      raise ArgumentError, "validate accepts one directory" unless arguments.empty?
+      result = Validator.new.validate(source)
+      if result.valid?
+        @out.puts("Valid Zui application (surfaces: #{result.surfaces.join(', ')})")
+        return 0
+      end
+      result.errors.each { |error| @err.puts("zui: #{error}") }
+      1
+    end
+
+    def bundle_project(arguments)
+      name = option_value(arguments, "--name")
+      destination = option_value(arguments, "--output")
+      source = File.expand_path(arguments.shift || Dir.pwd)
+      raise ArgumentError, "bundle accepts one directory" unless arguments.empty?
+      result = Validator.new.validate(source)
+      raise ArgumentError, "application validation failed: #{result.errors.join('; ')}" unless result.valid?
+      path = Distribution.new.bundle(source, name:, destination:)
+      @out.puts("Bundled #{Platform.current.os} application in #{path}")
+      0
+    end
+
+    def doctor(arguments)
+      raise ArgumentError, "doctor accepts no arguments" unless arguments.empty?
+      platform = Platform.current
+      host = Host.new(platform:)
+      @out.puts("Zui #{VERSION}")
+      @out.puts("Platform: #{platform.id}#{platform.supported? ? '' : ' (unsupported)'}")
+      @out.puts("Ruby: #{RbConfig.ruby} (#{RUBY_VERSION})")
+      @out.puts("Host: #{host.executable(build: false) || 'not built'}") if platform.supported?
+      @out.puts("Qt build requirements: #{host.platform_help}") if platform.supported? && !host.available?
+      platform.supported? ? 0 : 1
+    end
+
+    def option_value(arguments, name)
+      index = arguments.index(name)
+      return nil unless index
+      raise ArgumentError, "#{name} requires a value" if index == arguments.length - 1
+      arguments.delete_at(index)
+      arguments.delete_at(index)
+    end
+
+    def slug(value)
+      result = value.to_s.downcase.gsub(/[^a-z0-9]+/, "-").gsub(/\A-|-\z/, "")
+      raise ArgumentError, "name must contain letters or numbers" if result.empty?
+      result
+    end
+  end
+end
