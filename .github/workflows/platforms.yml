@@ -1,0 +1,56 @@
+name: Native platforms
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native:
+    name: ${{ matrix.platform }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: Linux x86-64
+            os: ubuntu-24.04
+          - platform: macOS Apple Silicon
+            os: macos-14
+          - platform: Windows x86-64
+            os: windows-2022
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Install Ruby
+        uses: ruby/setup-ruby@95ef2b042f9d7a56d8268cba8559e2842e2ad01b
+        with:
+          ruby-version: "3.3"
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@48d3ad6db93f3627c8ee7a0454bc6f3744f7e730 # v4.3.1
+        with:
+          version: "6.8.3"
+          modules: "qtmultimedia qtquick3d qtshadertools qtwebengine"
+          cache: true
+
+      - name: Test gem, catalog, native host, and runtime
+        run: ruby scripts/ci.rb
+
+      - name: Preserve native verification artifacts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: zui-${{ runner.os }}-${{ runner.arch }}
+          if-no-files-found: warn
+          path: |
+            tmp/ci-host/**
+            tmp/gems/*.gem
+            tmp/runtime-smoke-*.log
