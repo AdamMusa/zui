@@ -2,4 +2,4 @@
 
 require_relative "app"
 
-RestaurantDrinks.build.run
+RestaurantDrinks.run

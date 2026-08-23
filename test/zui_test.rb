@@ -7,6 +7,28 @@ require "timeout"
 require_relative "../lib/zui"
 
 class ZuiTest < Minitest::Test
+  def test_application_ui_modules_are_scoped_to_one_builder
+    ui = Module.new do
+      def status_panel
+        card(id: :status_panel) { text "Online" }
+      end
+    end
+    application = Zui::Application.new(ui:) do
+      app { status_panel }
+    end
+
+    assert_equal "card", application.tree.fetch("main").fetch("children").first.fetch("type")
+    refute Zui::Builder.instance_methods.include?(:status_panel)
+  end
+
+  def test_application_rejects_non_module_ui_extensions
+    error = assert_raises(ArgumentError) do
+      Zui::Application.new(ui: Object.new) { app { text "Invalid" } }
+    end
+
+    assert_includes error.message, "ui extensions must be modules"
+  end
+
   def test_responsive_layouts_and_icon_catalog_are_built_in
     application = Zui::Application.new do
       app do

@@ -2,4 +2,4 @@
 
 require_relative "app"
 
-SmartHomeEnergy.build.run
+SmartHomeEnergy.run

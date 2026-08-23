@@ -5,7 +5,7 @@ require_relative "components/drink_ordering"
 
 module RestaurantDrinks
   def self.build
-    Zui::Application.new do
+    Zui::Application.new(ui: UI) do
       state :query, ""
       state :category, "All"
       state :size, "Regular"
@@ -47,4 +47,6 @@ module RestaurantDrinks
       end
     end
   end
+
+  def self.run = build.run
 end

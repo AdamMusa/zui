@@ -278,7 +278,7 @@ module SmartHomeEnergy
   end
 
   def self.build
-    Zui::Application.new do
+    Zui::Application.new(ui: UI) do
       state :tick, 0
       state :scene, "Focus"
       state :secure, true
@@ -319,6 +319,6 @@ module SmartHomeEnergy
       end
     end
   end
-end
 
-Zui::Builder.include(SmartHomeEnergy::UI)
+  def self.run = build.run
+end

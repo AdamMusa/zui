@@ -243,7 +243,7 @@ module ShaderStudio
   end
 
   def self.build
-    Zui::Application.new do
+    Zui::Application.new(ui: UI) do
       state :shader, "golden_apollian"
       state :frequency, 3.2
       state :amplitude, 0.05
@@ -277,6 +277,6 @@ module ShaderStudio
       end
     end
   end
-end
 
-Zui::Builder.include(ShaderStudio::UI)
+  def self.run = build.run
+end

@@ -31,11 +31,19 @@ module Zui
         require "zui"
         require_relative "components/welcome"
 
-        Zui.app do
-          app :main, title: "#{@name}", width: 760, height: 520 do
-            welcome_card(title: "Welcome to #{@name}", message: "A native cross-platform Zui application.")
+        module #{constant_name}
+          def self.build
+            Zui::Application.new(ui: WelcomeComponent) do
+              app :main, title: "#{@name}", width: 760, height: 520 do
+                welcome_card(title: "Welcome to #{@name}", message: "A native cross-platform Zui application.")
+              end
+            end
           end
+
+          def self.run = build.run
         end
+
+        #{constant_name}.run
       RUBY
     end
 
@@ -51,8 +59,6 @@ module Zui
             end
           end
         end
-
-        Zui::Builder.include(WelcomeComponent)
       RUBY
     end
 
@@ -60,13 +66,19 @@ module Zui
       <<~MARKDOWN
         # #{@name}
 
-        A native Linux and macOS desktop application written in Ruby with Zui.
+        A native Linux, macOS, and Windows desktop application written in Ruby with Zui.
 
         ```bash
         zui run main.rb
         zui bundle
         ```
       MARKDOWN
+    end
+
+    def constant_name
+      value = @name.scan(/[a-z0-9]+/i).map { |part| part[0].upcase + part[1..].to_s }.join
+      value = "Application#{value}" if value.match?(/\A\d/)
+      value.empty? ? "ZuiApplication" : value
     end
   end
 end

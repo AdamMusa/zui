@@ -8,7 +8,7 @@ module Zui
     ANIMATION_DEFAULTS = { "opacity" => 1.0, "scale" => 1.0, "rotation" => 0.0, "z" => 0.0 }.freeze
     attr_reader :state, :surfaces, :surface_options, :components
 
-    def initialize(components: DEFAULT_COMPONENTS, &definition)
+    def initialize(components: DEFAULT_COMPONENTS, ui: nil, &definition)
       @surfaces = {}
       @surface_options = {}
       @nodes = {}
@@ -23,6 +23,11 @@ module Zui
       @state_change_lock = Mutex.new
       @components = components.dup
       @builder = Builder.new(self)
+      builder_extensions = Array(ui).compact
+      unless builder_extensions.all? { |extension| extension.is_a?(Module) }
+        raise ArgumentError, "ui extensions must be modules"
+      end
+      @builder.extend(*builder_extensions) unless builder_extensions.empty?
       @state = StateStore.new(method(:state_changed))
       @scheduler = Scheduler.new(evaluator: method(:evaluate), on_error: method(:report_internal_error))
       @builder.instance_eval(&definition) if definition

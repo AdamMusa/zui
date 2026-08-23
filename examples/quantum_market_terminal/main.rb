@@ -2,4 +2,4 @@
 
 require_relative "app"
 
-QuantumMarketTerminal.build.run
+QuantumMarketTerminal.run

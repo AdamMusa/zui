@@ -2,4 +2,4 @@
 
 require_relative "app"
 
-CinematicMusicStudio.build.run
+CinematicMusicStudio.run

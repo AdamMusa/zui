@@ -19,9 +19,13 @@ class CLITest < Minitest::Test
       end
       project = File.join(directory, "signal-board")
       main = File.read(File.join(project, "main.rb"))
+      component = File.read(File.join(project, "components", "welcome.rb"))
       assert_includes main, 'require "zui"'
-      assert_includes main, "Zui.app do"
+      assert_includes main, "module SignalBoard"
+      assert_includes main, "Zui::Application.new(ui: WelcomeComponent)"
+      assert_includes main, "SignalBoard.run"
       refute_match(/Omarchy|Quickshell/, main)
+      refute_includes component, "Zui::Builder.include"
       assert_equal %w[README.md components main.rb], Dir.children(project).sort
     end
   end

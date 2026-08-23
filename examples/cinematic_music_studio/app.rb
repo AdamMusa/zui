@@ -382,7 +382,7 @@ module CinematicMusicStudio
   end
 
   def self.build
-    Zui::Application.new do
+    Zui::Application.new(ui: UI) do
       state :playing, true
       state :position, 0.0
       state :track, TRACKS.first.fetch(:label)
@@ -463,6 +463,6 @@ module CinematicMusicStudio
       end
     end
   end
-end
 
-Zui::Builder.include(CinematicMusicStudio::UI)
+  def self.run = build.run
+end

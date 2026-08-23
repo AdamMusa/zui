@@ -2,4 +2,4 @@
 
 require_relative "app"
 
-OrbitalWeatherConsole.build.run
+OrbitalWeatherConsole.run

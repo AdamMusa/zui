@@ -2,4 +2,4 @@
 
 require_relative "app"
 
-FuturisticDashboard.build.run
+FuturisticDashboard.run

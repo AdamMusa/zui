@@ -2,4 +2,4 @@
 
 require_relative "app"
 
-ShaderStudio.build.run
+ShaderStudio.run

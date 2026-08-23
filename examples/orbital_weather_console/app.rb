@@ -269,7 +269,7 @@ module OrbitalWeatherConsole
   end
 
   def self.build
-    Zui::Application.new do
+    Zui::Application.new(ui: UI) do
       state :tick, 0
       state :layer, "Infrared"
       state :distance, 612
@@ -314,6 +314,6 @@ module OrbitalWeatherConsole
       end
     end
   end
-end
 
-Zui::Builder.include(OrbitalWeatherConsole::UI)
+  def self.run = build.run
+end

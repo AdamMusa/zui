@@ -709,7 +709,7 @@ module TeslaDriveDashboard
   end
 
   def self.build
-    Zui::Application.new do
+    Zui::Application.new(ui: UI) do
       state :speed, 0
       state :charge, 82
       state :range, 286
@@ -787,6 +787,6 @@ module TeslaDriveDashboard
       end
     end
   end
-end
 
-Zui::Builder.include(TeslaDriveDashboard::UI)
+  def self.run = build.run
+end

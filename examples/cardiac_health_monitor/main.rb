@@ -2,4 +2,4 @@
 
 require_relative "app"
 
-CardiacHealthMonitor.build.run
+CardiacHealthMonitor.run

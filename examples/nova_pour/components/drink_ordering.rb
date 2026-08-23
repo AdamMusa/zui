@@ -364,5 +364,3 @@ module RestaurantDrinks
     end
   end
 end
-
-Zui::Builder.include(RestaurantDrinks::UI)

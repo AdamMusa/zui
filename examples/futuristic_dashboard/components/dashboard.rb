@@ -414,5 +414,3 @@ module FuturisticDashboard
     end
   end
 end
-
-Zui::Builder.include(FuturisticDashboard::UI)
