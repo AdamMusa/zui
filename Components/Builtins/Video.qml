@@ -1,0 +1,39 @@
+import QtQuick
+import QtQuick.Controls as QQC
+import QtQuick.Layouts
+import QtMultimedia
+import QtQuick.VectorImage
+import "../../Theme"
+import "../../Controls" as ZuiControls
+
+Video {
+  required property var renderer
+      source: String(renderer.prop("source", ""))
+      implicitWidth: Number(renderer.prop("width", 640))
+      implicitHeight: Number(renderer.prop("height", 360))
+      autoPlay: renderer.prop("auto_play", false) === true
+      loops: Number(renderer.prop("loops", 1))
+      volume: Math.max(0, Math.min(1, Number(renderer.prop("volume", 1))))
+      muted: renderer.prop("muted", false) === true
+      playbackRate: Number(renderer.prop("playback_rate", 1))
+      orientation: Number(renderer.prop("orientation", 0))
+      mirrored: renderer.prop("mirrored", false) === true
+      fillMode: {
+        var mode = String(renderer.prop("fill_mode", "contain"))
+        if (mode === "cover") return VideoOutput.PreserveAspectCrop
+        if (mode === "stretch") return VideoOutput.Stretch
+        return VideoOutput.PreserveAspectFit
+      }
+      onPlaying: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "play", {})
+      onPaused: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "pause", {})
+      onStopped: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "stop", {})
+      onErrorOccurred: function(error, message) {
+        renderer.componentError("video_playback_failed", message, { native_code: error, source: String(source) })
+      }
+      onPositionChanged: {
+        if (renderer.subscribed("position")) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "position", { value: position, duration: duration })
+      }
+      onDurationChanged: {
+        if (renderer.subscribed("duration")) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "duration", { value: duration })
+      }
+    }

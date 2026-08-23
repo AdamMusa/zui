@@ -1,0 +1,18 @@
+import QtQuick
+import QtQuick.Controls as QQC
+import QtQuick.Layouts
+import QtMultimedia
+import QtQuick.VectorImage
+import "../../Theme"
+import "../../Controls" as ZuiControls
+
+Flow {
+  required property var renderer
+      width: Number(renderer.prop("width", 420))
+      height: renderer.prop("height", null) === null ? childrenRect.height : Number(renderer.prop("height", childrenRect.height))
+      spacing: Number(renderer.prop("spacing", Style.spacing.controlGap))
+      flow: String(renderer.prop("orientation", "horizontal")) === "vertical" ? Flow.TopToBottom : Flow.LeftToRight
+      layoutDirection: String(renderer.prop("layout_direction", "left_to_right")) === "right_to_left"
+        ? Qt.RightToLeft : Qt.LeftToRight
+      Repeater { model: renderer.node.children || []; delegate: renderer.childDelegateComponent }
+    }

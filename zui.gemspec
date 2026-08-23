@@ -14,6 +14,9 @@ Gem::Specification.new do |spec|
   spec.metadata["documentation_uri"] = "#{spec.homepage}#readme"
   spec.metadata["rubygems_mfa_required"] = "true"
   spec.required_ruby_version = ">= 3.1"
-  spec.files = Dir["bin/*", "lib/**/*.rb", "README.md", "LICENSE"]
+  spec.files = Dir[
+    "bin/*", "lib/**/*.rb", "*.qml", "Components/**/*", "Controls/**/*", "Theme/**/*",
+    "native/**/*", "README.md", "LICENSE"
+  ]
   spec.require_paths = ["lib"]
 end
