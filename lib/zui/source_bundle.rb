@@ -3,11 +3,15 @@
 module Zui
   class SourceBundle
     REQUIRE_RELATIVE = /\A\s*require_relative\s*(?:\(\s*)?["']([^"']+)["']\s*\)?\s*(?:#.*)?\z/
-    EMBEDDED_FRAMEWORK_REQUIRE = /\A\s*require\s*(?:\(\s*)?["']zui["']\s*\)?\s*(?:#.*)?\z/
 
-    def initialize(entrypoint, root: File.dirname(entrypoint))
+    def initialize(entrypoint, root: File.dirname(entrypoint), embedded_frameworks: ["zui"])
       @entrypoint = File.expand_path(entrypoint)
       @root = File.expand_path(root)
+      frameworks = Array(embedded_frameworks).map(&:to_s)
+      raise ArgumentError, "embedded framework names cannot be empty" if frameworks.any?(&:empty?)
+
+      names = frameworks.map { |name| Regexp.escape(name) }.join("|")
+      @embedded_framework_require = /\A\s*require\s*(?:\(\s*)?["'](?:#{names})["']\s*\)?\s*(?:#.*)?\z/
       @loaded = {}
       @loading = []
     end
@@ -30,7 +34,7 @@ module Zui
         match = REQUIRE_RELATIVE.match(line)
         if match
           expand(File.expand_path(match[1], File.dirname(path)))
-        elsif EMBEDDED_FRAMEWORK_REQUIRE.match?(line)
+        elsif @embedded_framework_require.match?(line)
           ""
         else
           line
