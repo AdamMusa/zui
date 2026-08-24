@@ -366,9 +366,11 @@ class QmlContractTest < Minitest::Test
     assert_includes renderer, 'node.type === "vector_image"'
     assert_includes renderer, "id: vectorImageComponent"
     assert_includes renderer, "VectorImage.CurveRenderer"
-    assert_includes renderer, "animations.paused"
     vector_image = source("Components/Builtins/VectorImage.qml")
     assert_includes vector_image, 'source: renderer.assetUrl(renderer.prop("source", ""))'
+    assert_includes vector_image, 'vectorRoot["animations"]'
+    assert_includes vector_image, "controller.paused = paused"
+    assert_includes vector_image, 'componentError("vector_animation_unsupported"'
   end
 
   def test_model_view_3d_loads_real_geometry_and_native_pointer_controls
