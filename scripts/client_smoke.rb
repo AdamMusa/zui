@@ -31,7 +31,7 @@ Dir.mktmpdir("zui-client-smoke-") do |cache|
   FileUtils.mkdir_p(File.dirname(log_path))
   run_environment = {
     "ZUI_CACHE_HOME" => cache,
-    "QT_QPA_PLATFORM" => "offscreen",
+    "QT_QPA_PLATFORM" => File.basename(archive).include?("macos") ? nil : "offscreen",
     "QT_QUICK_BACKEND" => "software",
     "QML_IMPORT_PATH" => nil,
     "QML2_IMPORT_PATH" => nil,
