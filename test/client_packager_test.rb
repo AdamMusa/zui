@@ -6,6 +6,34 @@ require_relative "../lib/zui"
 require_relative "../lib/zui/client_packager"
 
 class ClientPackagerTest < Minitest::Test
+  def test_does_not_duplicate_payload_referenced_by_framework_symlinks
+    Dir.mktmpdir do |directory|
+      platform = Zui::Platform.new(os: :linux, arch: :x86_64)
+      source = File.join(directory, "stage")
+      FileUtils.mkdir_p([
+        File.join(source, "bin"), File.join(source, "lib"), File.join(source, "plugins"),
+        File.join(source, "qml"), File.join(source, "Framework.framework", "Versions", "A")
+      ])
+      File.write(File.join(source, "bin", "zui-host"), "host")
+      FileUtils.chmod(0o755, File.join(source, "bin", "zui-host"))
+      File.write(File.join(source, "lib", "libQt6Core.so.6"), "qt")
+      canonical = File.join(source, "Framework.framework", "Versions", "A", "Framework")
+      File.write(canonical, "canonical framework binary")
+      File.symlink(File.join("Versions", "A", "Framework"),
+                   File.join(source, "Framework.framework", "Framework"))
+      File.symlink("A", File.join(source, "Framework.framework", "Versions", "Current"))
+
+      archive = Zui::ClientPackager.new(platform:).package(
+        source:, output: File.join(directory, "output"), executable: "bin/zui-host"
+      )
+
+      entries = archive_entries(archive)
+      assert_includes entries, "Framework.framework/Versions/A/Framework"
+      refute_includes entries, "Framework.framework/Framework"
+      refute entries.any? { |entry| entry.start_with?("Framework.framework/Versions/Current") }
+    end
+  end
+
   def test_packages_only_native_payload_and_round_trips_through_configure
     Dir.mktmpdir do |directory|
       platform = Zui::Platform.new(os: :linux, arch: :x86_64)
@@ -109,5 +137,15 @@ class ClientPackagerTest < Minitest::Test
     })
     client.configure!
     client
+  end
+
+  def archive_entries(archive)
+    entries = []
+    Zlib::GzipReader.open(archive) do |gzip|
+      Gem::Package::TarReader.new(gzip) do |tar|
+        tar.each { |entry| entries << entry.full_name }
+      end
+    end
+    entries
   end
 end

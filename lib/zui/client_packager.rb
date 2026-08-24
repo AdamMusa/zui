@@ -124,8 +124,15 @@ module Zui
       Dir.children(current).sort.each do |name|
         path = File.join(current, name)
         relative = safe_relative_path!(path.delete_prefix("#{root}/"))
-        stat = File.stat(path)
-        if stat.directory?
+        stat = File.lstat(path)
+        if stat.symlink?
+          # Qt frameworks contain convenience aliases such as `QtCore` and
+          # `Versions/Current`. The actual load paths target `Versions/A`, so
+          # following those links would store every framework binary up to
+          # three times. Client archives deliberately contain only canonical
+          # files and never accept links during extraction.
+          next
+        elsif stat.directory?
           tar.mkdir(relative, stat.mode & 0o777)
           add_tree(tar, root, path)
         elsif stat.file?
