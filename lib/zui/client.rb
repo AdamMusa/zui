@@ -187,7 +187,7 @@ module Zui
 
       relative = safe_manifest_path!(manifest["executable"], "client executable")
       executable = File.join(directory, relative)
-      unless File.file?(executable) && (platform.windows? || File.executable?(executable))
+      unless File.file?(executable) && executable_for_target?(executable)
         raise ArgumentError, "Zui client executable is missing or not executable: #{executable}"
       end
 
@@ -209,6 +209,12 @@ module Zui
       manifest
     rescue JSON::ParserError => error
       raise ArgumentError, "invalid Zui client manifest: #{error.message}"
+    end
+
+    def executable_for_target?(path)
+      # Windows cannot represent the POSIX executable bit when validating a
+      # Linux or macOS archive. Native POSIX clients still require that bit.
+      platform.windows? || Gem.win_platform? || File.executable?(path)
     end
 
     def verify_checksum!(archive, checksum_file)
