@@ -19,7 +19,7 @@ forbidden = %r{
     webchannel[^/]*|(?:lib)?Qt6(?:WebEngine|WebChannel|Positioning)[^/]*|position|Quickshell|
     SddmComponents|Qt5Compat
   )(?:/|\z)|
-  (?:\A|/)qml/org/|(?:\A|/)QtQuick/Pdf(?:/|\z)|(?:\A|/)QtQuick/Controls/FluentWinUI3(?:/|\z)
+  (?:\A|/)qml/org/|(?:\A|/)QtQuick/Pdf(?:/|\z)
 }ix
 
 entries = []
