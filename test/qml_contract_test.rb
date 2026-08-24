@@ -683,12 +683,17 @@ class QmlContractTest < Minitest::Test
 
   def test_search_field_has_a_specific_native_suggestion_renderer
     renderer = source("ControlNode.qml")
+    search_field = source("Components/Builtins/SearchField.qml")
 
     assert_includes renderer, 'node.type === "search_field"'
     assert_includes renderer, "id: searchFieldComponent"
-    assert_includes renderer, "QQC.SearchField {"
-    assert_includes renderer, 'suggestionModel: root.prop("suggestions", [])'
+    assert_includes search_field, "QQC.TextField {"
+    assert_includes search_field, 'suggestionModel: renderer.prop("suggestions", [])'
+    assert_includes search_field, "id: suggestionPopup"
+    assert_includes search_field, "Keys.onDownPressed"
+    assert_includes search_field, "activateSuggestion(highlightedIndex)"
     assert_includes renderer, '"search", { value: text }'
+    refute_includes search_field, "QQC.SearchField"
   end
 
   def test_password_field_has_a_specific_masked_reveal_renderer
