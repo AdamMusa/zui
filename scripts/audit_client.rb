@@ -42,5 +42,12 @@ controls_plugin = if File.basename(archive).include?("macos")
                   end
 abort "client archive cannot load QtQuick.Controls: #{controls_plugin} is missing" unless entries.include?(controls_plugin)
 
+if File.basename(archive).include?("linux")
+  %w[libicui18n libicuuc libicudata].each do |library|
+    present = entries.any? { |entry| entry.match?(%r{\Alib/#{library}\.so(?:\.|\z)}) }
+    abort "Linux client is missing private runtime dependency: #{library}" unless present
+  end
+end
+
 puts format("Client audit passed: %.1f MiB, %d entries, desktop payload only.",
             size.fdiv(1024 * 1024), entries.length)

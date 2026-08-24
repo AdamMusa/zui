@@ -24,6 +24,7 @@ module Zui
     LINUX_TRANSLATION_GLOBS = %w[
       qtbase_*.qm qtdeclarative_*.qm qtmultimedia_*.qm qtquickcontrols2_*.qm
     ].freeze
+    LINUX_PRIVATE_LIBRARY_PREFIXES = %w[libQt6 libicu].freeze
     BROWSER_PAYLOAD_PATTERN = %r{
       (?:\A|/)(?:
         QtWebEngine[^/]* |
@@ -174,7 +175,7 @@ module Zui
         next if inspected[binary]
         inspected[binary] = true
 
-        qt_dependencies(binary).each do |library|
+        linux_private_dependencies(binary).each do |library|
           name = File.basename(library)
           next if copied[name]
 
@@ -186,13 +187,14 @@ module Zui
       end
     end
 
-    def qt_dependencies(binary)
+    def linux_private_dependencies(binary)
       result = Command.run(["ldd", binary], timeout: 30, max_output_bytes: 2_000_000)
-      raise ArgumentError, "could not inspect Qt dependencies for #{binary}: #{result.stderr}" unless result.success?
+      raise ArgumentError, "could not inspect Linux dependencies for #{binary}: #{result.stderr}" unless result.success?
 
       result.stdout.each_line.filter_map do |line|
         path = line[/=>\s+(\/\S+)/, 1] || line[/^\s*(\/\S+)/, 1]
-        path if path && File.basename(path).start_with?("libQt6") && File.file?(path)
+        name = File.basename(path.to_s)
+        path if path && name.start_with?(*LINUX_PRIVATE_LIBRARY_PREFIXES) && File.file?(path)
       end.uniq
     end
 
