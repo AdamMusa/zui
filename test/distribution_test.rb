@@ -15,8 +15,8 @@ class DistributionTest < Minitest::Test
       platform = Zui::Platform.new(os: :linux, arch: :x86_64)
       destination = Zui::Distribution.new(host: FakeHost.new(host), platform:).bundle(project)
 
-      assert File.executable?(File.join(destination, "run"))
-      assert File.executable?(File.join(destination, "bin", "zui-host"))
+      assert_posix_executable File.join(destination, "run")
+      assert_posix_executable File.join(destination, "bin", "zui-host")
       assert File.file?(File.join(destination, "app", "main.rb"))
       assert File.file?(File.join(destination, "runtime", "lib", "zui.rb"))
       assert File.file?(File.join(destination, "runtime", "qml", "Desktop.qml"))
@@ -33,8 +33,8 @@ class DistributionTest < Minitest::Test
       Zui::Distribution.new(host: FakeHost.new(host), platform:).bundle(project, destination:)
 
       contents = File.join(destination, "Contents")
-      assert File.executable?(File.join(contents, "MacOS", "run"))
-      assert File.executable?(File.join(contents, "MacOS", "zui-host"))
+      assert_posix_executable File.join(contents, "MacOS", "run")
+      assert_posix_executable File.join(contents, "MacOS", "zui-host")
       assert File.file?(File.join(contents, "Info.plist"))
       assert File.file?(File.join(contents, "Resources", "app", "main.rb"))
       assert File.file?(File.join(contents, "Resources", "runtime", "qml", "Desktop.qml"))
@@ -61,6 +61,11 @@ class DistributionTest < Minitest::Test
   end
 
   private
+
+  def assert_posix_executable(path)
+    assert File.file?(path)
+    assert File.executable?(path) unless Gem.win_platform?
+  end
 
   def with_project
     Dir.mktmpdir do |directory|

@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Controls as QQC
-import QtQml.Models
+import Qt.labs.qmlmodels
 import "../../Theme"
 
 QQC.MenuBar {

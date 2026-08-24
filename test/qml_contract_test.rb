@@ -1163,6 +1163,7 @@ class QmlContractTest < Minitest::Test
 
   def test_menu_has_a_specific_native_popup_entry_renderer
     renderer = source("ControlNode.qml")
+    menu = source("Components/Builtins/Menu.qml")
 
     assert_includes renderer, 'node.type === "menu"'
     assert_includes renderer, "id: menuComponent"
@@ -1182,6 +1183,8 @@ class QmlContractTest < Minitest::Test
     assert_includes renderer, '"highlight", menuRoot.entryPayload(index, modelData, this)'
     assert_includes renderer, '"about_to_show", {}'
     assert_includes renderer, '"about_to_hide", {}'
+    assert_includes menu, "import Qt.labs.qmlmodels"
+    refute_includes menu, "import QtQml.Models"
   end
 
   def test_menu_item_has_a_specific_native_entry_renderer
@@ -1218,6 +1221,7 @@ class QmlContractTest < Minitest::Test
 
   def test_menu_bar_has_a_specific_native_hierarchical_renderer
     renderer = source("ControlNode.qml")
+    menu_bar = source("Components/Builtins/MenuBar.qml")
 
     assert_includes renderer, 'node.type === "menu_bar"'
     assert_includes renderer, "id: menuBarComponent"
@@ -1234,10 +1238,13 @@ class QmlContractTest < Minitest::Test
     assert_includes renderer, '"toggle", menuBarRoot.itemPayload'
     assert_includes renderer, '"menu_open",'
     assert_includes renderer, '"menu_close",'
+    assert_includes menu_bar, "import Qt.labs.qmlmodels"
+    refute_includes menu_bar, "import QtQml.Models"
   end
 
   def test_context_menu_has_a_specific_native_targeted_popup_renderer
     renderer = source("ControlNode.qml")
+    context_menu = source("Components/Builtins/ContextMenu.qml")
 
     assert_includes renderer, 'node.type === "context_menu"'
     assert_includes renderer, "id: contextMenuComponent"
@@ -1254,6 +1261,8 @@ class QmlContractTest < Minitest::Test
     assert_includes renderer, '"toggle", contextRoot.entryPayload'
     assert_includes renderer, '"open", {}'
     assert_includes renderer, '"close", {}'
+    assert_includes context_menu, "import Qt.labs.qmlmodels"
+    refute_includes context_menu, "import QtQml.Models"
   end
 
   def test_popup_has_a_specific_native_container_renderer
