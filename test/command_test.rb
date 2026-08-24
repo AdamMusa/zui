@@ -17,7 +17,7 @@ class CommandTest < Minitest::Test
     result = Zui::Command.run([RbConfig.ruby, "-e", "warn 'bad'; exit 7"])
     refute result.success?
     assert_equal 7, result.exitstatus
-    assert_equal "bad\n", result.stderr
+    assert_equal ["bad"], result.stderr.lines(chomp: true)
   end
 
   def test_command_timeout_terminates_the_child

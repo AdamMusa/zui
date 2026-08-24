@@ -10,7 +10,21 @@ VectorImage {
   id: vectorRoot
   required property var renderer
 
-  function synchronizeAnimations() {
+  function synchronizeCapabilities() {
+    var trusted = renderer.prop("trusted", false) === true
+    if (vectorRoot["assumeTrustedSource"] !== undefined)
+      vectorRoot["assumeTrustedSource"] = trusted
+    else if (trusted)
+      renderer.componentError("trusted_vector_unsupported",
+        "The installed Qt version does not support trusted vector sources", {})
+
+    var asynchronous = renderer.prop("asynchronous_shapes", false) === true
+    if (vectorRoot["asynchronousShapes"] !== undefined)
+      vectorRoot["asynchronousShapes"] = asynchronous
+    else if (asynchronous)
+      renderer.componentError("asynchronous_vector_unsupported",
+        "The installed Qt version does not support asynchronous vector shapes", {})
+
     var controller = vectorRoot["animations"]
     var loops = Number(renderer.prop("animation_loops", 1))
     var paused = renderer.prop("animation_paused", false) === true
@@ -36,15 +50,13 @@ VectorImage {
   }
   preferredRendererType: String(renderer.prop("renderer", "geometry")) === "curve"
     ? VectorImage.CurveRenderer : VectorImage.GeometryRenderer
-  assumeTrustedSource: renderer.prop("trusted", false) === true
-  asynchronousShapes: renderer.prop("asynchronous_shapes", false) === true
   onSourceChanged: {
     if (renderer.subscribed("source_change"))
       renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "source_change", { value: source })
   }
-  Component.onCompleted: synchronizeAnimations()
+  Component.onCompleted: synchronizeCapabilities()
   Connections {
     target: vectorRoot.renderer
-    function onNodeChanged() { vectorRoot.synchronizeAnimations() }
+    function onNodeChanged() { vectorRoot.synchronizeCapabilities() }
   }
 }

@@ -382,7 +382,6 @@ Loader {
     if (node.type === "shader_effect") return shaderEffectComponent
     if (node.type === "shader_effect_source") return shaderEffectSourceComponent
     if (node.type === "multi_effect") return multiEffectComponent
-    if (node.type === "rectangular_shadow") return rectangularShadowComponent
     if (node.type === "opacity_mask") return opacityMaskComponent
     if (node.type === "blur") return blurComponent
     if (node.type === "drop_shadow") return dropShadowComponent
@@ -994,11 +993,6 @@ Loader {
   Component {
     id: multiEffectComponent
     Builtins.MultiEffect { renderer: root }
-  }
-
-  Component {
-    id: rectangularShadowComponent
-    Builtins.RectangularShadow { renderer: root }
   }
 
   Component {

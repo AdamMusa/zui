@@ -369,8 +369,12 @@ class QmlContractTest < Minitest::Test
     vector_image = source("Components/Builtins/VectorImage.qml")
     assert_includes vector_image, 'source: renderer.assetUrl(renderer.prop("source", ""))'
     assert_includes vector_image, 'vectorRoot["animations"]'
+    assert_includes vector_image, 'vectorRoot["assumeTrustedSource"]'
+    assert_includes vector_image, 'vectorRoot["asynchronousShapes"]'
     assert_includes vector_image, "controller.paused = paused"
     assert_includes vector_image, 'componentError("vector_animation_unsupported"'
+    assert_includes vector_image, 'componentError("trusted_vector_unsupported"'
+    assert_includes vector_image, 'componentError("asynchronous_vector_unsupported"'
   end
 
   def test_model_view_3d_loads_real_geometry_and_native_pointer_controls
@@ -425,12 +429,18 @@ class QmlContractTest < Minitest::Test
 
   def test_video_has_a_specific_native_multimedia_renderer
     renderer = source("ControlNode.qml")
+    video = source("Components/Builtins/Video.qml")
+    video_output = source("Components/Builtins/VideoOutput.qml")
 
     assert_includes renderer, "import QtMultimedia"
     assert_includes renderer, 'node.type === "video"'
     assert_includes renderer, "id: videoComponent"
     assert_includes renderer, "VideoOutput.PreserveAspectCrop"
     assert_includes renderer, '"position", { value: position, duration: duration }'
+    assert_includes video, 'videoRoot["mirrored"]'
+    assert_includes video, 'componentError("video_mirroring_unsupported"'
+    assert_includes video_output, 'videoRoot["endOfStreamPolicy"]'
+    assert_includes video_output, 'componentError("video_end_policy_unsupported"'
   end
 
   def test_audio_has_a_specific_native_media_player_renderer
