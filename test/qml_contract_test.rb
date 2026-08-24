@@ -669,11 +669,16 @@ class QmlContractTest < Minitest::Test
 
   def test_text_area_has_a_specific_native_multiline_renderer
     renderer = source("ControlNode.qml")
+    text_area = source("Components/Builtins/TextArea.qml")
 
     assert_includes renderer, 'node.type === "text_area"'
     assert_includes renderer, "id: textAreaComponent"
     assert_includes renderer, "QQC.TextArea {"
     assert_includes renderer, '"selection", { start: selectionStart'
+    assert_includes text_area, 'nativeTextArea["textEdited"]'
+    assert_includes text_area, "ignoreUnknownSignals: true"
+    assert_includes text_area, "if (!supportsTextEditedSignal && activeFocus) sendInputEvent()"
+    refute_includes text_area, "onTextEdited:"
   end
 
   def test_search_field_has_a_specific_native_suggestion_renderer

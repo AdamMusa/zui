@@ -13,6 +13,10 @@ QQC.ScrollView {
       clip: true
       QQC.TextArea {
         id: nativeTextArea
+        readonly property bool supportsTextEditedSignal: nativeTextArea["textEdited"] !== undefined
+        function sendInputEvent() {
+          renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "input", { value: text })
+        }
         text: String(renderer.prop("text", ""))
         placeholderText: String(renderer.prop("placeholder", ""))
         readOnly: renderer.prop("read_only", false) === true
@@ -32,14 +36,24 @@ QQC.ScrollView {
           border.width: Style.normalBorderWidth
           border.color: nativeTextArea.activeFocus ? renderer.prop("accent", Color.accent) : renderer.prop("foreground", renderer.foreground)
         }
-        onTextChanged: if (text.length > maximumLengthValue) remove(maximumLengthValue, text.length)
-        onTextEdited: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "input", { value: text })
+        onTextChanged: {
+          if (text.length > maximumLengthValue) {
+            remove(maximumLengthValue, text.length)
+            return
+          }
+          if (!supportsTextEditedSignal && activeFocus) sendInputEvent()
+        }
         onActiveFocusChanged: {
           renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, activeFocus ? "focus" : "blur", { value: text })
           if (!activeFocus && renderer.subscribed("change")) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "change", { value: text })
         }
         onSelectedTextChanged: {
           if (renderer.subscribed("selection")) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "selection", { start: selectionStart, end: selectionEnd, text: selectedText })
+        }
+        Connections {
+          target: nativeTextArea
+          ignoreUnknownSignals: true
+          function onTextEdited() { nativeTextArea.sendInputEvent() }
         }
       }
     }
