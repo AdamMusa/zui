@@ -1651,7 +1651,10 @@ class QmlContractTest < Minitest::Test
     assert_includes renderer, "TableView.SelectRows"
     assert_includes renderer, "TableView.ExtendedSelection"
     assert_includes renderer, "TableView.DoubleTapped"
-    assert_includes renderer, "delegate: QQC.TableViewDelegate {"
+    assert_includes renderer, "delegate: QQC.ItemDelegate {"
+    assert_includes renderer, "selected = tableSelection.isSelected(modelIndex)"
+    assert_includes renderer, "tableSelection.setCurrentIndex(modelIndex, ItemSelectionModel.ClearAndSelect)"
+    refute_includes source("Components/Builtins/TableView.qml"), "QQC.TableViewDelegate"
     assert_includes renderer, "TableView.editDelegate: FocusScope {"
     assert_includes renderer, "tableRoot.tableModel.setData(index, editor.text, Qt.EditRole)"
     assert_includes renderer, '"cell_click", tableRoot.cellPayload'

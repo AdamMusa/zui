@@ -245,8 +245,26 @@ Rectangle {
     rowHeightProvider: function(row) { return Number(renderer.prop("row_height", 42)) }
     columnWidthProvider: function(column) { return tableRoot.columnWidth(column) }
 
-    delegate: QQC.TableViewDelegate {
+    delegate: QQC.ItemDelegate {
       id: cellDelegate
+      required property int row
+      required property int column
+      required property var model
+      property bool selected: false
+      property bool current: false
+
+      function refreshSelection() {
+        if (!tableRoot.tableModel) {
+          selected = false
+          current = false
+          return
+        }
+        var modelIndex = tableRoot.tableModel.index(row, column)
+        selected = tableSelection.isSelected(modelIndex)
+        current = tableSelection.currentIndex.valid
+          && tableSelection.currentIndex.row === row
+          && tableSelection.currentIndex.column === column
+      }
 
       text: String(model.display === undefined || model.display === null ? "" : model.display)
       font.family: String(renderer.prop("font_family", renderer.fontFamily))
@@ -272,7 +290,6 @@ Rectangle {
         horizontalAlignment: tableRoot.columnAlignment(cellDelegate.column)
         verticalAlignment: Text.AlignVCenter
         elide: Text.ElideRight
-        visible: !cellDelegate.editing
       }
 
       TableView.editDelegate: FocusScope {
@@ -299,12 +316,24 @@ Rectangle {
         }
       }
 
-      onClicked: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
-        "cell_click", tableRoot.cellPayload(row, column, model.display))
+      onClicked: {
+        var modelIndex = tableRoot.tableModel.index(row, column)
+        tableSelection.setCurrentIndex(modelIndex, ItemSelectionModel.ClearAndSelect)
+        renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
+          "cell_click", tableRoot.cellPayload(row, column, model.display))
+      }
       onDoubleClicked: {
         var payload = tableRoot.cellPayload(row, column, model.display)
         renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "cell_double_click", payload)
         renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "activate", payload)
+      }
+      Component.onCompleted: refreshSelection()
+      onRowChanged: refreshSelection()
+      onColumnChanged: refreshSelection()
+      Connections {
+        target: tableSelection
+        function onSelectionChanged(selected, deselected) { cellDelegate.refreshSelection() }
+        function onCurrentChanged(current, previous) { cellDelegate.refreshSelection() }
       }
     }
 
