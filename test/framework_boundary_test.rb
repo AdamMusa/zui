@@ -122,6 +122,8 @@ class FrameworkBoundaryTest < Minitest::Test
     refute_nil specification
     assert_empty specification.files.grep(%r{\Aexamples(?:/|\z)})
     assert_empty specification.files.grep(/(?:\A|\/)examples(?:\/|\z)/)
+    assert_empty specification.files.grep(%r{\A(?:native|vendor)/})
+    assert_empty specification.files.grep(%r{\Alib/zui/client_(?:builder|packager)\.rb\z})
   end
 
   def test_core_has_no_omarchy_or_quickshell_dependency

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(zui-host VERSION 0.1.0 LANGUAGES CXX)
+project(zui-host LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -24,6 +24,11 @@ qt_add_executable(zui-host
   ZuiProcess.h
 )
 
+set_target_properties(zui-host PROPERTIES
+  MACOSX_BUNDLE TRUE
+  WIN32_EXECUTABLE TRUE
+)
+
 target_link_libraries(zui-host PRIVATE
   Qt6::Core
   Qt6::Gui
@@ -43,3 +48,20 @@ install(TARGETS zui-host
   BUNDLE DESTINATION .
   RUNTIME DESTINATION bin
 )
+
+if(APPLE OR WIN32)
+  set(zui_deploy_tool_options "")
+  if(APPLE)
+    list(APPEND zui_deploy_tool_options "-qmldir=${CMAKE_CURRENT_SOURCE_DIR}/..")
+  else()
+    list(APPEND zui_deploy_tool_options "--qmldir" "${CMAKE_CURRENT_SOURCE_DIR}/..")
+  endif()
+
+  qt_generate_deploy_app_script(
+    TARGET zui-host
+    OUTPUT_SCRIPT zui_deploy_script
+    NO_TRANSLATIONS
+    DEPLOY_TOOL_OPTIONS ${zui_deploy_tool_options}
+  )
+  install(SCRIPT ${zui_deploy_script})
+endif()

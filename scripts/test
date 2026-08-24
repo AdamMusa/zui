@@ -31,6 +31,5 @@ if command -v cmake >/dev/null 2>&1; then
   fi
 fi
 
-(cd vendor/host/linux-x86_64 && sha256sum --check zui-host.sha256)
 git diff --check
 echo "Zui tests passed."

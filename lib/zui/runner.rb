@@ -24,7 +24,7 @@ module Zui
         "--load-path", File.join(@framework_root, "lib"),
         "--name", name || project_name(project)
       ]
-      system(environment, *arguments)
+      system(@host.environment(environment), *arguments)
       $?&.exitstatus || 1
     end
 

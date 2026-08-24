@@ -5,7 +5,7 @@ require "rbconfig"
 
 module Zui
   class CLI
-    USAGE = "Usage: zui <new NAME|run FILE|bundle [DIRECTORY]|doctor|version>"
+    USAGE = "Usage: zui <new NAME|configure|doctor|run FILE|bundle [DIRECTORY]|version>"
 
     def self.run(arguments, out: $stdout, err: $stderr)
       new(out:, err:).run(arguments.dup)
@@ -20,6 +20,7 @@ module Zui
       command = arguments.shift
       case command
       when "new" then new_project(arguments)
+      when "configure" then configure(arguments)
       when "run" then run_file(arguments)
       when "bundle" then bundle_project(arguments)
       when "doctor" then doctor(arguments)
@@ -65,13 +66,34 @@ module Zui
     def doctor(arguments)
       raise ArgumentError, "doctor accepts no arguments" unless arguments.empty?
       platform = Platform.current
-      host = Host.new(platform:)
       @out.puts("Zui #{VERSION}")
       @out.puts("Platform: #{platform.id}#{platform.supported? ? '' : ' (unsupported)'}")
       @out.puts("Ruby: #{RbConfig.ruby} (#{RUBY_VERSION})")
-      @out.puts("Host: #{host.executable(build: false) || 'not built'}") if platform.supported?
-      @out.puts("Qt build requirements: #{host.platform_help}") if platform.supported? && !host.available?
-      platform.supported? ? 0 : 1
+      return 1 unless platform.supported?
+
+      client = Client.new(platform:)
+      if client.configured?
+        @out.puts("Client: #{client.root}")
+        @out.puts("Run: ready")
+        @out.puts("Bundle: ready")
+        0
+      else
+        @out.puts("Client: not configured")
+        @out.puts("Run `zui configure` to install the native client and bundle support.")
+        1
+      end
+    end
+
+    def configure(arguments)
+      raise ArgumentError, "configure accepts no arguments" unless arguments.empty?
+      platform = Platform.current.assert_supported!
+      client = Client.new(platform:)
+      @out.puts("Configuring Zui #{VERSION} for #{platform.id}...")
+      client.configure!
+      @out.puts("Client: #{client.root}")
+      @out.puts("Run: ready")
+      @out.puts("Bundle: ready")
+      0
     end
 
     def option_value(arguments, name)

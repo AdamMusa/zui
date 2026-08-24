@@ -2,39 +2,45 @@
 
 require "json"
 require "minitest/autorun"
+require "rbconfig"
 require "tmpdir"
 require_relative "../lib/zui"
+require_relative "support/client_fixture"
 
 class DistributionTest < Minitest::Test
-  FakeHost = Struct.new(:path) do
-    def executable = path
-  end
-
-  def test_linux_bundle_contains_portable_app_runtime_and_desktop_entry
-    with_project do |project, host|
-      platform = Zui::Platform.new(os: :linux, arch: :x86_64)
-      destination = Zui::Distribution.new(host: FakeHost.new(host), platform:).bundle(project)
+  def test_linux_bundle_contains_app_framework_and_native_runtimes
+    platform = Zui::Platform.new(os: :linux, arch: :x86_64)
+    with_project(platform) do |project, client|
+      destination = Zui::Distribution.new(client:, platform:).bundle(project)
 
       assert_posix_executable File.join(destination, "run")
-      assert_posix_executable File.join(destination, "bin", "zui-host")
+      assert_posix_executable File.join(destination, "runtime", "native", "bin", "zui-host")
+      assert File.file?(File.join(destination, "runtime", "native", "client.json"))
+      assert File.file?(File.join(destination, "runtime", "native", "lib", ".fixture"))
       assert File.file?(File.join(destination, "app", "main.rb"))
       assert File.file?(File.join(destination, "runtime", "lib", "zui.rb"))
+      refute File.exist?(File.join(destination, "runtime", "lib", "zui", "client_builder.rb"))
+      refute File.exist?(File.join(destination, "runtime", "lib", "zui", "client_packager.rb"))
       assert File.file?(File.join(destination, "runtime", "qml", "Desktop.qml"))
-      assert_equal "linux", JSON.parse(File.read(File.join(destination, "zui-bundle.json"))).fetch("platform")
+      manifest = JSON.parse(File.read(File.join(destination, "zui-bundle.json")))
+      assert_equal "linux", manifest.fetch("platform")
+      assert_equal Zui::VERSION, manifest.fetch("client_version")
       assert_equal 1, Dir[File.join(destination, "share", "applications", "*.desktop")].length
-      assert_includes File.read(File.join(destination, "run")), '${ZUI_RUBY:-ruby}'
+      launcher = File.read(File.join(destination, "run"))
+      assert_includes launcher, '${ZUI_RUBY:-ruby}'
+      assert_includes launcher, '$native_dir/lib'
     end
   end
 
   def test_macos_bundle_has_a_standard_application_layout
-    with_project do |project, host|
-      platform = Zui::Platform.new(os: :macos, arch: :arm64)
+    platform = Zui::Platform.new(os: :macos, arch: :arm64)
+    with_project(platform) do |project, client|
       destination = File.join(project, "package", "Demo.app")
-      Zui::Distribution.new(host: FakeHost.new(host), platform:).bundle(project, destination:)
+      Zui::Distribution.new(client:, platform:).bundle(project, destination:)
 
       contents = File.join(destination, "Contents")
       assert_posix_executable File.join(contents, "MacOS", "run")
-      assert_posix_executable File.join(contents, "MacOS", "zui-host")
+      assert_posix_executable File.join(contents, "Resources", "runtime", "native", "bin", "zui-host")
       assert File.file?(File.join(contents, "Info.plist"))
       assert File.file?(File.join(contents, "Resources", "app", "main.rb"))
       assert File.file?(File.join(contents, "Resources", "runtime", "qml", "Desktop.qml"))
@@ -42,21 +48,54 @@ class DistributionTest < Minitest::Test
     end
   end
 
-  def test_windows_bundle_has_native_host_runtime_and_safe_launchers
-    with_project do |project, host|
-      platform = Zui::Platform.new(os: :windows, arch: :x86_64)
-      destination = Zui::Distribution.new(host: FakeHost.new(host), platform:).bundle(project)
+  def test_windows_bundle_has_native_runtime_and_safe_launchers
+    platform = Zui::Platform.new(os: :windows, arch: :x86_64)
+    with_project(platform) do |project, client|
+      destination = Zui::Distribution.new(client:, platform:).bundle(project)
 
       assert File.file?(File.join(destination, "run.cmd"))
       assert File.file?(File.join(destination, "run.rb"))
-      assert File.file?(File.join(destination, "bin", "zui-host.exe"))
+      assert File.file?(File.join(destination, "runtime", "native", "bin", "zui-host.exe"))
       assert File.file?(File.join(destination, "app", "main.rb"))
       assert File.file?(File.join(destination, "runtime", "lib", "zui.rb"))
       assert File.file?(File.join(destination, "runtime", "qml", "Desktop.qml"))
       assert_equal "windows", JSON.parse(File.read(File.join(destination, "zui-bundle.json"))).fetch("platform")
       assert_includes File.read(File.join(destination, "run.cmd")), "%ZUI_RUBY%"
-      assert_includes File.read(File.join(destination, "run.rb")), 'exec(*arguments)'
-      refute_includes File.read(File.join(destination, "run.rb")), "Omarchy"
+      launcher = File.read(File.join(destination, "run.rb"))
+      assert_includes launcher, "exec(environment, *arguments)"
+      assert_includes launcher, 'runtime", "native'
+      refute_includes launcher, "Omarchy"
+      assert system(RbConfig.ruby, "-c", File.join(destination, "run.rb"), out: File::NULL)
+    end
+  end
+
+  def test_existing_bundle_destination_is_never_removed
+    platform = Zui::Platform.new(os: :linux, arch: :x86_64)
+    with_project(platform) do |project, client|
+      destination = File.join(project, "my-existing-output")
+      FileUtils.mkdir_p(destination)
+      File.write(File.join(destination, "personal.txt"), "keep")
+
+      assert_raises(ArgumentError) do
+        Zui::Distribution.new(client:, platform:).bundle(project, destination:)
+      end
+      assert_equal "keep", File.read(File.join(destination, "personal.txt"))
+    end
+  end
+
+  def test_bundle_requires_configuration_instead_of_using_system_qt
+    Dir.mktmpdir do |directory|
+      project = File.join(directory, "demo")
+      FileUtils.mkdir_p(project)
+      File.write(File.join(project, "main.rb"), "require 'zui'\n")
+      platform = Zui::Platform.new(os: :linux, arch: :x86_64)
+      client = Zui::Client.new(platform:, cache_root: File.join(directory, "cache"),
+                               environment: { "HOME" => directory })
+
+      error = assert_raises(ArgumentError) do
+        Zui::Distribution.new(client:, platform:).bundle(project)
+      end
+      assert_includes error.message, "zui configure"
     end
   end
 
@@ -67,16 +106,15 @@ class DistributionTest < Minitest::Test
     assert File.executable?(path) unless Gem.win_platform?
   end
 
-  def with_project
+  def with_project(platform)
     Dir.mktmpdir do |directory|
       project = File.join(directory, "demo")
       FileUtils.mkdir_p(project)
       File.write(File.join(project, "main.rb"), File.read(File.join(__dir__, "fixtures", "smoke_app.rb")))
       File.write(File.join(project, "asset.txt"), "owned by app")
-      host = File.join(directory, "zui-host")
-      File.write(host, "host")
-      FileUtils.chmod(0o755, host)
-      yield project, host
+      client_root = ClientFixture.create(File.join(directory, "client"), platform:)
+      client = Zui::Client.new(platform:, environment: { "ZUI_CLIENT_ROOT" => client_root })
+      yield project, client
     end
   end
 end

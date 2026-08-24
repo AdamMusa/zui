@@ -3,47 +3,43 @@
 require "minitest/autorun"
 require "tmpdir"
 require_relative "../lib/zui"
+require_relative "support/client_fixture"
 
 class HostTest < Minitest::Test
-  def test_uses_native_cache_roots_on_every_supported_platform
-    Dir.mktmpdir do |home|
-      linux = host_for(:linux, home:, "XDG_CACHE_HOME" => File.join(home, "xdg"))
-      macos = host_for(:macos, home:)
-      windows = host_for(:windows, home:, "LOCALAPPDATA" => File.join(home, "Local"))
+  def test_requires_explicit_configuration_instead_of_building_from_source
+    client = Object.new
+    client.define_singleton_method(:configured?) { false }
+    platform = Zui::Platform.new(os: :linux, arch: :x86_64)
+    host = Zui::Host.new(platform:, client:, environment: {})
 
-      assert_equal File.join(home, "xdg", "zui", "host", Zui::VERSION, "linux-x86_64", "zui-host"),
-                   linux.send(:cached)
-      assert_equal File.join(home, "Library", "Caches", "zui", "host", Zui::VERSION,
-                             "macos-x86_64", "zui-host"), macos.send(:cached)
-      assert_equal File.join(home, "Local", "zui", "host", Zui::VERSION,
-                             "windows-x86_64", "zui-host.exe"), windows.send(:cached)
-    end
+    error = assert_raises(ArgumentError) { host.executable }
+    assert_includes error.message, "zui configure"
+    refute host.available?
   end
 
-  def test_windows_build_help_names_the_required_native_toolchain
-    host = host_for(:windows, home: Dir.home)
-
-    assert_includes host.platform_help, "Windows"
-    assert_includes host.platform_help, "CMake"
-    assert_includes host.platform_help, "Qt 6"
-  end
-
-  def test_windows_command_lookup_honors_pathext
+  def test_uses_the_configured_clients_executable_and_environment
     Dir.mktmpdir do |directory|
-      executable = File.join(directory, "cmake.exe")
-      File.write(executable, "binary")
-      FileUtils.chmod(0o755, executable)
-      host = host_for(:windows, home: directory, "PATH" => directory, "PATHEXT" => ".EXE;.CMD")
+      platform = Zui::Platform.new(os: :linux, arch: :x86_64)
+      root = ClientFixture.create(File.join(directory, "client"), platform:)
+      client = Zui::Client.new(platform:, environment: { "ZUI_CLIENT_ROOT" => root })
+      host = Zui::Host.new(platform:, client:, environment: {})
 
-      assert_equal executable, host.send(:find_command, "cmake")
+      assert_equal File.join(root, "bin", "zui-host"), host.executable
+      assert_equal File.join(root, "qml"), host.environment.fetch("QML_IMPORT_PATH")
     end
   end
 
-  private
+  def test_explicit_host_override_does_not_inherit_client_paths
+    Dir.mktmpdir do |directory|
+      executable = File.join(directory, "custom-host")
+      File.write(executable, "host")
+      FileUtils.chmod(0o755, executable)
+      client = Object.new
+      platform = Zui::Platform.new(os: :linux, arch: :x86_64)
+      host = Zui::Host.new(platform:, client:, environment: { "ZUI_HOST" => executable })
 
-  def host_for(os, home:, **environment)
-    platform = Zui::Platform.new(os:, arch: :x86_64)
-    Zui::Host.new(platform:, framework_root: File.expand_path("..", __dir__),
-                  environment: { "HOME" => home, "USERPROFILE" => home }.merge(environment))
+      assert_equal executable, host.executable
+      assert_equal({ "PATH" => "/bin" }, host.environment("PATH" => "/bin"))
+    end
   end
 end

@@ -4,6 +4,7 @@ require "fileutils"
 require "rbconfig"
 require "rubygems"
 require_relative "../lib/zui"
+require_relative "../lib/zui/client_builder"
 
 ROOT = File.expand_path("..", __dir__)
 
@@ -26,12 +27,11 @@ qml_files.concat(Dir[File.join(ROOT, "{Components,Controls,Theme}", "**", "*.qml
 qml_files.each_slice(40) { |files| run!(qml_linter, "-I", ROOT, *files) }
 
 platform = Zui::Platform.current.assert_supported!
-executable_name = platform.windows? ? "zui-host.exe" : "zui-host"
-host_path = File.join(ROOT, "tmp", "ci-host", platform.id, executable_name)
-FileUtils.rm_f(host_path)
-puts "+ build native host for #{platform.id}"
-Zui::Host.new(platform:).build!(host_path)
-abort "native host was not produced: #{host_path}" unless File.executable?(host_path)
+client_dir = File.join(ROOT, "tmp", "clients")
+FileUtils.mkdir_p(client_dir)
+Dir[File.join(client_dir, "zui-client-#{platform.id}.tar.gz*")].each { |path| FileUtils.rm_f(path) }
+puts "+ build relocatable client for #{platform.id}"
+client_archive = Zui::ClientBuilder.new(platform:).build!(output: client_dir)
 
 gem_dir = File.join(ROOT, "tmp", "gems")
 FileUtils.mkdir_p(gem_dir)
@@ -41,7 +41,7 @@ run!(RbConfig.ruby, "-S", "gem", "build", "zui.gemspec", "--output", gem_path)
 run!(RbConfig.ruby, "-S", "gem", "install", "--local", "--force", "--no-document", gem_path)
 cli_path = Gem.bin_path("zui", "zui", Zui::VERSION)
 run!(RbConfig.ruby, cli_path, "version")
-run!(RbConfig.ruby, File.join(ROOT, "scripts", "runtime_smoke.rb"), host_path, cli_path,
+run!(RbConfig.ruby, File.join(ROOT, "scripts", "client_smoke.rb"), client_archive, cli_path,
      File.join(ROOT, "test", "fixtures", "smoke_app.rb"))
 
 puts "Zui native CI passed on #{platform.id}."

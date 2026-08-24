@@ -7,20 +7,25 @@ module Zui
   class Distribution
     attr_reader :platform
 
-    def initialize(host: Host.new, platform: Platform.current, framework_root: FRAMEWORK_ROOT)
-      @host = host
+    def initialize(client: nil, platform: Platform.current, framework_root: FRAMEWORK_ROOT)
       @platform = platform.assert_supported!
+      @client = client || Client.new(platform: @platform)
       @framework_root = framework_root
     end
 
     def bundle(source, name: nil, destination: nil)
+      created = false
       project = File.expand_path(source)
       raise ArgumentError, "project directory not found: #{project}" unless File.directory?(project)
       raise ArgumentError, "main.rb not found: #{project}" unless File.file?(File.join(project, "main.rb"))
+      unless @client.configured?
+        raise ArgumentError, "Zui is not configured for #{platform.id}; run `zui configure` before bundling"
+      end
       app_name = name || titleize(File.basename(project))
       destination ||= default_destination(project, app_name)
       destination = File.expand_path(destination)
       raise ArgumentError, "bundle destination already exists: #{destination}" if File.exist?(destination)
+      created = true
 
       case platform.os
       when :linux then bundle_linux(project, destination, app_name)
@@ -29,19 +34,18 @@ module Zui
       end
       destination
     rescue StandardError
-      FileUtils.remove_entry(destination) if destination && File.exist?(destination)
+      FileUtils.remove_entry(destination) if created && destination && File.exist?(destination)
       raise
     end
 
     private
 
     def bundle_linux(project, destination, app_name)
-      FileUtils.mkdir_p([File.join(destination, "app"), File.join(destination, "bin"),
+      FileUtils.mkdir_p([File.join(destination, "app"),
                          File.join(destination, "runtime"), File.join(destination, "share", "applications")])
       install_application(project, File.join(destination, "app"))
       install_runtime(File.join(destination, "runtime"))
-      FileUtils.cp(@host.executable, File.join(destination, "bin", "zui-host"))
-      FileUtils.chmod(0o755, File.join(destination, "bin", "zui-host"))
+      @client.copy_to(File.join(destination, "runtime", "native"))
       write_linux_launcher(destination, app_name)
       desktop_name = "#{slug(app_name)}.desktop"
       File.write(File.join(destination, "share", "applications", desktop_name), <<~DESKTOP)
@@ -62,8 +66,7 @@ module Zui
       FileUtils.mkdir_p([macos, File.join(resources, "app"), File.join(resources, "runtime")])
       install_application(project, File.join(resources, "app"))
       install_runtime(File.join(resources, "runtime"))
-      FileUtils.cp(@host.executable, File.join(macos, "zui-host"))
-      FileUtils.chmod(0o755, File.join(macos, "zui-host"))
+      @client.copy_to(File.join(resources, "runtime", "native"))
       File.write(File.join(macos, "run"), macos_launcher(app_name))
       FileUtils.chmod(0o755, File.join(macos, "run"))
       File.write(File.join(contents, "Info.plist"), info_plist(app_name))
@@ -71,11 +74,11 @@ module Zui
     end
 
     def bundle_windows(project, destination, app_name)
-      FileUtils.mkdir_p([File.join(destination, "app"), File.join(destination, "bin"),
+      FileUtils.mkdir_p([File.join(destination, "app"),
                          File.join(destination, "runtime")])
       install_application(project, File.join(destination, "app"))
       install_runtime(File.join(destination, "runtime"))
-      FileUtils.cp(@host.executable, File.join(destination, "bin", "zui-host.exe"))
+      @client.copy_to(File.join(destination, "runtime", "native"))
       File.write(File.join(destination, "run.rb"), windows_ruby_launcher(app_name))
       File.write(File.join(destination, "run.cmd"), windows_command_launcher)
       write_manifest(destination, app_name)
@@ -93,7 +96,11 @@ module Zui
       Runtime.install_qml(File.join(destination, "qml"), framework_root: @framework_root)
       FileUtils.mkdir_p(File.join(destination, "lib"))
       FileUtils.cp(File.join(@framework_root, "lib", "zui.rb"), File.join(destination, "lib", "zui.rb"))
-      FileUtils.cp_r(File.join(@framework_root, "lib", "zui"), File.join(destination, "lib", "zui"))
+      source = File.join(@framework_root, "lib", "zui")
+      target = File.join(destination, "lib", "zui")
+      FileUtils.mkdir_p(target)
+      entries = Dir.children(source).reject { |entry| %w[client_builder.rb client_packager.rb].include?(entry) }
+      FileUtils.cp_r(entries.map { |entry| File.join(source, entry) }, target) unless entries.empty?
     end
 
     def write_linux_launcher(destination, app_name)
@@ -101,8 +108,10 @@ module Zui
         #!/bin/sh
         set -eu
         bundle_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+        native_dir="$bundle_dir/runtime/native"
+        #{posix_client_environment}
         ruby_command=${ZUI_RUBY:-ruby}
-        exec "$bundle_dir/bin/zui-host" \
+        exec "$native_dir/#{@client.executable_relative_path}" \
           --qml-root "$bundle_dir/runtime/qml" \
           --project "$bundle_dir/app" \
           --program "$bundle_dir/app/main.rb" \
@@ -119,8 +128,10 @@ module Zui
         set -eu
         contents=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
         resources="$contents/Resources"
+        native_dir="$resources/runtime/native"
+        #{posix_client_environment}
         ruby_command=${ZUI_RUBY:-ruby}
-        exec "$contents/MacOS/zui-host" \
+        exec "$native_dir/#{@client.executable_relative_path}" \
           --qml-root "$resources/runtime/qml" \
           --project "$resources/app" \
           --program "$resources/app/main.rb" \
@@ -137,8 +148,11 @@ module Zui
         require "rbconfig"
 
         bundle_dir = File.expand_path(__dir__)
+        native_dir = File.join(bundle_dir, "runtime", "native")
+        environment = {}
+        #{windows_environment_builder}
         arguments = [
-          File.join(bundle_dir, "bin", "zui-host.exe"),
+          File.join(native_dir, #{@client.executable_relative_path.dump}),
           "--qml-root", File.join(bundle_dir, "runtime", "qml"),
           "--project", File.join(bundle_dir, "app"),
           "--program", File.join(bundle_dir, "app", "main.rb"),
@@ -146,7 +160,7 @@ module Zui
           "--load-path", File.join(bundle_dir, "runtime", "lib"),
           "--name", #{app_name.to_s.dump}
         ]
-        exec(*arguments)
+        exec(environment, *arguments)
       RUBY
     end
 
@@ -183,7 +197,7 @@ module Zui
       File.write(File.join(directory, "zui-bundle.json"), JSON.pretty_generate(
         "format" => 1, "framework" => "zui", "version" => VERSION,
         "platform" => platform.os.to_s, "architecture" => platform.arch.to_s,
-        "name" => app_name
+        "name" => app_name, "client_version" => @client.manifest.fetch("client_version")
       ))
     end
 
@@ -196,5 +210,28 @@ module Zui
     def slug(value) = value.downcase.gsub(/[^a-z0-9]+/, "-").gsub(/\A-|-\z/, "")
     def shell_quote(value) = "'#{value.to_s.gsub("'", %q('"'"'))}'"
     def xml_escape(value) = value.to_s.gsub("&", "&amp;").gsub("<", "&lt;").gsub(">", "&gt;")
+
+    def posix_client_environment
+      @client.environment_entries.map do |name, paths|
+        value = paths.map { |path| "$native_dir/#{path}" }.join(":")
+        <<~SH.chomp
+          zui_environment="#{value}"
+          [ -z "${#{name}:-}" ] || zui_environment="$zui_environment:${#{name}}"
+          export #{name}="$zui_environment"
+        SH
+      end.join("\n")
+    end
+
+    def windows_client_environment = @client.environment_entries
+
+    def windows_environment_builder
+      @client.environment_entries.keys.map do |name|
+        <<~RUBY.chomp
+          values = #{windows_client_environment.fetch(name).inspect}.map { |path| File.join(native_dir, path) }
+          values << ENV[#{name.dump}] unless ENV[#{name.dump}].nil? || ENV[#{name.dump}].empty?
+          environment[#{name.dump}] = values.join(File::PATH_SEPARATOR)
+        RUBY
+      end.join("\n")
+    end
   end
 end
