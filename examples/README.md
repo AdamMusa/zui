@@ -1,7 +1,7 @@
 # Standalone Zui applications
 
 Every application in this directory is pure Ruby plus application assets. They
-run through Zui's ordinary Qt host on Linux and macOS and contain no Omarchy UI,
+run through Zui's ordinary Qt host on Linux, macOS, and Windows and contain no Omarchy UI,
 Quickshell, shell imports, or application-owned QML.
 
 The complete showcase migration is available app-for-app:

@@ -6,8 +6,8 @@ business logic. QML is the rendering backend, not application code.
 
 This repository is the reusable core. Distribution integrations live at its edges:
 
-- Linux desktop applications use the standalone Qt host.
-- macOS applications use the same Qt host inside an app bundle.
+- Linux and Windows desktop applications use the standalone Qt host.
+- macOS applications use the same host inside a standard application bundle.
 - Omarchy plugins and applications use the separate
   [`omarchy-ui`](https://github.com/AdamMusa/omarchy-ui) adapter.
 
@@ -44,20 +44,54 @@ zui run main.rb
 zui bundle
 ```
 
-`zui run` uses the bundled host for supported release targets. If a matching host is not
-bundled, Zui builds and caches it from the checked-in C++ source with CMake and Qt 6.
+Until the first RubyGems release, install directly from a checkout:
 
-`zui bundle` produces a Linux application directory on Linux and a standard `.app` bundle on
-macOS. Each package includes the application, Zui Ruby runtime, QML renderer, component catalog,
-theme, controls, and the native host. Ruby and the required Qt runtime libraries must be available
-on the destination machine; native packages can add them with the distribution's normal dependency
-system.
+```bash
+gem build zui.gemspec
+gem install ./zui-0.1.0.gem
+```
+
+`zui run` uses the bundled host for supported release targets. If a matching host is not
+bundled, Zui builds and caches it from the checked-in C++ source with CMake and Qt 6.8 or newer.
+
+`zui bundle` produces an application directory on Linux and Windows and a standard `.app` bundle
+on macOS. Each package includes the application, Zui Ruby runtime, QML renderer, component catalog,
+theme, controls, and native host. Ruby and the required Qt runtime libraries must be available on
+the destination machine; native installers can add them with the platform's normal deployment
+tools.
 
 See [Platform support](docs/platforms.md) for host requirements and bundle layouts.
 
 Zui has no separate validation command. `run` opens the app directly, and
 `bundle` packages the project directly. Ruby, DSL, protocol, resource, and QML
 errors are reported by the operation that actually encounters them.
+
+## Reusable application UI
+
+Application UI modules are scoped to one builder instead of being mixed into Zui globally:
+
+```ruby
+module TelemetryConsole
+  module UI
+    def dashboard
+      card { text "System online" }
+    end
+  end
+
+  def self.build
+    Zui::Application.new(ui: UI) do
+      app(:main, title: "Telemetry Console") { dashboard }
+    end
+  end
+
+  def self.run = build.run
+end
+
+TelemetryConsole.run
+```
+
+This keeps `main.rb` at one domain-level call and prevents components from one application leaking
+into another application's DSL.
 
 ## Architecture
 
