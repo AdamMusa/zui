@@ -39,7 +39,8 @@ class ClientTest < Minitest::Test
       assert client.configured?
       assert_equal File.join(installed, "bin", "zui-host"), client.executable
       environment = client.environment({ "PATH" => "/usr/bin", "LD_LIBRARY_PATH" => "/existing" })
-      assert_equal "#{File.join(installed, 'lib')}:/existing", environment.fetch("LD_LIBRARY_PATH")
+      assert_equal [File.join(installed, "lib"), "/existing"].join(File::PATH_SEPARATOR),
+                   environment.fetch("LD_LIBRARY_PATH")
       assert_equal "/usr/bin", environment.fetch("PATH")
       refute File.exist?(File.join(installed, "app"))
       refute File.exist?(File.join(installed, "lib", "zui.rb"))
