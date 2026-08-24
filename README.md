@@ -44,11 +44,11 @@ zui run main.rb
 zui bundle
 ```
 
-Until the first RubyGems release, install directly from a checkout:
+Build and install the gem directly from a checkout:
 
 ```bash
 gem build zui.gemspec
-gem install ./zui-0.1.0.gem
+gem install ./zui-0.0.1.gem
 ```
 
 `zui run` uses the bundled host for supported release targets. If a matching host is not
