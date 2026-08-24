@@ -158,7 +158,7 @@ QQC.Control {
               anchors.verticalCenter: parent.verticalCenter
               text: renderer.iconGlyph("chevron_down")
               color: renderer.prop("accent", Color.accent)
-              font.family: renderer.fontFamily
+              font.family: renderer.iconFontFamily
               font.pixelSize: Number(renderer.prop("indicator_size", Style.font.icon))
               rotation: sectionRoot.expanded ? 180 : 0
               Behavior on rotation {

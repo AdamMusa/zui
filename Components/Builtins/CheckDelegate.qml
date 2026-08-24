@@ -105,7 +105,8 @@ QQC.CheckDelegate {
       visible: checkRoot.checkState !== Qt.Unchecked
       text: checkRoot.checkState === Qt.PartiallyChecked ? "−" : renderer.iconGlyph("check")
       color: renderer.prop("check_color", Color.background)
-      font.family: renderer.fontFamily
+      font.family: checkRoot.checkState === Qt.PartiallyChecked
+        ? String(renderer.prop("font_family", renderer.fontFamily)) : renderer.iconFontFamily
       font.pixelSize: Math.max(10, parent.height * 0.62)
       font.bold: true
     }

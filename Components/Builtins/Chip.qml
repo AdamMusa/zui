@@ -28,7 +28,7 @@ Rectangle {
           text: renderer.iconGlyph(renderer.prop("icon", ""))
           textFormat: Text.PlainText
           color: chipRoot.selected ? renderer.prop("selected_foreground", Color.background) : renderer.prop("foreground", renderer.foreground)
-          font.family: renderer.fontFamily
+          font.family: renderer.iconFontFamilyFor(renderer.prop("icon", ""))
           font.pixelSize: Number(renderer.prop("icon_size", Style.font.icon))
         }
         Text {
@@ -43,7 +43,7 @@ Rectangle {
           text: renderer.iconGlyph("xmark")
           textFormat: Text.PlainText
           color: chipRoot.selected ? renderer.prop("selected_foreground", Color.background) : renderer.prop("foreground", renderer.foreground)
-          font.family: renderer.fontFamily
+          font.family: renderer.iconFontFamily
           font.pixelSize: Number(renderer.prop("icon_size", Style.font.icon))
           MouseArea {
             anchors.fill: parent

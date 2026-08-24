@@ -11,6 +11,6 @@ Text {
       text: renderer.iconGlyph(renderer.prop("name", renderer.prop("text", "")))
       textFormat: Text.PlainText
       color: renderer.prop("color", renderer.foreground)
-      font.family: renderer.fontFamily
+      font.family: renderer.iconFontFamilyFor(renderer.prop("name", renderer.prop("text", "")))
       font.pixelSize: Number(renderer.prop("size", Style.font.icon))
     }

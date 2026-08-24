@@ -15,8 +15,8 @@ Gem::Specification.new do |spec|
   spec.metadata["rubygems_mfa_required"] = "true"
   spec.required_ruby_version = ">= 3.1"
   spec.files = Dir[
-    "bin/*", "lib/**/*.rb", "*.qml", "Components/**/*", "Controls/**/*", "Theme/**/*",
-    "README.md", "LICENSE"
+    "bin/*", "lib/**/*.rb", "*.qml", "Components/**/*", "Controls/**/*", "Theme/**/*", "Fonts/**/*",
+    "README.md", "LICENSE", "THIRD_PARTY_NOTICES.md"
   ].reject { |path| path.match?(%r{\Alib/zui/client_(?:builder|packager)\.rb\z}) }
   spec.require_paths = ["lib"]
   spec.bindir = "bin"

@@ -21,6 +21,7 @@ ZuiControls.Button {
     background: renderer.prop("background", "transparent")
     accent: renderer.prop("accent", Color.accent)
     fontFamily: String(renderer.prop("font_family", renderer.fontFamily))
+    iconFontFamily: renderer.iconFontFamilyFor(renderer.prop("icon", ""))
     fontSize: Number(renderer.prop("font_size", Style.font.body))
     iconSize: Number(renderer.prop("icon_size", Style.font.icon))
     iconRotation: Number(renderer.prop("icon_rotation", 0))

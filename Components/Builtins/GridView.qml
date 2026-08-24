@@ -131,7 +131,7 @@ Rectangle {
           color: current
             ? renderer.prop("selected_foreground", renderer.prop("accent", Color.accent))
             : renderer.prop("foreground", renderer.foreground)
-          font.family: renderer.fontFamily
+          font.family: renderer.iconFontFamilyFor(gridRoot.itemIcon(modelData))
           font.pixelSize: Number(renderer.prop("icon_size", 28))
         }
 

@@ -10,5 +10,5 @@ Item {
   implicitWidth: glyph.implicitWidth
   implicitHeight: glyph.implicitHeight
   Rectangle { anchors.fill: parent; visible: parent.debugBounds; color: "transparent"; border.color: Color.accent }
-  Text { id: glyph; anchors.centerIn: parent; color: Color.foreground; font.family: Style.font.family; font.pixelSize: Style.font.icon }
+  Text { id: glyph; anchors.centerIn: parent; color: Color.foreground; font.family: Fonts.iconFamily; font.pixelSize: Style.font.icon }
 }

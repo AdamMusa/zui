@@ -130,7 +130,7 @@ QQC.Popup {
         visible: renderer.prop("show_close", true) !== false
           && renderer.prop("dismissible", true) !== false
         text: renderer.iconGlyph("xmark")
-        font.family: renderer.fontFamily
+        font.family: renderer.iconFontFamily
         font.pixelSize: Number(renderer.prop("font_size", Style.font.body))
         onClicked: modalSheetRoot.dismiss("close_button")
       }

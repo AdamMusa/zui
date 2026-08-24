@@ -15,6 +15,7 @@ Item {
   property color background: "transparent"
   property color accent: Color.accent
   property string fontFamily: Style.font.family
+  property string iconFontFamily: Fonts.iconFamily
   property real fontSize: Style.font.body
   property real iconSize: Style.font.icon
   property real iconRotation: 0
@@ -53,7 +54,7 @@ Item {
       visible: root.iconText !== ""
       text: root.iconText
       color: root.selected || root.active ? Color.background : root.foreground
-      font.family: root.fontFamily
+      font.family: root.iconFontFamily
       font.pixelSize: root.iconSize
       rotation: root.iconRotation
     }

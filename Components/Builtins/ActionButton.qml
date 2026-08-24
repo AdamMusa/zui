@@ -12,7 +12,7 @@ ZuiControls.PanelActionButton {
       bordered: renderer.prop("bordered", false) === true; focusable: renderer.prop("focusable", false) === true
       hasCursor: renderer.prop("cursor", false) === true
       size: Number(renderer.prop("size", 28)); foreground: renderer.prop("foreground", renderer.foreground)
-      hoverColor: renderer.prop("hover_color", foreground); fontFamily: String(renderer.prop("font_family", renderer.fontFamily))
+      hoverColor: renderer.prop("hover_color", foreground); fontFamily: renderer.iconFontFamilyFor(renderer.prop("icon", ""))
       fontSize: Number(renderer.prop("font_size", Style.font.icon))
       onClicked: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "click", {})
       onHovered: function(value) { renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "hover", { value: value }) }

@@ -105,7 +105,7 @@ QQC.Popup {
       text: renderer.iconGlyph(toastRoot.severityIcon())
       textFormat: Text.PlainText
       color: toastRoot.severityColor()
-      font.family: renderer.fontFamily
+      font.family: renderer.iconFontFamily
       font.pixelSize: Number(renderer.prop("icon_size", 22))
     }
 

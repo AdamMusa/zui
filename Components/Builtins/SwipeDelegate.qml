@@ -106,7 +106,7 @@ QQC.SwipeDelegate {
       text: String(renderer.prop("icon", "")).length > 0
         ? renderer.iconGlyph(renderer.prop("icon", "")) : ""
       color: renderer.prop("icon_color", renderer.prop("foreground", renderer.foreground))
-      font.family: renderer.fontFamily
+      font.family: renderer.iconFontFamilyFor(renderer.prop("icon", ""))
       font.pixelSize: Number(renderer.prop("icon_size", 22))
       horizontalAlignment: Text.AlignHCenter
     }
@@ -147,7 +147,7 @@ QQC.SwipeDelegate {
           visible: text.length > 0
           text: renderer.iconGlyph(renderer.prop("left_icon", ""))
           color: Color.background
-          font.family: renderer.fontFamily
+          font.family: renderer.iconFontFamilyFor(renderer.prop("left_icon", ""))
           font.pixelSize: Number(renderer.prop("icon_size", 22))
         }
         Text {
@@ -174,7 +174,7 @@ QQC.SwipeDelegate {
           visible: text.length > 0
           text: renderer.iconGlyph(renderer.prop("right_icon", ""))
           color: Color.background
-          font.family: renderer.fontFamily
+          font.family: renderer.iconFontFamilyFor(renderer.prop("right_icon", ""))
           font.pixelSize: Number(renderer.prop("icon_size", 22))
         }
         Text {

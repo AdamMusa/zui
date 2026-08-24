@@ -11,7 +11,7 @@ Item {
   property string indicatorBlock: "single"
   property color foreground: Color.foreground
   property color activeColor: Color.accent
-  property string fontFamily: Style.font.family
+  property string fontFamily: Fonts.iconFamily
   property real fontSize: Style.font.caption
   signal pressed(int button)
   signal wheelMoved(real delta)

@@ -41,7 +41,7 @@ Item {
           text: renderer.iconGlyph(passwordRoot.revealState ? "eye_slash" : "eye")
           textFormat: Text.PlainText
           color: renderer.foreground
-          font.family: renderer.fontFamily
+          font.family: renderer.iconFontFamily
           font.pixelSize: Style.font.icon
         }
         TapHandler {

@@ -46,7 +46,7 @@ QQC.ApplicationWindow {
     id: renderer
     anchors.fill: parent
     anchors.margins: Number(window.option("padding", 20))
-    visible: window.activeSurface !== "" && service.rootId(window.activeSurface) !== ""
+    visible: Fonts.ready && window.activeSurface !== "" && service.rootId(window.activeSurface) !== ""
     bridge: service
     surfaceName: window.activeSurface
     controlId: service.rootId(surfaceName)
@@ -58,10 +58,14 @@ QQC.ApplicationWindow {
     anchors.centerIn: parent
     spacing: Style.spacing.sm
     visible: !renderer.visible
-    QQC.BusyIndicator { anchors.horizontalCenter: parent.horizontalCenter; running: !service.ready && service.lastError === "" }
+    QQC.BusyIndicator {
+      anchors.horizontalCenter: parent.horizontalCenter
+      running: (!service.ready || !Fonts.ready) && service.lastError === "" && !Fonts.failed
+    }
     Text {
       anchors.horizontalCenter: parent.horizontalCenter
-      text: service.lastError !== "" ? service.lastError : "Starting Zui…"
+      text: service.lastError !== "" ? service.lastError
+        : (Fonts.failed ? "Zui could not load its bundled fonts" : "Starting Zui…")
       color: Color.foreground
       font.family: Style.font.family
       font.pixelSize: Style.font.body

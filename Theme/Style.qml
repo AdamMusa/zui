@@ -11,7 +11,7 @@ QtObject {
   function selectedFillFor(foreground, accent) { return Qt.rgba(accent.r, accent.g, accent.b, 0.22) }
 
   readonly property QtObject font: QtObject {
-    readonly property string family: "Sans Serif"
+    readonly property string family: Fonts.family
     readonly property int caption: 11
     readonly property int bodySmall: 12
     readonly property int body: 14

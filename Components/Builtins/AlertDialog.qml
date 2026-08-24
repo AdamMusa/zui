@@ -258,7 +258,7 @@ QQC.Dialog {
                     anchors.centerIn: parent
                     text: renderer.iconGlyph(alertRoot.severityIcon())
                     color: renderer.prop("icon_foreground", Color.background)
-                    font.family: renderer.fontFamily
+                    font.family: renderer.iconFontFamily
                     font.pixelSize: Math.max(10, parent.width * 0.5)
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
@@ -380,6 +380,7 @@ QQC.Dialog {
                     background: primary ? renderer.prop("button_background", "transparent") : "transparent"
                     accent: renderer.prop("button_accent", renderer.prop("accent", Color.accent))
                     fontFamily: String(renderer.prop("font_family", renderer.fontFamily))
+                    iconFontFamily: renderer.iconFontFamily
                     fontSize: Number(renderer.prop("font_size", Style.font.body))
                     focusable: true
                     bordered: !primary

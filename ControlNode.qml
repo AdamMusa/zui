@@ -15,6 +15,8 @@ Loader {
   property string controlId: ""
   property color foreground: Color.foreground
   property string fontFamily: Style.font.family
+  readonly property string iconFontFamily: Fonts.iconFamily
+  readonly property string brandIconFontFamily: Fonts.brandIconFamily
 
   // Shared recursive delegates are framework infrastructure. Individual built-in
   // renderers consume these without duplicating ControlNode's lifecycle wiring.
@@ -55,7 +57,7 @@ Loader {
 
   function iconGlyph(name) {
     var icons = {
-      ruby: "\ue23e",
+      ruby: "\uf3a5",
       phone: "\uf3cd",
       plus: "\uf067",
       minus: "\uf068",
@@ -76,6 +78,12 @@ Loader {
     }
     var key = String(name || "")
     return icons[key] || key
+  }
+
+  function iconFontFamilyFor(name) {
+    var key = String(name || "")
+    return ["bluetooth", "android", "apple"].indexOf(key) >= 0
+      ? brandIconFontFamily : iconFontFamily
   }
 
   function escapeAutoText(value) {

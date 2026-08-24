@@ -10,7 +10,7 @@ Item {
   property color activeColor: Color.accent
   property real slotSize: 30
   property real opticalSize: 18
-  property string fontFamily: Style.font.family
+  property string fontFamily: Fonts.iconFamily
   property real fontSize: Style.font.icon
   property real textRotation: 0
   property bool keepSpace: false

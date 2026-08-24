@@ -91,6 +91,30 @@ class QmlContractTest < Minitest::Test
     refute_includes qml, "Process {"
   end
 
+  def test_service_applies_reactive_patch_batches_with_one_visual_revision
+    qml = source("Service.qml")
+
+    assert_includes qml, 'message.op === "batch"'
+    assert_includes qml, "validSetPatch(message.patches[batchIndex])"
+    assert_includes qml, "applySetPatch(message.patches[applyIndex], false)"
+  end
+
+  def test_framework_loads_bundled_cross_platform_text_and_icon_fonts
+    fonts = source("Theme/Fonts.qml")
+    style = source("Theme/Style.qml")
+    renderer = source("ControlNode.qml")
+    framework_qml = (Dir[File.join(ROOT, "*.qml")] +
+      Dir[File.join(ROOT, "{Components,Controls,Theme}", "**", "*.qml")]).map { File.read(_1) }.join("\n")
+
+    %w[RobotoMono-Regular.otf RobotoMono-Bold.otf FontAwesome-Solid.otf FontAwesome-Brands.otf].each do |name|
+      assert_operator File.size(File.join(ROOT, "Fonts", name)), :>, 10_000
+    end
+    assert_includes fonts, "readonly property bool ready:"
+    assert_includes style, "readonly property string family: Fonts.family"
+    assert_includes renderer, "readonly property string iconFontFamily: Fonts.iconFamily"
+    refute_match(/Sans ?Serif/, framework_qml)
+  end
+
   def test_renderer_installs_the_ruby_component_registry
     qml = source("Service.qml")
     assert_includes qml, "function validateComponents(components)"

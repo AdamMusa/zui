@@ -12,5 +12,5 @@ ZuiControls.OpticalGlyph {
   fontSize: Number(renderer.prop("size", Style.font.body))
   color: renderer.prop("color", renderer.foreground)
   debugBounds: renderer.prop("debug_bounds", false) === true
-  fontFamily: renderer.fontFamily
+  fontFamily: renderer.iconFontFamilyFor(renderer.prop("text", ""))
 }

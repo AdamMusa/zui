@@ -112,7 +112,7 @@ QQC.Pane {
                 text: renderer.iconGlyph(breadcrumbRoot.itemValue(index, "icon", ""))
                 color: crumbButton.enabled ? renderer.prop("foreground", renderer.foreground)
                   : renderer.prop("muted", Color.muted)
-                font.family: renderer.fontFamily
+                font.family: renderer.iconFontFamilyFor(breadcrumbRoot.itemValue(index, "icon", ""))
                 font.pixelSize: Number(renderer.prop("icon_size", Style.font.icon))
                 anchors.verticalCenter: parent.verticalCenter
               }
@@ -142,7 +142,7 @@ QQC.Pane {
             visible: index < breadcrumbRoot.destinations.length - 1
             text: renderer.iconGlyph(renderer.prop("separator", "chevron_right"))
             color: renderer.prop("muted", Color.muted)
-            font.family: renderer.fontFamily
+            font.family: renderer.iconFontFamilyFor(renderer.prop("separator", "chevron_right"))
             font.pixelSize: Number(renderer.prop("icon_size", Style.font.icon))
             anchors.verticalCenter: parent.verticalCenter
           }

@@ -1245,6 +1245,37 @@ class ZuiTest < Minitest::Test
     assert_equal "Total: 5", patches.first.fetch("value")
   end
 
+  def test_transactions_emit_multiple_reactive_values_as_one_atomic_patch_batch
+    app = Zui::Application.new do
+      state :first, 0
+      state :second, 0
+      panel :main do
+        first = text "", id: :first_value
+        second = text "", id: :second_value
+        bind(first, :text) { "First: #{state.first}" }
+        bind(second, :text) { "Second: #{state.second}" }
+        button("Batch", id: :batch) do
+          transaction do
+            state.first = 2
+            state.second = 3
+          end
+        end
+      end
+    end
+    output = StringIO.new
+    app.start(output: output, error: StringIO.new)
+    output.truncate(0)
+    output.rewind
+
+    app.receive(event("batch", surface: "main"))
+
+    patches = messages(output).select { |message| message["type"] == "patch" }
+    assert_equal 1, patches.length
+    assert_equal "batch", patches.first.fetch("op")
+    assert_equal %w[first_value second_value], patches.first.fetch("patches").map { _1.fetch("id") }
+    assert_equal ["First: 2", "Second: 3"], patches.first.fetch("patches").map { _1.fetch("value") }
+  end
+
   def test_values_reject_cycles_nonfinite_numbers_and_excessive_depth
     cyclic = []
     cyclic << cyclic

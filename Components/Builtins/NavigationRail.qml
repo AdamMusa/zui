@@ -103,7 +103,7 @@ QQC.Pane {
               color: parent.selected ? renderer.prop("accent", Color.accent)
                 : (parent.available ? renderer.prop("foreground", renderer.foreground)
                   : renderer.prop("muted", Color.muted))
-              font.family: renderer.fontFamily
+              font.family: renderer.iconFontFamilyFor(railRoot.itemValue(index, "icon", "circle_info"))
               font.pixelSize: Number(renderer.prop("icon_size", Style.font.icon))
               anchors.verticalCenter: parent.verticalCenter
             }

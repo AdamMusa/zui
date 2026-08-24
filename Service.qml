@@ -184,7 +184,17 @@ Item {
 
   function applyPatch(message) {
     if (!validId(message.id))
-      return reject("invalid patch")
+      if (message.op !== "batch") return reject("invalid patch")
+    if (message.op === "batch") {
+      if (!Array.isArray(message.patches) || message.patches.length === 0 || message.patches.length > 256)
+        return reject("patch batch rejected")
+      for (var batchIndex = 0; batchIndex < message.patches.length; batchIndex++)
+        if (!validSetPatch(message.patches[batchIndex])) return reject("patch batch rejected")
+      for (var applyIndex = 0; applyIndex < message.patches.length; applyIndex++)
+        applySetPatch(message.patches[applyIndex], false)
+      revision += 1
+      return true
+    }
     var node = nodeIndex[message.id]
     if (!node) return reject("patch target rejected")
 
@@ -250,12 +260,25 @@ Item {
 
     if (message.op !== "set" || typeof message.property !== "string") return reject("invalid patch")
     if (!allowedProperties[node.type][message.property]) return reject("patch target rejected")
+    if (!boundedValue(message.value, 0)) return reject("patch value rejected")
+    if (message.animation !== undefined && !validAnimation(message.animation))
+      return reject("patch animation rejected")
+    return applySetPatch(message, true)
+  }
+
+  function validSetPatch(message) {
+    if (!plainObject(message) || message.op !== "set" || !validId(message.id)
+        || typeof message.property !== "string") return false
+    var node = nodeIndex[message.id]
+    if (!node || !allowedProperties[node.type][message.property]) return false
+    if (!boundedValue(message.value, 0)) return false
+    return message.animation === undefined || validAnimation(message.animation)
+  }
+
+  function applySetPatch(message, incrementRevision) {
+    var node = nodeIndex[message.id]
     var value = message.value
-    if (!boundedValue(value, 0)) return reject("patch value rejected")
-
     var animation = message.animation
-    if (animation !== undefined && !validAnimation(animation)) return reject("patch animation rejected")
-
     var replacement = ({ type: node.type, id: node.id })
     var props = ({})
     var oldProps = node.props || {}
@@ -280,7 +303,8 @@ Item {
     for (var id in nodeIndex) nextIndex[id] = nodeIndex[id]
     nextIndex[node.id] = replacement
     nodeIndex = nextIndex
-    revision += 1
+    if (incrementRevision) revision += 1
+    return true
   }
 
   function validAnimation(animation) {

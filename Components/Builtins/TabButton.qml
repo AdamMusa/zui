@@ -45,7 +45,7 @@ QQC.TabButton {
         && String(renderer.prop("icon_source", "")).length === 0
       text: renderer.iconGlyph(renderer.prop("icon", ""))
       color: renderer.prop("icon_color", renderer.prop("foreground", renderer.foreground))
-      font.family: renderer.fontFamily
+      font.family: renderer.iconFontFamilyFor(renderer.prop("icon", ""))
       font.pixelSize: Number(renderer.prop("icon_width", Style.font.body))
       anchors.verticalCenter: parent.verticalCenter
     }

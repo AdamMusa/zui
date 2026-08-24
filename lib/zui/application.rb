@@ -19,6 +19,7 @@ module Zui
       @output = nil
       @error = $stderr
       @running = false
+      @patch_batch = nil
       @write_lock = Mutex.new
       @state_change_lock = Mutex.new
       @components = components.dup
@@ -174,11 +175,31 @@ module Zui
 
     def state_changed(_name, _previous, _value)
       @state_change_lock.synchronize do
-        @structures.dup.each do |structure|
-          reconcile_structure(structure) if @structures.include?(structure)
+        @patch_batch = []
+        begin
+          @structures.dup.each do |structure|
+            reconcile_structure(structure) if @structures.include?(structure)
+          end
+          @bindings.dup.each { |binding| update_binding(binding) }
+        ensure
+          patches = @patch_batch
+          @patch_batch = nil
         end
-        @bindings.dup.each { |binding| update_binding(binding) }
+        flush_patch_batch(patches)
       end
+    end
+
+    def flush_patch_batch(patches)
+      return if patches.empty?
+      return emit(patches.first) if patches.length == 1
+
+      batch = {
+        "v" => PROTOCOL_VERSION, "type" => "patch", "op" => "batch",
+        "patches" => patches.map { |patch| patch.reject { |key, _| %w[v type].include?(key) } }
+      }
+      return emit(batch) if JSON.generate(batch).bytesize <= MAX_MESSAGE_BYTES
+
+      patches.each { |patch| emit(patch) }
     end
 
     def update_binding(binding)
@@ -302,6 +323,10 @@ module Zui
 
     def emit(message)
       return unless @running && @output
+      if @patch_batch && message["type"] == "patch" && message["op"] == "set"
+        @patch_batch << message
+        return
+      end
       encoded = JSON.generate(message)
       raise ProtocolError, "outgoing message exceeds #{MAX_MESSAGE_BYTES} bytes" if encoded.bytesize > MAX_MESSAGE_BYTES
       @write_lock.synchronize { @output.puts(encoded) }

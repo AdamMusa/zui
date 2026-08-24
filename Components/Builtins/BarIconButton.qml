@@ -15,7 +15,7 @@ ZuiControls.BarIconButton {
       activeColor: renderer.prop("active_color", Color.accent)
       slotSize: Number(renderer.prop("slot_size", Style.bar.iconSlot))
       opticalSize: Number(renderer.prop("optical_size", Style.bar.iconCanvas))
-      fontFamily: String(renderer.prop("font_family", renderer.fontFamily))
+      fontFamily: renderer.iconFontFamilyFor(renderer.prop("icon", ""))
       fontSize: Number(renderer.prop("font_size", Style.bar.iconFont))
       textRotation: Number(renderer.prop("text_rotation", 0))
       keepSpace: renderer.prop("keep_space", false) === true

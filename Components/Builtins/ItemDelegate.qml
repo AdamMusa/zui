@@ -75,7 +75,7 @@ QQC.ItemDelegate {
       color: renderer.prop("icon_color", delegateRoot.selected
         ? renderer.prop("selected_foreground", renderer.prop("accent", Color.accent))
         : renderer.prop("foreground", renderer.foreground))
-      font.family: renderer.fontFamily
+      font.family: renderer.iconFontFamilyFor(renderer.prop("icon", ""))
       font.pixelSize: Number(renderer.prop("icon_size", 22))
       horizontalAlignment: Text.AlignHCenter
     }
@@ -124,7 +124,7 @@ QQC.ItemDelegate {
       text: renderer.iconGlyph("chevron_right")
       textFormat: Text.PlainText
       color: renderer.prop("muted", Color.muted)
-      font.family: renderer.fontFamily
+      font.family: renderer.iconFontFamily
       font.pixelSize: Number(renderer.prop("icon_size", 22))
     }
   }

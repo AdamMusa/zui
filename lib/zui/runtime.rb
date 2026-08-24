@@ -7,7 +7,7 @@ module Zui
     module_function
 
     QML_FILES = %w[Desktop.qml Service.qml ControlNode.qml].freeze
-    QML_DIRECTORIES = %w[Components Controls Theme].freeze
+    QML_DIRECTORIES = %w[Components Controls Theme Fonts].freeze
 
     def install_qml(destination, framework_root: FRAMEWORK_ROOT)
       FileUtils.mkdir_p(destination)

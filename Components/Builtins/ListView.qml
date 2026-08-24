@@ -42,7 +42,7 @@ ListView {
           id: rowContent
           anchors.centerIn: parent
           spacing: Style.spacing.controlGap
-          Text { visible: text !== ""; text: renderer.iconGlyph(typeof modelData === "object" ? modelData[listControl.iconField] : ""); textFormat: Text.PlainText; color: renderer.foreground; font.family: renderer.fontFamily }
+          Text { visible: text !== ""; text: renderer.iconGlyph(typeof modelData === "object" ? modelData[listControl.iconField] : ""); textFormat: Text.PlainText; color: renderer.foreground; font.family: renderer.iconFontFamilyFor(typeof modelData === "object" ? modelData[listControl.iconField] : "") }
           Column {
             Text { text: String(typeof modelData === "object" ? (modelData[listControl.labelField] ?? value) : modelData); textFormat: Text.PlainText; color: renderer.foreground; font.family: renderer.fontFamily }
             Text { visible: text !== ""; text: String(typeof modelData === "object" ? (modelData[listControl.descriptionField] || "") : ""); textFormat: Text.PlainText; color: Qt.darker(renderer.foreground, 1.4); font.family: renderer.fontFamily; font.pixelSize: Style.font.caption }

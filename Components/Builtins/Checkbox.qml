@@ -43,7 +43,7 @@ QQC.CheckBox {
             text: checkControl.checked ? renderer.iconGlyph("check") : ""
             textFormat: Text.PlainText
             color: Color.background
-            font.family: String(renderer.prop("font_family", renderer.fontFamily))
+            font.family: renderer.iconFontFamily
             font.pixelSize: parent.width * 0.7
         }
 

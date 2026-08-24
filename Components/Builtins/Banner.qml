@@ -51,7 +51,7 @@ QQC.Pane {
       text: renderer.iconGlyph(bannerRoot.severityIcon())
       textFormat: Text.PlainText
       color: bannerRoot.severityColor()
-      font.family: renderer.fontFamily
+      font.family: renderer.iconFontFamily
       font.pixelSize: Number(renderer.prop("icon_size", 24))
     }
 
@@ -104,7 +104,7 @@ QQC.Pane {
       Layout.alignment: Qt.AlignTop
       visible: renderer.prop("dismissible", true) !== false
       text: renderer.iconGlyph("xmark")
-      font.family: renderer.fontFamily
+      font.family: renderer.iconFontFamily
       font.pixelSize: Number(renderer.prop("font_size", Style.font.body))
       onClicked: {
         bannerRoot.locallyDismissed = true

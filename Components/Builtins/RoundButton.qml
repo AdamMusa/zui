@@ -28,7 +28,9 @@ QQC.RoundButton {
         text: String(renderer.prop("icon", "")).length > 0 ? renderer.iconGlyph(renderer.prop("icon", "")) : nativeRoundButton.text
         textFormat: Text.PlainText
         color: nativeRoundButton.checked ? Color.background : renderer.prop("foreground", renderer.foreground)
-        font.family: String(renderer.prop("font_family", renderer.fontFamily))
+        font.family: String(renderer.prop("icon", "")).length > 0
+          ? renderer.iconFontFamilyFor(renderer.prop("icon", ""))
+          : String(renderer.prop("font_family", renderer.fontFamily))
         font.pixelSize: Number(String(renderer.prop("icon", "")).length > 0 ? renderer.prop("icon_size", Style.font.icon) : renderer.prop("font_size", Style.font.body))
         font.bold: true
         horizontalAlignment: Text.AlignHCenter
