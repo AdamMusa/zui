@@ -3,6 +3,7 @@
 require "minitest/autorun"
 require "minitest/mock"
 require "open3"
+require "rbconfig"
 require "stringio"
 require "tmpdir"
 require_relative "../lib/zui"
@@ -31,7 +32,7 @@ class CLITest < Minitest::Test
   end
 
   def test_version_executable_works_without_bundler
-    stdout, stderr, status = Open3.capture3(File.join(ROOT, "bin", "zui"), "version")
+    stdout, stderr, status = Open3.capture3(RbConfig.ruby, File.join(ROOT, "bin", "zui"), "version")
 
     assert status.success?, stderr
     assert_equal "#{Zui::VERSION}\n", stdout
