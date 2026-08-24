@@ -89,7 +89,9 @@ class TeslaDriveDashboardTest < Minitest::Test
     assert_equal false, app.state.trunk_open
     assert_equal false, app.state.charge_port_open
     assert_equal "assets/vehicle-front.png", hero.dig("props", "source")
-    Timeout.timeout(2) { sleep(0.02) until app.state.speed.positive? }
+    Timeout.timeout(2) do
+      sleep(0.02) until app.state.speed.positive? && app.state.trip_distance.positive?
+    end
     assert_operator app.state.speed, :>, 0
     assert_operator app.state.trip_distance, :>, 0
     power = nodes(app.tree.fetch("main")).find { |node| node["id"] == "drive_power" }
