@@ -77,7 +77,9 @@ Dir.mktmpdir("zui-client-smoke-") do |cache|
     /module ".+" plugin ".+" not found/i,
     /module ".+" is not installed/i,
     /cannot load library/i,
-    /library not loaded:/i
+    /library not loaded:/i,
+    /font families specified are invalid:/i,
+    /Zui could not register bundled font:/i
   ].find { |pattern| log.match?(pattern) }
   if status || fatal_runtime_error
     warn log

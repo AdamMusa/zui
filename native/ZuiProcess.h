@@ -31,4 +31,5 @@ private:
   QProcess m_process;
   QByteArray m_stdoutBuffer;
   QByteArray m_stderrBuffer;
+  bool m_crashed = false;
 };

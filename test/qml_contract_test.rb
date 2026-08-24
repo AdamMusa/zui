@@ -81,12 +81,16 @@ class QmlContractTest < Minitest::Test
   def test_service_uses_one_injected_bidirectional_transport
     qml = source("Service.qml")
     native = source("native/ZuiProcess.cpp")
+    host = source("native/main.cpp")
     assert_includes qml, "required property var transport"
     assert_includes qml, "transport.write(JSON.stringify("
     assert_includes qml, "transport.start(runtimeExecutable, program, projectDir, rubyLoadPath)"
     assert_includes qml, "function onLineReceived(line)"
     assert_includes native, "QProcess::SeparateChannels"
     assert_includes native, "m_process.write(data.toUtf8())"
+    assert_includes native, "m_crashed = true"
+    assert_includes host, "QFontDatabase::addApplicationFont"
+    assert_includes host, 'QFont::insertSubstitution(QStringLiteral("RobotoMono"), textFamily)'
     refute_includes qml, "Quickshell"
     refute_includes qml, "Process {"
   end

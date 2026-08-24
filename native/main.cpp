@@ -2,12 +2,45 @@
 #include "ZuiProcess.h"
 
 #include <QCommandLineParser>
+#include <QDebug>
 #include <QDir>
 #include <QFileInfo>
+#include <QFont>
+#include <QFontDatabase>
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QQuickStyle>
+
+namespace {
+void installBundledFonts(const QString &qmlRoot) {
+  const QDir fontsDirectory(QDir(qmlRoot).filePath(QStringLiteral("Fonts")));
+  const QStringList fontFiles = {
+      QStringLiteral("RobotoMono-Regular.otf"),
+      QStringLiteral("RobotoMono-Bold.otf"),
+      QStringLiteral("FontAwesome-Solid.otf"),
+      QStringLiteral("FontAwesome-Brands.otf")};
+  QString textFamily;
+  for (const QString &fontFile : fontFiles) {
+    const QString path = fontsDirectory.filePath(fontFile);
+    const int fontId = QFontDatabase::addApplicationFont(path);
+    if (fontId < 0) {
+      qWarning().noquote() << "Zui could not register bundled font:" << path;
+      continue;
+    }
+    const QStringList families = QFontDatabase::applicationFontFamilies(fontId);
+    if (textFamily.isEmpty() && fontFile.startsWith(QStringLiteral("RobotoMono"))
+        && !families.isEmpty())
+      textFamily = families.first();
+  }
+  if (textFamily.isEmpty())
+    return;
+
+  QFont::insertSubstitution(QStringLiteral("RobotoMono"), textFamily);
+  QFont::insertSubstitution(QStringLiteral("Roboto Mono"), textFamily);
+  QGuiApplication::setFont(QFont(textFamily));
+}
+}
 
 int main(int argc, char *argv[]) {
   QGuiApplication application(argc, argv);
@@ -36,6 +69,8 @@ int main(int argc, char *argv[]) {
   if (qmlRootValue.isEmpty() || projectValue.isEmpty() || programValue.isEmpty()
       || !desktopFile.isFile() || !QFileInfo(project).isDir() || !QFileInfo(program).isFile())
     parser.showHelp(64);
+
+  installBundledFonts(qmlRoot);
 
   ZuiProcess process;
   ZuiClipboard clipboard;

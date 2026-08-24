@@ -14,6 +14,7 @@ Zui.app do
         button "Increment", id: :increment do
           state.count += 1
         end
+        radar_chart [[3, 5, 4]], labels: %w[UI State Events], width: 140, height: 100
       end
     end
   end

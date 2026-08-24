@@ -17,7 +17,9 @@ ZuiProcess::ZuiProcess(QObject *parent) : QObject(parent) {
     emit errorLineReceived(m_process.errorString());
   });
   connect(&m_process, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), this,
-          [this](int exitCode, QProcess::ExitStatus) {
+          [this](int exitCode, QProcess::ExitStatus exitStatus) {
+            if (exitStatus == QProcess::CrashExit)
+              m_crashed = true;
             m_stdoutBuffer += m_process.readAllStandardOutput();
             m_stderrBuffer += m_process.readAllStandardError();
             flush(m_stdoutBuffer, false);
@@ -32,7 +34,7 @@ bool ZuiProcess::running() const { return m_process.state() != QProcess::NotRunn
 
 void ZuiProcess::start(const QString &executable, const QString &program,
                        const QString &workingDirectory, const QString &loadPath) {
-  if (running() || executable.isEmpty() || program.isEmpty())
+  if (running() || m_crashed || executable.isEmpty() || program.isEmpty())
     return;
 
   QProcessEnvironment environment = QProcessEnvironment::systemEnvironment();
