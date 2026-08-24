@@ -8,11 +8,9 @@ set(CMAKE_AUTOMOC ON)
 find_package(Qt6 6.8 REQUIRED COMPONENTS
   Core
   Gui
-  Multimedia
   Qml
   Quick
   QuickControls2
-  QuickVectorImage
 )
 
 qt_add_executable(zui-host
@@ -31,11 +29,9 @@ set_target_properties(zui-host PROPERTIES
 target_link_libraries(zui-host PRIVATE
   Qt6::Core
   Qt6::Gui
-  Qt6::Multimedia
   Qt6::Qml
   Qt6::Quick
   Qt6::QuickControls2
-  Qt6::QuickVectorImage
 )
 
 install(TARGETS zui-host

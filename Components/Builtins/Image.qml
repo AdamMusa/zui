@@ -1,8 +1,6 @@
-import QtMultimedia
 import QtQuick
 import QtQuick.Controls as QQC
 import QtQuick.Layouts
-import QtQuick.VectorImage
 import "../../Theme"
 import "../../Controls" as ZuiControls
 

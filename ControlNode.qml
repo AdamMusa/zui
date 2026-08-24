@@ -1,8 +1,6 @@
 import QtQuick
 import QtQuick.Controls as QQC
 import QtQuick.Layouts
-import QtMultimedia
-import QtQuick.VectorImage
 import "Theme"
 import "Controls" as ZuiControls
 import "Components/Builtins" as Builtins
@@ -306,12 +304,9 @@ Loader {
     if (node.type === "container") return containerComponent
     if (node.type === "image") return imageComponent
     if (node.type === "vector_image") return vectorImageComponent
-    if (node.type === "model_view_3d") return modelView3dComponent
     if (node.type === "font_loader") return fontLoaderComponent
     if (node.type === "text_metrics") return textMetricsComponent
     if (node.type === "animated_image") return animatedImageComponent
-    if (node.type === "video") return videoComponent
-    if (node.type === "audio") return audioComponent
     if (node.type === "avatar") return avatarComponent
     if (node.type === "badge") return badgeComponent
     if (node.type === "chip") return chipComponent
@@ -589,11 +584,6 @@ Loader {
   }
 
   Component {
-    id: modelView3dComponent
-    Builtins.ModelView3d { renderer: root }
-  }
-
-  Component {
     id: fontLoaderComponent
     Builtins.FontLoader { renderer: root }
   }
@@ -606,16 +596,6 @@ Loader {
   Component {
     id: animatedImageComponent
     Builtins.AnimatedImage { renderer: root }
-  }
-
-  Component {
-    id: videoComponent
-    Builtins.Video { renderer: root }
-  }
-
-  Component {
-    id: audioComponent
-    Builtins.Audio { renderer: root }
   }
 
   Component {

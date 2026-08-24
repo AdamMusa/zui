@@ -407,8 +407,8 @@ class QmlContractTest < Minitest::Test
     model = source("Components/Builtins/Support/ModelView3dScene.qml")
 
     assert_includes renderer, '"model_view_3d"'
-    assert_includes renderer, 'node.type === "model_view_3d"'
-    assert_includes renderer, "id: modelView3dComponent"
+    assert_includes renderer, "builtInSource(node.type)"
+    refute_includes renderer, "id: modelView3dComponent"
     assert_includes host, 'Qt.resolvedUrl("Support/ModelView3dScene.qml")'
     refute_includes host, "Image {"
     refute_match(/fallback_(?:source|text|fill_mode|while_loading)|prefer_3d/, host)
@@ -452,15 +452,12 @@ class QmlContractTest < Minitest::Test
   end
 
   def test_video_has_a_specific_native_multimedia_renderer
-    renderer = source("ControlNode.qml")
     video = source("Components/Builtins/Video.qml")
     video_output = source("Components/Builtins/VideoOutput.qml")
 
-    assert_includes renderer, "import QtMultimedia"
-    assert_includes renderer, 'node.type === "video"'
-    assert_includes renderer, "id: videoComponent"
-    assert_includes renderer, "VideoOutput.PreserveAspectCrop"
-    assert_includes renderer, '"position", { value: position, duration: duration }'
+    assert_includes video, "import QtMultimedia"
+    assert_includes video, "VideoOutput.PreserveAspectCrop"
+    assert_includes video, '"position", { value: position, duration: duration }'
     assert_includes video, 'videoRoot["mirrored"]'
     assert_includes video, 'componentError("video_mirroring_unsupported"'
     assert_includes video_output, 'videoRoot["endOfStreamPolicy"]'
@@ -468,16 +465,15 @@ class QmlContractTest < Minitest::Test
   end
 
   def test_audio_has_a_specific_native_media_player_renderer
-    renderer = source("ControlNode.qml")
+    audio = source("Components/Builtins/Audio.qml")
 
-    assert_includes renderer, 'node.type === "audio"'
-    assert_includes renderer, "id: audioComponent"
-    assert_includes renderer, "MediaPlayer {"
-    assert_includes renderer, "audioOutput: AudioOutput {"
-    assert_includes renderer, 'requested === "pause"'
-    assert_includes renderer, 'source: root.assetUrl(root.prop("source", ""))'
-    assert_includes renderer, "audioPlayer.setPosition"
-    assert_includes renderer, 'audioRoot.send("end"'
+    assert_includes audio, "import QtMultimedia"
+    assert_includes audio, "MediaPlayer {"
+    assert_includes audio, "audioOutput: AudioOutput {"
+    assert_includes audio, 'requested === "pause"'
+    assert_includes audio, 'source: renderer.assetUrl(renderer.prop("source", ""))'
+    assert_includes audio, "audioPlayer.setPosition"
+    assert_includes audio, 'audioRoot.send("end"'
   end
 
   def test_reorderable_list_has_padded_fluid_drag_feedback

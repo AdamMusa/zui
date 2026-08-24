@@ -1,5 +1,5 @@
-import QtMultimedia
 import QtQuick
+import QtMultimedia
 
 Item {
     id: screenRoot
