@@ -737,12 +737,16 @@ class QmlContractTest < Minitest::Test
 
   def test_double_spin_box_has_a_specific_native_floating_renderer
     renderer = source("ControlNode.qml")
+    double_spin_box = source("Components/Builtins/DoubleSpinBox.qml")
 
     assert_includes renderer, 'node.type === "double_spin_box"'
     assert_includes renderer, "id: doubleSpinBoxComponent"
-    assert_includes renderer, "QQC.DoubleSpinBox {"
+    assert_includes double_spin_box, "QQC.SpinBox {"
+    assert_includes double_spin_box, "readonly property real scaleFactor"
+    assert_includes double_spin_box, "readonly property real realValue"
     assert_includes renderer, 'root.prop("decimals", 2)'
-    assert_includes renderer, 'Number(value).toLocaleString(locale, "f", decimals)'
+    assert_includes double_spin_box, 'toLocaleString(locale, "f", decimalPlaces)'
+    refute_includes double_spin_box, "QQC.DoubleSpinBox"
   end
 
   def test_color_picker_has_a_specific_native_dialog_renderer
