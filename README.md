@@ -29,11 +29,13 @@ module Counter
       state :count, 0
 
       app :main, title: "Counter", width: 640, height: 420 do
-        column spacing: 16, padding: 24 do
-          label "Counter"
-          text { "Count: #{state.count}" }
-          button "Increment" do
-            state.count += 1
+        container padding: 24 do
+          column spacing: 16 do
+            label "Counter"
+            text { "Count: #{state.count}" }
+            button "Increment" do
+              state.count += 1
+            end
           end
         end
       end
