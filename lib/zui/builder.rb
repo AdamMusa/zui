@@ -101,7 +101,11 @@ module Zui
       node
     end
 
-    def label(value, id: nil, **props) = component(:label, id:, text: value.to_s, **props)
+    def label(value = UNSET, id: nil, **props, &reader)
+      node = component(:label, id:, **props)
+      bind_or_set(node, "text", value, reader)
+      node
+    end
     def rich_text(markup, id: nil, **props) = component(:rich_text, id:, text: markup.to_s, **props)
     def markdown(source, id: nil, **props) = component(:markdown, id:, text: source.to_s, **props)
     def selectable_text(value, id: nil, **props) = component(:selectable_text, id:, text: value.to_s, **props)

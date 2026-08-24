@@ -28,7 +28,7 @@ Zui.app do
 
   app :main, title: "Counter", width: 640, height: 420 do
     column spacing: 16 do
-      label { "Count: #{state.count}" }
+      text { "Count: #{state.count}" }
       button "Increment" do
         state.count += 1
       end
