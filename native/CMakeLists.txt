@@ -40,11 +40,12 @@ install(TARGETS zui-host
 )
 
 if(APPLE OR WIN32)
+  set(ZUI_QML_SCAN_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/.." CACHE PATH "QML tree scanned for deployment")
   set(zui_deploy_tool_options "")
   if(APPLE)
-    list(APPEND zui_deploy_tool_options "-qmldir=${CMAKE_CURRENT_SOURCE_DIR}/..")
+    list(APPEND zui_deploy_tool_options "-qmldir=${ZUI_QML_SCAN_ROOT}")
   else()
-    list(APPEND zui_deploy_tool_options "--qmldir" "${CMAKE_CURRENT_SOURCE_DIR}/..")
+    list(APPEND zui_deploy_tool_options "--qmldir" "${ZUI_QML_SCAN_ROOT}")
   endif()
 
   qt_generate_deploy_app_script(

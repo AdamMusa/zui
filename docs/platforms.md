@@ -61,6 +61,8 @@ application source/assets
 
 The native client carries the Qt libraries, QML modules, media backends, image plugins, GPU support,
 and optional 3D support needed by the desktop catalog. Browser-engine payloads are not part of Zui.
+Release builds scan a clean copy of the Zui runtime and package only catalog modules plus their linked
+Qt dependencies; they never copy the host machine's complete Qt installation.
 The current templates expect Ruby 3.1 or newer on the destination; an installer can point
 `ZUI_RUBY` at a private Ruby executable.
 

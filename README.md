@@ -4,6 +4,9 @@ Zui builds beautiful native desktop applications in pure Ruby, with first-class 
 events, bindings, animation, media, GPU effects, 3D, and application logic. Applications are
 Ruby and assets—there is no application UI language to learn alongside Ruby.
 
+Zui is desktop-only. Its native client intentionally excludes browser-engine payloads while
+retaining the complete desktop component catalog.
+
 This repository is the reusable core. Distribution integrations live at its edges:
 
 - Linux and Windows desktop applications use the standalone Qt host.

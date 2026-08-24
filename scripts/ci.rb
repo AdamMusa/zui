@@ -32,6 +32,7 @@ FileUtils.mkdir_p(client_dir)
 Dir[File.join(client_dir, "zui-client-#{platform.id}.tar.gz*")].each { |path| FileUtils.rm_f(path) }
 puts "+ build relocatable client for #{platform.id}"
 client_archive = Zui::ClientBuilder.new(platform:).build!(output: client_dir)
+run!(RbConfig.ruby, File.join(ROOT, "scripts", "audit_client.rb"), client_archive)
 
 gem_dir = File.join(ROOT, "tmp", "gems")
 FileUtils.mkdir_p(gem_dir)

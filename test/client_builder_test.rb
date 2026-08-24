@@ -33,4 +33,61 @@ class ClientBuilderTest < Minitest::Test
       assert File.file?(desktop_library)
     end
   end
+
+  def test_linux_qml_payload_contains_only_catalog_roots
+    Dir.mktmpdir do |directory|
+      qml = File.join(directory, "qt", "qml")
+      stage = File.join(directory, "stage")
+      Zui::ClientBuilder::LINUX_QML_ROOTS.each do |root|
+        path = File.join(qml, root)
+        FileUtils.mkdir_p(path)
+        File.write(File.join(path, "catalog-marker"), root)
+      end
+      Zui::ClientBuilder::LINUX_QML_EXCLUSIONS.each do |relative|
+        path = File.join(qml, relative)
+        FileUtils.mkdir_p(path)
+        File.write(File.join(path, "unused-marker"), relative)
+      end
+      FileUtils.mkdir_p(File.join(qml, "UnrelatedDesktopModule"))
+      File.write(File.join(qml, "UnrelatedDesktopModule", "unused"), "unused")
+
+      builder.send(:install_linux_qml, stage, "QT_INSTALL_QML" => qml)
+
+      Zui::ClientBuilder::LINUX_QML_ROOTS.each do |root|
+        assert File.file?(File.join(stage, "qml", root, "catalog-marker"))
+      end
+      Zui::ClientBuilder::LINUX_QML_EXCLUSIONS.each do |relative|
+        refute File.exist?(File.join(stage, "qml", relative))
+      end
+      refute File.exist?(File.join(stage, "qml", "UnrelatedDesktopModule"))
+    end
+  end
+
+  def test_linux_plugin_payload_excludes_designer_and_pdf_plugins
+    Dir.mktmpdir do |directory|
+      plugins = File.join(directory, "qt", "plugins")
+      stage = File.join(directory, "stage")
+      Zui::ClientBuilder::LINUX_PLUGIN_DIRECTORIES.each do |name|
+        path = File.join(plugins, name)
+        FileUtils.mkdir_p(path)
+        File.write(File.join(path, "catalog-plugin.so"), name)
+      end
+      File.write(File.join(plugins, "imageformats", "libqpdf.so"), "pdf")
+      FileUtils.mkdir_p(File.join(plugins, "designer"))
+      File.write(File.join(plugins, "designer", "unused.so"), "designer")
+
+      builder.send(:install_linux_plugins, stage, "QT_INSTALL_PLUGINS" => plugins)
+
+      assert File.file?(File.join(stage, "plugins", "platforms", "catalog-plugin.so"))
+      assert File.file?(File.join(stage, "plugins", "multimedia", "catalog-plugin.so"))
+      refute File.exist?(File.join(stage, "plugins", "imageformats", "libqpdf.so"))
+      refute File.exist?(File.join(stage, "plugins", "designer"))
+    end
+  end
+
+  private
+
+  def builder
+    @builder ||= Zui::ClientBuilder.new(platform: Zui::Platform.new(os: :linux, arch: :x86_64))
+  end
 end

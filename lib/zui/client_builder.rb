@@ -7,6 +7,23 @@ require_relative "client_packager"
 module Zui
   # Internal CI/release builder. It is deliberately not used by `zui configure`.
   class ClientBuilder
+    LINUX_QML_ROOTS = %w[QML Qt QtCore QtMultimedia QtQml QtQuick QtQuick3D].freeze
+    LINUX_QML_EXCLUSIONS = %w[
+      Qt/labs/StyleKit Qt/labs/animation Qt/labs/settings Qt/labs/sharedimage Qt/labs/synchronizer
+      Qt/labs/wavefrontmesh Qt/test QtQuick/Controls/FluentWinUI3 QtQuick/Controls/Imagine
+      QtQuick/Controls/Material QtQuick/Controls/Universal QtQuick/Controls/designer QtQuick/LocalStorage
+      QtQuick/Pdf QtQuick/Timeline QtQuick/tooling QtQuick3D/Effects QtQuick3D/Helpers
+      QtQuick3D/MaterialEditor QtQuick3D/ParticleEffects QtQuick3D/Particles3D QtQuick3D/SpatialAudio
+      QtQuick3D/Xr QtQuick3D/designer QtQuick3D/lightmapviewer QtQml/XmlListModel
+    ].freeze
+    LINUX_PLUGIN_DIRECTORIES = %w[
+      assetimporters generic iconengines imageformats multimedia networkinformation platforminputcontexts
+      platforms platformthemes tls wayland-decoration-client wayland-graphics-integration-client
+      xcbglintegrations
+    ].freeze
+    LINUX_TRANSLATION_GLOBS = %w[
+      qtbase_*.qm qtdeclarative_*.qm qtmultimedia_*.qm qtquickcontrols2_*.qm
+    ].freeze
     BROWSER_PAYLOAD_PATTERN = %r{
       (?:\A|/)(?:
         QtWebEngine[^/]* |
@@ -30,9 +47,12 @@ module Zui
       Dir.mktmpdir("zui-client-build-") do |temporary|
         build = File.join(temporary, "build")
         stage = File.join(temporary, "stage")
+        qml_scan_root = File.join(temporary, "qml-scan")
+        Runtime.install_qml(qml_scan_root, framework_root: @framework_root)
         cmake = command!("cmake")
         run!([cmake, "-S", File.join(@framework_root, "native"), "-B", build,
-              "-DCMAKE_BUILD_TYPE=Release", "-DCMAKE_INSTALL_PREFIX=#{stage}"], timeout: 240)
+              "-DCMAKE_BUILD_TYPE=Release", "-DCMAKE_INSTALL_PREFIX=#{stage}",
+              "-DZUI_QML_SCAN_ROOT=#{qml_scan_root}"], timeout: 240)
         run!([cmake, "--build", build, "--config", "Release", "--parallel"], timeout: 900)
         run!([cmake, "--install", build, "--config", "Release"], timeout: 900)
 
@@ -57,45 +77,94 @@ module Zui
     end
 
     def install_catalog_runtime(stage, qt)
-      unless @platform.macos? # macdeployqt patches and embeds the scanned QML modules in the app.
-        copy_tree(qt.fetch("QT_INSTALL_QML"), File.join(stage, "qml"))
-        copy_tree(qt.fetch("QT_INSTALL_PLUGINS"), File.join(stage, "plugins"))
-        copy_tree(qt["QT_INSTALL_TRANSLATIONS"], File.join(stage, "translations"))
-
-        if @platform.linux?
-          install_linux_libraries(stage, qt)
-          File.write(File.join(stage, "bin", "qt.conf"), <<~CONF)
-            [Paths]
-            Prefix=..
-            Libraries=lib
-            Plugins=plugins
-            Qml2Imports=qml
-            LibraryExecutables=libexec
-            Data=.
-            Translations=translations
-          CONF
-        else
-          install_windows_libraries(stage, qt)
-        end
+      if @platform.linux?
+        install_linux_qml(stage, qt)
+        install_linux_plugins(stage, qt)
+        install_linux_translations(stage, qt)
+        install_linux_libraries(stage)
+        File.write(File.join(stage, "bin", "qt.conf"), <<~CONF)
+          [Paths]
+          Prefix=..
+          Libraries=lib
+          Plugins=plugins
+          Qml2Imports=qml
+          Translations=translations
+        CONF
       end
-
       purge_browser_payload!(stage)
     end
 
-    def install_linux_libraries(stage, qt)
-      destination = File.join(stage, "lib")
+    def install_linux_qml(stage, qt)
+      source = qt.fetch("QT_INSTALL_QML")
+      destination = File.join(stage, "qml")
       FileUtils.mkdir_p(destination)
-      Dir[File.join(qt.fetch("QT_INSTALL_LIBS"), "libQt6*.so.6")].sort.each do |library|
-        FileUtils.cp(library, File.join(destination, File.basename(library)))
+      LINUX_QML_ROOTS.each do |name|
+        path = File.join(source, name)
+        raise ArgumentError, "required Qt QML module is missing: #{path}" unless File.directory?(path)
+
+        FileUtils.cp_r(path, destination)
+      end
+      LINUX_QML_EXCLUSIONS.each do |relative|
+        path = File.join(destination, relative)
+        FileUtils.remove_entry(path) if File.exist?(path) || File.symlink?(path)
       end
     end
 
-    def install_windows_libraries(stage, qt)
-      destination = File.join(stage, "bin")
+    def install_linux_plugins(stage, qt)
+      source = qt.fetch("QT_INSTALL_PLUGINS")
+      destination = File.join(stage, "plugins")
       FileUtils.mkdir_p(destination)
-      Dir[File.join(qt.fetch("QT_INSTALL_BINS"), "Qt6*.dll")].sort.each do |library|
-        FileUtils.cp(library, File.join(destination, File.basename(library)))
+      LINUX_PLUGIN_DIRECTORIES.each do |name|
+        path = File.join(source, name)
+        FileUtils.cp_r(path, destination) if File.directory?(path)
       end
+      FileUtils.rm_f(File.join(destination, "imageformats", "libqpdf.so"))
+    end
+
+    def install_linux_translations(stage, qt)
+      source = qt["QT_INSTALL_TRANSLATIONS"]
+      return unless source && File.directory?(source)
+
+      destination = File.join(stage, "translations")
+      translations = LINUX_TRANSLATION_GLOBS.flat_map { |glob| Dir[File.join(source, glob)] }.uniq.sort
+      return if translations.empty?
+
+      FileUtils.mkdir_p(destination)
+      FileUtils.cp(translations, destination)
+    end
+
+    def install_linux_libraries(stage)
+      destination = File.join(stage, "lib")
+      FileUtils.mkdir_p(destination)
+      queue = [File.join(stage, "bin", "zui-host")]
+      queue.concat(Dir[File.join(stage, "{qml,plugins}", "**", "*.so*")])
+      inspected = {}
+      copied = {}
+      until queue.empty?
+        binary = queue.shift
+        next if inspected[binary]
+        inspected[binary] = true
+
+        qt_dependencies(binary).each do |library|
+          name = File.basename(library)
+          next if copied[name]
+
+          installed = File.join(destination, name)
+          FileUtils.cp(library, installed)
+          copied[name] = true
+          queue << installed
+        end
+      end
+    end
+
+    def qt_dependencies(binary)
+      result = Command.run(["ldd", binary], timeout: 30, max_output_bytes: 2_000_000)
+      raise ArgumentError, "could not inspect Qt dependencies for #{binary}: #{result.stderr}" unless result.success?
+
+      result.stdout.each_line.filter_map do |line|
+        path = line[/=>\s+(\/\S+)/, 1] || line[/^\s*(\/\S+)/, 1]
+        path if path && File.basename(path).start_with?("libQt6") && File.file?(path)
+      end.uniq
     end
 
     def copy_tree(source, destination)
@@ -129,8 +198,7 @@ module Zui
     def qt_installation
       qmake = command!("qmake6", "qmake")
       keys = %w[
-        QT_VERSION QT_INSTALL_BINS QT_INSTALL_LIBS
-        QT_INSTALL_PLUGINS QT_INSTALL_QML QT_INSTALL_TRANSLATIONS
+        QT_VERSION QT_INSTALL_PLUGINS QT_INSTALL_QML QT_INSTALL_TRANSLATIONS
       ]
       keys.to_h do |key|
         result = Command.run([qmake, "-query", key], timeout: 30, max_output_bytes: 64_000)
