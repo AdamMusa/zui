@@ -6,6 +6,13 @@ Item {
 
     required property var renderer
     required property string chartType
+    readonly property string requestedFontFamily: String(renderer.prop("font_family", renderer.fontFamily))
+
+    Text {
+        id: fontResolver
+        visible: false
+        font.family: chartRoot.requestedFontFamily
+    }
 
     function colors() {
         var result = renderer.prop("colors", []);
@@ -52,7 +59,8 @@ Item {
 
     function textStyle(ctx, color) {
         ctx.fillStyle = color || renderer.prop("label_color", renderer.foreground);
-        ctx.font = Number(renderer.prop("font_size", 12)) + "px " + String(renderer.prop("font_family", renderer.fontFamily));
+        var resolvedFamily = String(fontResolver.fontInfo.family || chartRoot.requestedFontFamily);
+        ctx.font = Number(renderer.prop("font_size", 12)) + "px " + JSON.stringify(resolvedFamily);
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
     }

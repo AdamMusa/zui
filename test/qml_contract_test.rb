@@ -119,6 +119,15 @@ class QmlContractTest < Minitest::Test
     refute_match(/Sans ?Serif/, framework_qml)
   end
 
+  def test_chart_canvas_resolves_and_quotes_fonts_for_context_2d
+    chart = source("Components/Builtins/Support/ChartCanvas.qml")
+
+    assert_includes chart, 'font.family: chartRoot.requestedFontFamily'
+    assert_includes chart, 'fontResolver.fontInfo.family || chartRoot.requestedFontFamily'
+    assert_includes chart, 'JSON.stringify(resolvedFamily)'
+    refute_includes chart, '+ "px " + String(renderer.prop("font_family", renderer.fontFamily))'
+  end
+
   def test_renderer_installs_the_ruby_component_registry
     qml = source("Service.qml")
     assert_includes qml, "function validateComponents(components)"
