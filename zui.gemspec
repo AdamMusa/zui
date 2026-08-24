@@ -5,8 +5,8 @@ require_relative "lib/zui"
 Gem::Specification.new do |spec|
   spec.name = "zui"
   spec.version = Zui::VERSION
-  spec.summary = "Build cross-platform native desktop applications in Ruby"
-  spec.description = "A platform-neutral Ruby UI framework powered by Qt and QML."
+  spec.summary = "Build beautiful native desktop applications in pure Ruby"
+  spec.description = "First-class UI, state, events, animation, media, GPU effects, and 3D for Ruby desktop applications."
   spec.authors = ["Adam Moussa Ali"]
   spec.license = "MIT"
   spec.homepage = "https://github.com/AdamMusa/zui"

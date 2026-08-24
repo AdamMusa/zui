@@ -1,8 +1,8 @@
 # Zui
 
-Zui is a platform-neutral Ruby framework for native desktop interfaces powered by Qt and QML.
-Ruby owns the application, component tree, state, events, bindings, animation descriptions, and
-business logic. QML is the rendering backend, not application code.
+Zui builds beautiful native desktop applications in pure Ruby, with first-class UI, state,
+events, bindings, animation, media, GPU effects, 3D, and application logic. Applications are
+Ruby and assets—there is no application UI language to learn alongside Ruby.
 
 This repository is the reusable core. Distribution integrations live at its edges:
 
@@ -48,7 +48,7 @@ Build and install the gem directly from a checkout:
 
 ```bash
 gem build zui.gemspec
-gem install ./zui-0.0.1.gem
+gem install ./zui-0.0.2.gem
 ```
 
 `zui run` uses the bundled host for supported release targets. If a matching host is not
