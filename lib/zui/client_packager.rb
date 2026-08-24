@@ -23,7 +23,7 @@ module Zui
 
       executable = safe_relative_path!(executable)
       executable_path = File.join(source, executable)
-      unless File.file?(executable_path) && (platform.windows? || File.executable?(executable_path))
+      unless File.file?(executable_path) && executable_for_target?(executable_path)
         raise ArgumentError, "client executable is missing or not executable: #{executable_path}"
       end
       reject_framework_payload!(source)
@@ -49,6 +49,13 @@ module Zui
     end
 
     private
+
+    def executable_for_target?(path)
+      # Windows filesystems do not preserve POSIX executable permission bits, so
+      # cross-platform layout tests and release tooling cannot inspect that bit
+      # for a Linux or macOS payload. Native POSIX builds still enforce it.
+      platform.windows? || Gem.win_platform? || File.executable?(path)
+    end
 
     def write_manifest(source, executable, qt_version)
       File.write(File.join(source, "client.json"), JSON.pretty_generate(
