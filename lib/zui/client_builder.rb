@@ -109,7 +109,7 @@ module Zui
         end
         plugin_names.uniq.each do |plugin_name|
           destination = File.join(File.dirname(qmldir), "lib#{plugin_name}.dylib")
-          next if File.file?(destination)
+          next if File.file?(destination) && !File.symlink?(destination)
 
           source = [
             File.join(plugin_root, "lib#{plugin_name}.dylib"),
@@ -117,6 +117,7 @@ module Zui
           ].find { |candidate| File.file?(candidate) }
           raise ArgumentError, "deployed macOS QML plugin is missing: #{plugin_name}" unless source
 
+          FileUtils.rm_f(destination) if File.symlink?(destination)
           FileUtils.cp(source, destination)
         end
       end
