@@ -38,6 +38,7 @@ end
 
 ```bash
 gem install zui
+zui configure
 zui new telemetry-console
 cd telemetry-console
 zui run main.rb
@@ -51,20 +52,26 @@ gem build zui.gemspec
 gem install ./zui-0.0.2.gem
 ```
 
-`zui run` uses the bundled host for supported release targets. If a matching host is not
-bundled, Zui builds and caches it from the checked-in C++ source with CMake and Qt 6.8 or newer.
+`zui configure` is the one-time setup for each Zui version and platform. It downloads the matching
+versioned client from the Zui release, verifies its SHA-256 checksum and manifest, and installs it
+in the native user cache. The client contains the native host and its Qt/QML engine libraries—not
+the developer's application, Ruby source, or the Zui Ruby/QML framework. It never changes the
+global shell environment; `zui run` supplies the client paths only to the child application.
 
-`zui bundle` produces an application directory on Linux and Windows and a standard `.app` bundle
-on macOS. Each package includes the application, Zui Ruby runtime, QML renderer, component catalog,
-theme, controls, and native host. Ruby and the required Qt runtime libraries must be available on
-the destination machine; native installers can add them with the platform's normal deployment
-tools.
+Developers install Ruby and the `zui` gem. They do not install CMake, a C++ compiler, or Qt. Those
+tools are used only by Zui's release CI to produce the platform clients.
+
+`zui bundle` uses a platform template to produce an application directory on Linux and Windows or
+a standard `.app` on macOS. The package combines the application's Ruby/assets, the Zui framework
+runtime and catalog, and a private copy of the configured native Qt/QML client. No system Qt
+installation is used by the finished bundle. The current bundle format expects Ruby 3.1 or newer
+on the destination and supports `ZUI_RUBY` when an installer provides a private Ruby executable.
 
 See [Platform support](docs/platforms.md) for host requirements and bundle layouts.
 
-Zui has no separate validation command. `run` opens the app directly, and
-`bundle` packages the project directly. Ruby, DSL, protocol, resource, and QML
-errors are reported by the operation that actually encounters them.
+`zui doctor` is read-only: it reports platform, Ruby, client, run, and bundle readiness. Use
+`zui configure` to make changes. Zui has no separate validation command; Ruby, DSL, protocol,
+resource, and QML errors are reported by the operation that encounters them.
 
 ## Reusable application UI
 
