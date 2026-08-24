@@ -38,7 +38,7 @@ end
 
 ```bash
 gem install zui
-zui configure
+zui doctor --fix
 zui new telemetry-console
 cd telemetry-console
 zui run main.rb
@@ -52,11 +52,13 @@ gem build zui.gemspec
 gem install ./zui-0.0.2.gem
 ```
 
-`zui configure` is the one-time setup for each Zui version and platform. It downloads the matching
-versioned client from the Zui release, verifies its SHA-256 checksum and manifest, and installs it
-in the native user cache. The client contains the native host and its Qt/QML engine libraries—not
-the developer's application, Ruby source, or the Zui Ruby/QML framework. It never changes the
-global shell environment; `zui run` supplies the client paths only to the child application.
+`zui doctor --fix` is the one-time setup for each Zui version and platform. It downloads the
+matching versioned client from GitHub Releases, verifies its SHA-256 checksum and manifest, and
+installs it in the native user cache. `zui configure` performs the same explicit setup operation.
+The prebuilt client is never packaged in or downloaded from the RubyGem. It contains the native
+host and its Qt/QML engine libraries—not the developer's application, Ruby source, or the Zui
+Ruby/QML framework. Setup never changes the global shell environment; `zui run` supplies the
+client paths only to the child application.
 
 Developers install Ruby and the `zui` gem. They do not install CMake, a C++ compiler, or Qt. Those
 tools are used only by Zui's release CI to produce the platform clients.
@@ -69,9 +71,10 @@ on the destination and supports `ZUI_RUBY` when an installer provides a private 
 
 See [Platform support](docs/platforms.md) for host requirements and bundle layouts.
 
-`zui doctor` is read-only: it reports platform, Ruby, client, run, and bundle readiness. Use
-`zui configure` to make changes. Zui has no separate validation command; Ruby, DSL, protocol,
-resource, and QML errors are reported by the operation that encounters them.
+`zui doctor` is read-only: it reports platform, Ruby, client, run, and bundle readiness. Add
+`--fix` to download and install the missing client from GitHub Releases. Zui has no separate
+validation command; Ruby, DSL, protocol, resource, and QML errors are reported by the operation
+that encounters them.
 
 ## Reusable application UI
 

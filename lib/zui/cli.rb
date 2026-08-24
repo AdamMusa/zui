@@ -5,7 +5,7 @@ require "rbconfig"
 
 module Zui
   class CLI
-    USAGE = "Usage: zui <new NAME|configure|doctor|run FILE|bundle [DIRECTORY]|version>"
+    USAGE = "Usage: zui <new NAME|configure|doctor [--fix]|run FILE|bundle [DIRECTORY]|version>"
 
     def self.run(arguments, out: $stdout, err: $stderr)
       new(out:, err:).run(arguments.dup)
@@ -64,7 +64,8 @@ module Zui
     end
 
     def doctor(arguments)
-      raise ArgumentError, "doctor accepts no arguments" unless arguments.empty?
+      fix = arguments.delete("--fix")
+      raise ArgumentError, "doctor accepts only --fix" unless arguments.empty?
       platform = Platform.current
       @out.puts("Zui #{VERSION}")
       @out.puts("Platform: #{platform.id}#{platform.supported? ? '' : ' (unsupported)'}")
@@ -73,13 +74,16 @@ module Zui
 
       client = Client.new(platform:)
       if client.configured?
-        @out.puts("Client: #{client.root}")
-        @out.puts("Run: ready")
-        @out.puts("Bundle: ready")
+        report_ready(client)
+        0
+      elsif fix
+        @out.puts("Repair: downloading the verified native client from GitHub Releases...")
+        client.configure!
+        report_ready(client)
         0
       else
         @out.puts("Client: not configured")
-        @out.puts("Run `zui configure` to install the native client and bundle support.")
+        @out.puts("Run `zui doctor --fix` to install the native client and bundle support.")
         1
       end
     end
@@ -90,10 +94,14 @@ module Zui
       client = Client.new(platform:)
       @out.puts("Configuring Zui #{VERSION} for #{platform.id}...")
       client.configure!
+      report_ready(client)
+      0
+    end
+
+    def report_ready(client)
       @out.puts("Client: #{client.root}")
       @out.puts("Run: ready")
       @out.puts("Bundle: ready")
-      0
     end
 
     def option_value(arguments, name)

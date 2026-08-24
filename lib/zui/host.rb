@@ -15,7 +15,7 @@ module Zui
       return checked_executable(override) if override && !override.empty?
       return client.executable if client.configured?
 
-      raise ArgumentError, "Zui is not configured for #{platform.id}; run `zui configure`"
+      raise ArgumentError, "Zui is not configured for #{platform.id}; run `zui doctor --fix`"
     end
 
     def available?

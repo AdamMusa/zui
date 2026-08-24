@@ -10,15 +10,17 @@ Install Ruby 3.1 or newer and the gem, then configure the matching native client
 
 ```bash
 gem install zui
-zui configure
+zui doctor --fix
 zui doctor
 zui run main.rb
 ```
 
-`zui configure` downloads `zui-client-<platform>-<architecture>.tar.gz` and its checksum from the
-matching GitHub release. Zui checks the checksum, archive paths, manifest format, framework version,
-platform, executable, and bundle capability before atomically activating it. CMake, C++, Qt SDKs,
-Homebrew Qt packages, and Linux Qt development packages are not end-user prerequisites.
+`zui doctor --fix` downloads `zui-client-<platform>-<architecture>.tar.gz` and its checksum from the
+matching GitHub release. (`zui configure` is the equivalent explicit setup command.) Zui checks
+the checksum, archive paths, manifest format, framework version, platform, executable, and bundle
+capability before atomically activating it. The native archive is not part of the RubyGem. CMake,
+C++, Qt SDKs, Homebrew Qt packages, and Linux Qt development packages are not end-user
+prerequisites.
 
 The client contains only:
 
@@ -116,7 +118,7 @@ The directory can be used as input to MSIX, MSI, WiX, Inno Setup, or another Win
 
 CMake, a C++17 toolchain, and the Qt SDK are release-infrastructure dependencies only. Native CI
 uses Qt's deployment tooling on macOS and Windows and a relocatable Qt layout on Linux, writes a
-strict `client.json`, packages a tar archive, verifies installation through `zui configure`, and
+strict `client.json`, packages a tar archive, verifies installation through `zui doctor --fix`, and
 launches a real offscreen Zui application before publishing an asset.
 
 ## Adapter boundary

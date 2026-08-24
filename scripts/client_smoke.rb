@@ -20,8 +20,10 @@ Dir.mktmpdir("zui-client-smoke-") do |cache|
     "ZUI_CLIENT_ARCHIVE" => archive,
     "ZUI_CLIENT_CHECKSUM" => "#{archive}.sha256"
   }
-  abort "zui configure failed" unless system(environment, RbConfig.ruby, cli, "configure", chdir: root)
-  abort "zui doctor failed after configuration" unless system(
+  abort "zui doctor --fix failed" unless system(
+    environment, RbConfig.ruby, cli, "doctor", "--fix", chdir: root
+  )
+  abort "zui doctor failed after repair" unless system(
     { "ZUI_CACHE_HOME" => cache }, RbConfig.ruby, cli, "doctor", chdir: root
   )
 
@@ -71,4 +73,4 @@ Dir.mktmpdir("zui-client-smoke-") do |cache|
   FileUtils.rm_f(log_path)
 end
 
-puts "Configured Zui client smoke passed."
+puts "Zui doctor repair and client smoke passed."

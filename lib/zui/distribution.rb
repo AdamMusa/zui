@@ -19,7 +19,7 @@ module Zui
       raise ArgumentError, "project directory not found: #{project}" unless File.directory?(project)
       raise ArgumentError, "main.rb not found: #{project}" unless File.file?(File.join(project, "main.rb"))
       unless @client.configured?
-        raise ArgumentError, "Zui is not configured for #{platform.id}; run `zui configure` before bundling"
+        raise ArgumentError, "Zui is not configured for #{platform.id}; run `zui doctor --fix` before bundling"
       end
       app_name = name || titleize(File.basename(project))
       destination ||= default_destination(project, app_name)

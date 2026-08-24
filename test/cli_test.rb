@@ -79,7 +79,7 @@ class CLITest < Minitest::Test
     assert_includes output.string, "Bundle: ready"
   end
 
-  def test_doctor_is_read_only_and_points_to_configure
+  def test_doctor_is_read_only_and_points_to_fix
     client = FakeClient.new("/tmp/zui-client", false, 0)
     output = StringIO.new
 
@@ -89,15 +89,39 @@ class CLITest < Minitest::Test
 
     assert_equal 1, status
     assert_equal 0, client.configure_calls
-    assert_includes output.string, "zui configure"
+    assert_includes output.string, "zui doctor --fix"
   end
 
-  def test_doctor_has_no_mutating_fix_or_bundle_flags
-    %w[--fix --bundle].each do |flag|
-      error = StringIO.new
-      assert_equal 1, Zui::CLI.run(["doctor", flag], out: StringIO.new, err: error)
-      assert_includes error.string, "doctor accepts no arguments"
+  def test_doctor_fix_installs_the_client_and_enables_run_and_bundle
+    client = FakeClient.new("/tmp/zui-client", false, 0)
+    output = StringIO.new
+
+    status = Zui::Client.stub(:new, client) do
+      Zui::CLI.run(["doctor", "--fix"], out: output, err: StringIO.new)
     end
+
+    assert_equal 0, status
+    assert_equal 1, client.configure_calls
+    assert_includes output.string, "GitHub Releases"
+    assert_includes output.string, "Run: ready"
+    assert_includes output.string, "Bundle: ready"
+  end
+
+  def test_doctor_fix_does_not_reinstall_a_ready_client
+    client = FakeClient.new("/tmp/zui-client", true, 0)
+
+    status = Zui::Client.stub(:new, client) do
+      Zui::CLI.run(["doctor", "--fix"], out: StringIO.new, err: StringIO.new)
+    end
+
+    assert_equal 0, status
+    assert_equal 0, client.configure_calls
+  end
+
+  def test_doctor_rejects_other_arguments
+    error = StringIO.new
+    assert_equal 1, Zui::CLI.run(["doctor", "--bundle"], out: StringIO.new, err: error)
+    assert_includes error.string, "doctor accepts only --fix"
   end
 
   def test_removed_commands_are_not_public

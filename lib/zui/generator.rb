@@ -69,7 +69,7 @@ module Zui
         A native Linux, macOS, and Windows desktop application written in Ruby with Zui.
 
         ```bash
-        zui configure # once for each Zui version
+        zui doctor --fix # once for each Zui version
         zui run main.rb
         zui bundle
         ```

@@ -13,7 +13,7 @@ class HostTest < Minitest::Test
     host = Zui::Host.new(platform:, client:, environment: {})
 
     error = assert_raises(ArgumentError) { host.executable }
-    assert_includes error.message, "zui configure"
+    assert_includes error.message, "zui doctor --fix"
     refute host.available?
   end
 

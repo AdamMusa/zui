@@ -95,7 +95,7 @@ class DistributionTest < Minitest::Test
       error = assert_raises(ArgumentError) do
         Zui::Distribution.new(client:, platform:).bundle(project)
       end
-      assert_includes error.message, "zui configure"
+      assert_includes error.message, "zui doctor --fix"
     end
   end
 
