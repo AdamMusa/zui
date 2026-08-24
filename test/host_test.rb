@@ -31,11 +31,12 @@ class HostTest < Minitest::Test
 
   def test_explicit_host_override_does_not_inherit_client_paths
     Dir.mktmpdir do |directory|
-      executable = File.join(directory, "custom-host")
+      executable_name = Gem.win_platform? ? "custom-host.exe" : "custom-host"
+      executable = File.join(directory, executable_name)
       File.write(executable, "host")
       FileUtils.chmod(0o755, executable)
       client = Object.new
-      platform = Zui::Platform.new(os: :linux, arch: :x86_64)
+      platform = Zui::Platform.current
       host = Zui::Host.new(platform:, client:, environment: { "ZUI_HOST" => executable })
 
       assert_equal executable, host.executable
