@@ -45,7 +45,7 @@ File.open(log_path, "wb") do |log|
       sleep 0.2
       Process.kill("KILL", -pid) if Process.waitpid(pid, Process::WNOHANG).nil?
     end
-    Process.wait(pid) unless windows
+    Process.wait(pid)
   end
 rescue Errno::ESRCH, Errno::ECHILD
   nil

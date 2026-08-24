@@ -28,6 +28,17 @@ class HostTest < Minitest::Test
     assert_includes host.platform_help, "Qt 6"
   end
 
+  def test_windows_command_lookup_honors_pathext
+    Dir.mktmpdir do |directory|
+      executable = File.join(directory, "cmake.exe")
+      File.write(executable, "binary")
+      FileUtils.chmod(0o755, executable)
+      host = host_for(:windows, home: directory, "PATH" => directory, "PATHEXT" => ".EXE;.CMD")
+
+      assert_equal executable, host.send(:find_command, "cmake")
+    end
+  end
+
   private
 
   def host_for(os, home:, **environment)

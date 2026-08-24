@@ -96,10 +96,19 @@ module Zui
 
     def find_command(name)
       @environment.fetch("PATH", "").split(File::PATH_SEPARATOR).each do |directory|
-        path = File.join(directory, name)
-        return path if File.executable?(path) && !File.directory?(path)
+        command_names(name).each do |command_name|
+          path = File.join(directory, command_name)
+          return path if File.executable?(path) && !File.directory?(path)
+        end
       end
       nil
+    end
+
+    def command_names(name)
+      return [name] unless platform.windows? && File.extname(name).empty?
+
+      extensions = @environment.fetch("PATHEXT", ".COM;.EXE;.BAT;.CMD").split(";")
+      [name] + extensions.flat_map { |extension| ["#{name}#{extension.downcase}", "#{name}#{extension.upcase}"] }.uniq
     end
 
     def locate_build(build_dir)
