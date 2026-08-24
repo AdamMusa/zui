@@ -32,7 +32,13 @@ Dir.mktmpdir("zui-client-smoke-") do |cache|
   run_environment = {
     "ZUI_CACHE_HOME" => cache,
     "QT_QPA_PLATFORM" => "offscreen",
-    "QT_QUICK_BACKEND" => "software"
+    "QT_QUICK_BACKEND" => "software",
+    "QML_IMPORT_PATH" => nil,
+    "QML2_IMPORT_PATH" => nil,
+    "QT_PLUGIN_PATH" => nil,
+    "QT_QPA_PLATFORM_PLUGIN_PATH" => nil,
+    "DYLD_FRAMEWORK_PATH" => nil,
+    "DYLD_LIBRARY_PATH" => nil
   }
   status = nil
   File.open(log_path, "wb") do |log|
@@ -65,8 +71,17 @@ Dir.mktmpdir("zui-client-smoke-") do |cache|
     nil
   end
 
-  if status
-    warn File.read(log_path)
+  log = File.read(log_path)
+  fatal_runtime_error = [
+    /QQmlApplicationEngine failed to load component/i,
+    /module ".+" plugin ".+" not found/i,
+    /module ".+" is not installed/i,
+    /cannot load library/i,
+    /library not loaded:/i
+  ].find { |pattern| log.match?(pattern) }
+  if status || fatal_runtime_error
+    warn log
+    abort "configured Zui client failed to load its private Qt/QML runtime" if fatal_runtime_error
     abort "configured Zui client exited before the smoke deadline (status #{status.exitstatus})"
   end
 

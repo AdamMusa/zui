@@ -90,8 +90,36 @@ module Zui
           Qml2Imports=qml
           Translations=translations
         CONF
+      elsif @platform.macos?
+        install_macos_qml_plugins(stage)
       end
       purge_browser_payload!(stage)
+    end
+
+    def install_macos_qml_plugins(stage)
+      contents = File.join(stage, "zui-host.app", "Contents")
+      qml_root = File.join(contents, "Resources", "qml")
+      plugin_root = File.join(contents, "PlugIns", "quick")
+      raise ArgumentError, "deployed macOS QML tree is missing: #{qml_root}" unless File.directory?(qml_root)
+      raise ArgumentError, "deployed macOS QML plugins are missing: #{plugin_root}" unless File.directory?(plugin_root)
+
+      Dir[File.join(qml_root, "**", "qmldir")].sort.each do |qmldir|
+        plugin_names = File.foreach(qmldir).filter_map do |line|
+          line[/\A\s*(?:optional\s+)?plugin\s+([A-Za-z0-9._+-]+)/, 1]
+        end
+        plugin_names.uniq.each do |plugin_name|
+          destination = File.join(File.dirname(qmldir), "lib#{plugin_name}.dylib")
+          next if File.file?(destination)
+
+          source = [
+            File.join(plugin_root, "lib#{plugin_name}.dylib"),
+            File.join(plugin_root, "#{plugin_name}.dylib")
+          ].find { |candidate| File.file?(candidate) }
+          raise ArgumentError, "deployed macOS QML plugin is missing: #{plugin_name}" unless source
+
+          FileUtils.cp(source, destination)
+        end
+      end
     end
 
     def install_linux_qml(stage, qt)

@@ -88,7 +88,11 @@ module Zui
           "QML2_IMPORT_PATH" => ["qml"]
         }
       else
-        {}
+        {
+          "QT_PLUGIN_PATH" => ["zui-host.app/Contents/PlugIns"],
+          "QML_IMPORT_PATH" => ["zui-host.app/Contents/Resources/qml"],
+          "QML2_IMPORT_PATH" => ["zui-host.app/Contents/Resources/qml"]
+        }
       end
     end
 

@@ -123,7 +123,9 @@ class ClientPackagerTest < Minitest::Test
 
       assert client.configured?
       assert_equal "zui-host.app/Contents/MacOS/zui-host", client.executable_relative_path
-      assert_empty client.environment_entries
+      assert_equal ["zui-host.app/Contents/PlugIns"], client.environment_entries.fetch("QT_PLUGIN_PATH")
+      assert_equal ["zui-host.app/Contents/Resources/qml"], client.environment_entries.fetch("QML_IMPORT_PATH")
+      assert_equal ["zui-host.app/Contents/Resources/qml"], client.environment_entries.fetch("QML2_IMPORT_PATH")
       refute File.exist?(File.join(client.root, "app"))
     end
   end

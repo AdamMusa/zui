@@ -23,18 +23,25 @@ Quickshell or an Omarchy installation.
 ```ruby
 require "zui"
 
-Zui.app do
-  state :count, 0
+module Counter
+  def self.run
+    Zui.app do
+      state :count, 0
 
-  app :main, title: "Counter", width: 640, height: 420 do
-    column spacing: 16 do
-      text { "Count: #{state.count}" }
-      button "Increment" do
-        state.count += 1
+      app :main, title: "Counter", width: 640, height: 420 do
+        column spacing: 16, padding: 24 do
+          label "Counter"
+          text { "Count: #{state.count}" }
+          button "Increment" do
+            state.count += 1
+          end
+        end
       end
     end
   end
 end
+
+Counter.run
 ```
 
 ## Developer workflow
