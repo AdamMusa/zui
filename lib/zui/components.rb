@@ -50,7 +50,6 @@ module Zui
     model_view_3d: [%i[source width height background rotation_x rotation_y rotation_z zoom minimum_zoom maximum_zoom interactive auto_rotate auto_rotate_speed reset_revision field_of_view camera_distance fit_size model_scale center_x center_y center_z key_light_color fill_light_color light_brightness antialiasing visible], %i[click double_click rotation_change zoom_change loaded error status], false],
     font_loader: [%i[source visible], %i[loaded error status], false],
     text_metrics: [%i[text font_family font_size bold italic letter_spacing word_spacing elide elide_width visible], %i[metrics], false],
-    web_view: [%i[url html base_url width height zoom_factor background_color active_focus_on_press javascript_enabled local_storage_enabled auto_load_images full_screen_support command command_revision visible], %i[load_start load_progress load_success load_failure url_change title_change navigation full_screen permission new_window error], false],
     animated_image: [%i[source width height fill_mode playing paused speed asynchronous cache mirror smooth visible], %i[frame loaded error status], false],
     video: [%i[source width height auto_play loops volume muted playback_rate fill_mode orientation mirrored visible], %i[play pause stop error position duration], false],
     audio: [%i[source auto_play playback position seek_revision loops volume muted playback_rate visible], %i[play pause stop end loaded status error position duration], false],

@@ -14,7 +14,6 @@ find_package(Qt6 6.8 REQUIRED COMPONENTS
   QuickControls2
   QuickVectorImage
 )
-find_package(Qt6 6.8 QUIET COMPONENTS WebEngineQuick)
 
 qt_add_executable(zui-host
   main.cpp
@@ -38,11 +37,6 @@ target_link_libraries(zui-host PRIVATE
   Qt6::QuickControls2
   Qt6::QuickVectorImage
 )
-
-if(TARGET Qt6::WebEngineQuick)
-  target_link_libraries(zui-host PRIVATE Qt6::WebEngineQuick)
-  target_compile_definitions(zui-host PRIVATE ZUI_HAS_WEBENGINE=1)
-endif()
 
 install(TARGETS zui-host
   BUNDLE DESTINATION .

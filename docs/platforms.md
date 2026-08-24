@@ -30,7 +30,6 @@ bin/ or zui-host.app/      # native process/QML host
 lib/ and/or Frameworks/    # deployed Qt libraries
 plugins/                   # deployed Qt platform/media/image plugins
 qml/                       # Qt QML modules required by the catalog
-resources/                 # native resources such as Qt WebEngine data when required
 ```
 
 The Zui gem and the project supply the Ruby application and framework QML during development.
@@ -60,8 +59,8 @@ application source/assets
   + configured native Qt/QML client
 ```
 
-The native client is copied as a whole so Qt libraries, QML modules, media backends, image plugins,
-GPU support, optional 3D, and WebEngine support do not disappear between development and packaging.
+The native client carries the Qt libraries, QML modules, media backends, image plugins, GPU support,
+and optional 3D support needed by the desktop catalog. Browser-engine payloads are not part of Zui.
 The current templates expect Ruby 3.1 or newer on the destination; an installer can point
 `ZUI_RUBY` at a private Ruby executable.
 

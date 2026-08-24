@@ -9,14 +9,7 @@
 #include <QQmlContext>
 #include <QQuickStyle>
 
-#ifdef ZUI_HAS_WEBENGINE
-#include <QtWebEngineQuick/qtwebenginequickglobal.h>
-#endif
-
 int main(int argc, char *argv[]) {
-#ifdef ZUI_HAS_WEBENGINE
-  QtWebEngineQuick::initialize();
-#endif
   QGuiApplication application(argc, argv);
   QCoreApplication::setApplicationName(QStringLiteral("Zui"));
   QCoreApplication::setOrganizationName(QStringLiteral("Zui"));

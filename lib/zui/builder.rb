@@ -113,7 +113,6 @@ module Zui
     def model_view_3d(source, id: nil, **props) = component(:model_view_3d, id:, source: source.to_s, **props)
     def font_loader(source, id: nil, **props) = component(:font_loader, id:, source: source.to_s, **props)
     def text_metrics(value, id: nil, **props) = component(:text_metrics, id:, text: value.to_s, **props)
-    def web_view(url = "", id: nil, **props) = component(:web_view, id:, url: url.to_s, **props)
     def animated_image(source, id: nil, **props) = component(:animated_image, id:, source: source.to_s, **props)
     def video(source, id: nil, **props) = component(:video, id:, source: source.to_s, **props)
     def audio(source, id: nil, **props) = component(:audio, id:, source: source.to_s, **props)

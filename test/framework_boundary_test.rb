@@ -44,7 +44,7 @@ class FrameworkBoundaryTest < Minitest::Test
   ERROR_REPORTING_RENDERERS = {
     image: "Image.qml", animated_image: "AnimatedImage.qml", border_image: "BorderImage.qml",
     avatar: "Avatar.qml", font_loader: "FontLoader.qml", video: "Video.qml", audio: "Audio.qml",
-    web_view: "WebView.qml", shader_effect: "ShaderEffect.qml", model_view_3d: "ModelView3d.qml",
+    shader_effect: "ShaderEffect.qml", model_view_3d: "ModelView3d.qml",
     media_player: "MediaPlayer.qml", sound_effect: "SoundEffect.qml", camera: "Camera.qml",
     capture_session: "CaptureSession.qml", audio_input: "AudioInput.qml",
     audio_output: "AudioOutput.qml", screen_capture: "ScreenCapture.qml",
@@ -95,6 +95,7 @@ class FrameworkBoundaryTest < Minitest::Test
 
     refute_nil builder
     assert_raises(ArgumentError) { Zui::Application.new { app { component(:not_a_component) } } }
+    assert_raises(ArgumentError) { Zui::Application.new { app { component(:web_view) } } }
     assert_includes router, 'if (node.type === "image") return imageComponent'
     assert_includes router, 'if (node.type === "vector_image") return vectorImageComponent'
     assert_includes router, 'if (node.type === "model_view_3d") return modelView3dComponent'

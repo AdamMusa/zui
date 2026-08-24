@@ -7,6 +7,19 @@ require_relative "client_packager"
 module Zui
   # Internal CI/release builder. It is deliberately not used by `zui configure`.
   class ClientBuilder
+    BROWSER_PAYLOAD_PATTERN = %r{
+      (?:\A|/)(?:
+        QtWebEngine[^/]* |
+        QtWebChannel[^/]* |
+        QtPositioning |
+        qtwebengine[^/]* |
+        (?:lib)?qwebengine[^/]* |
+        webchannel[^/]* |
+        (?:lib)?Qt6(?:WebEngine|WebChannel|Positioning)[^/]* |
+        position
+      )(?:/|\z)
+    }ix
+
     def initialize(platform: Platform.current, framework_root: FRAMEWORK_ROOT, environment: ENV)
       @platform = platform.assert_supported!
       @framework_root = framework_root
@@ -44,28 +57,29 @@ module Zui
     end
 
     def install_catalog_runtime(stage, qt)
-      return if @platform.macos? # macdeployqt patches and embeds the scanned QML modules in the app.
+      unless @platform.macos? # macdeployqt patches and embeds the scanned QML modules in the app.
+        copy_tree(qt.fetch("QT_INSTALL_QML"), File.join(stage, "qml"))
+        copy_tree(qt.fetch("QT_INSTALL_PLUGINS"), File.join(stage, "plugins"))
+        copy_tree(qt["QT_INSTALL_TRANSLATIONS"], File.join(stage, "translations"))
 
-      copy_tree(qt.fetch("QT_INSTALL_QML"), File.join(stage, "qml"))
-      copy_tree(qt.fetch("QT_INSTALL_PLUGINS"), File.join(stage, "plugins"))
-      copy_tree(qt["QT_INSTALL_TRANSLATIONS"], File.join(stage, "translations"))
-
-      if @platform.linux?
-        install_linux_libraries(stage, qt)
-        install_linux_webengine(stage, qt)
-        File.write(File.join(stage, "bin", "qt.conf"), <<~CONF)
-          [Paths]
-          Prefix=..
-          Libraries=lib
-          Plugins=plugins
-          Qml2Imports=qml
-          LibraryExecutables=libexec
-          Data=.
-          Translations=translations
-        CONF
-      else
-        install_windows_libraries(stage, qt)
+        if @platform.linux?
+          install_linux_libraries(stage, qt)
+          File.write(File.join(stage, "bin", "qt.conf"), <<~CONF)
+            [Paths]
+            Prefix=..
+            Libraries=lib
+            Plugins=plugins
+            Qml2Imports=qml
+            LibraryExecutables=libexec
+            Data=.
+            Translations=translations
+          CONF
+        else
+          install_windows_libraries(stage, qt)
+        end
       end
+
+      purge_browser_payload!(stage)
     end
 
     def install_linux_libraries(stage, qt)
@@ -74,20 +88,6 @@ module Zui
       Dir[File.join(qt.fetch("QT_INSTALL_LIBS"), "libQt6*.so.6")].sort.each do |library|
         FileUtils.cp(library, File.join(destination, File.basename(library)))
       end
-    end
-
-    def install_linux_webengine(stage, qt)
-      libexec = qt["QT_INSTALL_LIBEXECS"]
-      process = libexec && File.join(libexec, "QtWebEngineProcess")
-      if process && File.file?(process)
-        FileUtils.mkdir_p(File.join(stage, "libexec"))
-        FileUtils.cp(process, File.join(stage, "libexec", "QtWebEngineProcess"))
-        FileUtils.chmod(0o755, File.join(stage, "libexec", "QtWebEngineProcess"))
-      end
-
-      data = qt["QT_INSTALL_DATA"]
-      resources = data && File.join(data, "resources")
-      copy_tree(resources, File.join(stage, "resources"))
     end
 
     def install_windows_libraries(stage, qt)
@@ -106,10 +106,30 @@ module Zui
       FileUtils.cp_r(entries.map { |entry| File.join(source, entry) }, destination) unless entries.empty?
     end
 
+    def purge_browser_payload!(stage)
+      browser_payloads(stage).sort_by { |path| -path.count(File::SEPARATOR) }.each do |path|
+        FileUtils.remove_entry(path) if File.exist?(path) || File.symlink?(path)
+      end
+
+      remaining = browser_payloads(stage)
+      return if remaining.empty?
+
+      raise ArgumentError, "desktop client contains forbidden WebEngine payload: #{remaining.first}"
+    end
+
+    def browser_payloads(stage)
+      Dir.glob(File.join(stage, "**", "*"), File::FNM_DOTMATCH).select do |path|
+        next false if [".", ".."].include?(File.basename(path))
+
+        relative = path.delete_prefix("#{stage}#{File::SEPARATOR}").tr(File::SEPARATOR, "/")
+        relative.match?(BROWSER_PAYLOAD_PATTERN)
+      end
+    end
+
     def qt_installation
       qmake = command!("qmake6", "qmake")
       keys = %w[
-        QT_VERSION QT_INSTALL_BINS QT_INSTALL_DATA QT_INSTALL_LIBEXECS QT_INSTALL_LIBS
+        QT_VERSION QT_INSTALL_BINS QT_INSTALL_LIBS
         QT_INSTALL_PLUGINS QT_INSTALL_QML QT_INSTALL_TRANSLATIONS
       ]
       keys.to_h do |key|
