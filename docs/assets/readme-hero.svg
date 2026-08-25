@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="460" viewBox="0 0 1440 460" role="img" aria-labelledby="title description">
+  <title id="title">Zui — native desktop applications in pure Ruby</title>
+  <desc id="description">A dark product banner showing Ruby interface code flowing into a native desktop window on Linux, macOS, and Windows.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#07110d"/>
+      <stop offset="0.52" stop-color="#0a1518"/>
+      <stop offset="1" stop-color="#111020"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#9cff57"/>
+      <stop offset="1" stop-color="#46e8ff"/>
+    </linearGradient>
+    <linearGradient id="window" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#152325"/>
+      <stop offset="1" stop-color="#0c1419"/>
+    </linearGradient>
+    <radialGradient id="glow">
+      <stop offset="0" stop-color="#77f7b0" stop-opacity=".18"/>
+      <stop offset="1" stop-color="#77f7b0" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" width="34" height="34" patternUnits="userSpaceOnUse">
+      <path d="M34 0H0V34" fill="none" stroke="#b6f4d1" stroke-opacity=".045"/>
+    </pattern>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="180%">
+      <feDropShadow dx="0" dy="18" stdDeviation="22" flood-color="#000" flood-opacity=".48"/>
+    </filter>
+    <filter id="softGlow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="8"/>
+    </filter>
+  </defs>
+
+  <rect width="1440" height="460" rx="30" fill="url(#background)"/>
+  <rect width="1440" height="460" rx="30" fill="url(#grid)"/>
+  <circle cx="180" cy="120" r="260" fill="url(#glow)"/>
+  <circle cx="1280" cy="390" r="300" fill="url(#glow)" opacity=".5"/>
+
+  <g transform="translate(78 74)">
+    <rect width="70" height="70" rx="20" fill="#10241d" stroke="#84f7ad" stroke-opacity=".45"/>
+    <path d="M20 20h30L25 50h28" fill="none" stroke="url(#accent)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="55" cy="15" r="5" fill="#9cff57" filter="url(#softGlow)"/>
+
+    <text x="0" y="142" fill="#f3fff7" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="64" font-weight="800" letter-spacing="-2">Zui</text>
+    <text x="0" y="188" fill="url(#accent)" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="26" font-weight="650">Native desktop interfaces. Pure Ruby.</text>
+    <text x="0" y="232" fill="#a7bab1" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="18">Reactive state · 241 components · GPU, media and 3D</text>
+
+    <g transform="translate(0 270)" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="14" font-weight="650">
+      <rect width="122" height="38" rx="19" fill="#11251e" stroke="#75e999" stroke-opacity=".35"/>
+      <circle cx="22" cy="19" r="5" fill="#9cff57"/>
+      <text x="36" y="24" fill="#dfffe9">Linux</text>
+      <rect x="136" width="122" height="38" rx="19" fill="#112126" stroke="#69dce9" stroke-opacity=".35"/>
+      <circle cx="158" cy="19" r="5" fill="#46e8ff"/>
+      <text x="172" y="24" fill="#dffbff">macOS</text>
+      <rect x="272" width="132" height="38" rx="19" fill="#181a2a" stroke="#a79cff" stroke-opacity=".35"/>
+      <circle cx="294" cy="19" r="5" fill="#a79cff"/>
+      <text x="308" y="24" fill="#eeebff">Windows</text>
+    </g>
+  </g>
+
+  <g transform="translate(765 52)" filter="url(#shadow)">
+    <rect width="600" height="356" rx="22" fill="url(#window)" stroke="#95f5ba" stroke-opacity=".32"/>
+    <rect width="600" height="48" rx="22" fill="#182729"/>
+    <rect y="30" width="600" height="18" fill="#182729"/>
+    <circle cx="26" cy="24" r="5" fill="#ff6f7d"/>
+    <circle cx="45" cy="24" r="5" fill="#ffd166"/>
+    <circle cx="64" cy="24" r="5" fill="#9cff57"/>
+    <text x="300" y="29" text-anchor="middle" fill="#81958b" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="12">telemetry_console.rb</text>
+
+    <g transform="translate(34 58)" font-family="Roboto Mono,SFMono-Regular,Consolas,monospace" font-size="15" xml:space="preserve">
+      <text y="0"><tspan fill="#bd93f9">Zui</tspan><tspan fill="#d7e5de">.app do</tspan></text>
+      <text x="22" y="26"><tspan fill="#ffca80">state</tspan><tspan fill="#8be9fd"> :status</tspan><tspan fill="#d7e5de">, </tspan><tspan fill="#9cff57">"online"</tspan></text>
+      <text x="22" y="52"><tspan fill="#ffca80">state</tspan><tspan fill="#8be9fd"> :load</tspan><tspan fill="#d7e5de">, </tspan><tspan fill="#bd93f9">42</tspan></text>
+      <text x="22" y="84"><tspan fill="#ffca80">app</tspan><tspan fill="#8be9fd"> :main</tspan><tspan fill="#d7e5de">, title: </tspan><tspan fill="#9cff57">"Telemetry"</tspan><tspan fill="#d7e5de"> do</tspan></text>
+      <text x="44" y="110"><tspan fill="#ffca80">card</tspan><tspan fill="#d7e5de"> padding: </tspan><tspan fill="#bd93f9">24</tspan><tspan fill="#d7e5de"> do</tspan></text>
+      <text x="66" y="136"><tspan fill="#ffca80">column</tspan><tspan fill="#d7e5de"> spacing: </tspan><tspan fill="#bd93f9">16</tspan><tspan fill="#d7e5de"> do</tspan></text>
+      <text x="88" y="162"><tspan fill="#ffca80">label</tspan><tspan fill="#9cff57"> "System online"</tspan></text>
+      <text x="88" y="188"><tspan fill="#ffca80">progress</tspan><tspan fill="#d7e5de"> value: state.load</tspan></text>
+      <text x="88" y="214"><tspan fill="#ffca80">button</tspan><tspan fill="#9cff57"> "Refresh"</tspan><tspan fill="#d7e5de"> { refresh }</tspan></text>
+      <text x="66" y="240" fill="#d7e5de">end</text>
+      <text x="44" y="266" fill="#d7e5de">end</text>
+      <text x="22" y="292" fill="#d7e5de">end</text>
+    </g>
+  </g>
+
+  <rect x=".5" y=".5" width="1439" height="459" rx="29.5" fill="none" stroke="#c8ffe0" stroke-opacity=".12"/>
+</svg>
