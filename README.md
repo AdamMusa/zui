@@ -61,7 +61,7 @@ Build and install the gem directly from a checkout:
 
 ```bash
 gem build zui.gemspec
-gem install ./zui-0.0.5.gem
+gem install ./zui-0.0.6.gem
 ```
 
 `zui doctor --fix` is the one-time setup for each Zui version and platform. It downloads the
