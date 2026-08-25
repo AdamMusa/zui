@@ -101,6 +101,9 @@ class QmlContractTest < Minitest::Test
     assert_includes qml, 'message.op === "batch"'
     assert_includes qml, "validSetPatch(message.patches[batchIndex])"
     assert_includes qml, "applySetPatch(message.patches[applyIndex], false)"
+    assert_includes qml, "commitNodeIndex(nextIndex)"
+    assert_includes qml, "nodeIndex[node.id] = replacement"
+    refute_match(/^\s*nodeIndex\s*=/, qml)
   end
 
   def test_framework_loads_bundled_cross_platform_text_and_icon_fonts
@@ -627,12 +630,20 @@ class QmlContractTest < Minitest::Test
 
   def test_key_catcher_maps_all_native_keyboard_signals
     renderer = source("ControlNode.qml")
+    key_catcher = source("Controls/PanelKeyCatcher.qml")
 
     assert_includes renderer, 'node.type === "key_catcher"'
     assert_includes renderer, "ZuiControls.PanelKeyCatcher"
     assert_includes renderer, '"move", { dx: dx, dy: dy }'
     assert_includes renderer, '"tab", { direction: direction }'
     assert_includes renderer, '"text", { text: text }'
+    assert_includes key_catcher, "root.forceActiveFocus()"
+  end
+
+  def test_canvas_claims_keyboard_focus_on_pointer_press
+    canvas = source("Components/Builtins/Canvas.qml")
+
+    assert_includes canvas, "canvasRoot.forceActiveFocus()"
   end
 
   def test_checkbox_has_omarchy_styling_and_value_event

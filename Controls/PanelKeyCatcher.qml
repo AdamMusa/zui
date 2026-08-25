@@ -11,6 +11,8 @@ FocusScope {
   signal activateRequested()
   signal textKey(string text)
   focus: true
+  Component.onCompleted: Qt.callLater(function() { root.forceActiveFocus() })
+  onVisibleChanged: if (visible) Qt.callLater(function() { root.forceActiveFocus() })
   Keys.onEscapePressed: if (!blocked) closeRequested()
   Keys.onDeletePressed: if (!blocked) deleteRequested()
   Keys.onReturnPressed: if (!blocked) returnRequested()

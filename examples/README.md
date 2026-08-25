@@ -24,6 +24,8 @@ The complete showcase migration is available app-for-app:
   device state, energy telemetry, and home simulation.
 - [Cinematic Music Studio](cinematic_music_studio/) exercises local/remote media,
   playback state, fluid drag interaction, playlists, and audio controls.
+- [Avatar Runner](avatar_runner/) is a compact native game demonstrating keyboard
+  focus, pointer input, timed physics, collision detection, Canvas drawing, and batched state.
 
 Launch any example directly:
 
@@ -31,6 +33,7 @@ Launch any example directly:
 zui run examples/tesla_drive_dashboard/main.rb
 zui run examples/cardiac_health_monitor/main.rb
 zui run examples/smart_home_energy/main.rb
+zui run examples/avatar_runner/main.rb
 ```
 
 Package it for the current platform with `zui bundle`:

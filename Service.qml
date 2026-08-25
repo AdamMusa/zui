@@ -158,9 +158,18 @@ Item {
 
     surfaces = message.surfaces
     surfaceOptions = message.surface_options || ({})
-    nodeIndex = nextIndex
+    commitNodeIndex(nextIndex)
     revision += 1
     lastError = ""
+  }
+
+  // nodeIndex intentionally keeps a stable object identity. ControlNode observes
+  // revision, so publishing a new index object before its revision would expose
+  // intermediate patch state and invalidate every renderer in a batch.
+  function commitNodeIndex(nextIndex) {
+    for (var oldId in nodeIndex)
+      if (nextIndex[oldId] === undefined) delete nodeIndex[oldId]
+    for (var nextId in nextIndex) nodeIndex[nextId] = nextIndex[nextId]
   }
 
   function validateSurfaceOptions(options) {
@@ -192,6 +201,8 @@ Item {
         if (!validSetPatch(message.patches[batchIndex])) return reject("patch batch rejected")
       for (var applyIndex = 0; applyIndex < message.patches.length; applyIndex++)
         applySetPatch(message.patches[applyIndex], false)
+      // All replacements above are invisible to bindings until this single
+      // revision publishes the complete, internally consistent batch.
       revision += 1
       return true
     }
@@ -220,7 +231,7 @@ Item {
       var containerReplacement = ({ type: node.type, id: node.id, props: node.props || {}, children: message.children })
       if (node.events !== undefined) containerReplacement.events = node.events
       childrenIndex[node.id] = containerReplacement
-      nodeIndex = childrenIndex
+      commitNodeIndex(childrenIndex)
       revision += 1
       return true
     }
@@ -250,10 +261,7 @@ Item {
       if (node.children !== undefined) animatedReplacement.children = node.children
       if (node.events !== undefined) animatedReplacement.events = node.events
       animatedReplacement.transitions = validatedTracks
-      var animatedIndex = ({})
-      for (var animatedId in nodeIndex) animatedIndex[animatedId] = nodeIndex[animatedId]
-      animatedIndex[node.id] = animatedReplacement
-      nodeIndex = animatedIndex
+      nodeIndex[node.id] = animatedReplacement
       revision += 1
       return true
     }
@@ -299,10 +307,7 @@ Item {
       }
     }
 
-    var nextIndex = ({})
-    for (var id in nodeIndex) nextIndex[id] = nodeIndex[id]
-    nextIndex[node.id] = replacement
-    nodeIndex = nextIndex
+    nodeIndex[node.id] = replacement
     if (incrementRevision) revision += 1
     return true
   }

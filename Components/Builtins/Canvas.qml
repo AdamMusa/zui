@@ -152,7 +152,10 @@ Item {
     function payload(mouse) { return { x: mouse.x, y: mouse.y, button: mouse.button } }
     onClicked: function(mouse) { if (renderer.subscribed("click")) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "click", payload(mouse)) }
     onDoubleClicked: function(mouse) { if (renderer.subscribed("double_click")) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "double_click", payload(mouse)) }
-    onPressed: function(mouse) { if (renderer.subscribed("press")) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "press", payload(mouse)) }
+    onPressed: function(mouse) {
+      canvasRoot.forceActiveFocus()
+      if (renderer.subscribed("press")) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "press", payload(mouse))
+    }
     onReleased: function(mouse) { if (renderer.subscribed("release")) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "release", payload(mouse)) }
     onPositionChanged: function(mouse) { if (renderer.subscribed("hover")) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "hover", payload(mouse)) }
   }
