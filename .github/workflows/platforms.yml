@@ -31,6 +31,20 @@ jobs:
       - name: Check out source
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
+      - name: Check out pinned mruby
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          repository: mruby/mruby
+          ref: 831da26b9021de0369d17b71b5667e2941a1a32d # 4.0.0
+          path: tmp/mruby
+
+      - name: Check out pinned mruby-json
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          repository: mattn/mruby-json
+          ref: f99d9428025469f2400f93c53b185f65f963e507
+          path: tmp/mruby-json
+
       - name: Install Ruby
         uses: ruby/setup-ruby@95ef2b042f9d7a56d8268cba8559e2842e2ad01b
         with:
@@ -65,6 +79,7 @@ jobs:
           if-no-files-found: warn
           path: |
             tmp/clients/**
+            tmp/runtimes/**
             tmp/gems/*.gem
             tmp/runtime-smoke-*.log
 

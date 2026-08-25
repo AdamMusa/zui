@@ -3,6 +3,7 @@
 require "fileutils"
 require "rbconfig"
 require_relative "../lib/zui"
+require_relative "../lib/zui/lite_runtime_packager"
 
 root = File.expand_path("..", __dir__)
 mruby_source = File.expand_path(ARGV.fetch(0) do

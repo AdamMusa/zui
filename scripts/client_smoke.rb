@@ -6,10 +6,13 @@ require "tmpdir"
 
 root = File.expand_path("..", __dir__)
 archive = File.expand_path(ARGV.fetch(0))
-cli = File.expand_path(ARGV.fetch(1))
-program = File.expand_path(ARGV.fetch(2))
+lite_archive = File.expand_path(ARGV.fetch(1))
+cli = File.expand_path(ARGV.fetch(2))
+program = File.expand_path(ARGV.fetch(3))
 abort "client archive is missing: #{archive}" unless File.file?(archive)
 abort "client checksum is missing: #{archive}.sha256" unless File.file?("#{archive}.sha256")
+abort "lite runtime archive is missing: #{lite_archive}" unless File.file?(lite_archive)
+abort "lite runtime checksum is missing: #{lite_archive}.sha256" unless File.file?("#{lite_archive}.sha256")
 abort "installed Zui CLI is missing: #{cli}" unless File.file?(cli)
 abort "smoke application is missing: #{program}" unless File.file?(program)
 
@@ -18,7 +21,9 @@ Dir.mktmpdir("zui-client-smoke-") do |cache|
   environment = {
     "ZUI_CACHE_HOME" => cache,
     "ZUI_CLIENT_ARCHIVE" => archive,
-    "ZUI_CLIENT_CHECKSUM" => "#{archive}.sha256"
+    "ZUI_CLIENT_CHECKSUM" => "#{archive}.sha256",
+    "ZUI_LITE_RUNTIME_ARCHIVE" => lite_archive,
+    "ZUI_LITE_RUNTIME_CHECKSUM" => "#{lite_archive}.sha256"
   }
   abort "zui doctor --fix failed" unless system(
     environment, RbConfig.ruby, cli, "doctor", "--fix", chdir: root

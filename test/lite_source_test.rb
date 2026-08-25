@@ -29,21 +29,27 @@ class LiteSourceTest < Minitest::Test
     end
   end
 
-  def test_generated_source_runs_on_the_zui_mruby
+  def test_every_example_runs_on_the_zui_mruby
     mruby = ENV["ZUI_MRUBY"]
     skip "set ZUI_MRUBY to run the prebuilt lite-runtime smoke" unless mruby && File.executable?(mruby)
 
     Dir.mktmpdir do |directory|
-      program = File.join(directory, "app.rb")
-      File.write(program, Zui::LiteSource.new(project: File.join(ROOT, "examples", "futuristic_dashboard")).call)
+      projects = Dir[File.join(ROOT, "examples", "*")].select do |project|
+        File.file?(File.join(project, "main.rb"))
+      end
+      projects.each do |project|
+        name = File.basename(project)
+        program = File.join(directory, "#{name}.rb")
+        File.write(program, Zui::LiteSource.new(project:).call)
 
-      output, error, status = Open3.capture3(mruby, program, stdin_data: "")
+        output, error, status = Open3.capture3(mruby, program, stdin_data: "")
 
-      assert status.success?, error
-      messages = output.each_line.map { |line| JSON.parse(line) }
-      assert_equal "ready", messages.fetch(0).fetch("type")
-      assert_equal "render", messages.fetch(1).fetch("type")
-      assert messages.fetch(1).fetch("surfaces").key?("main")
+        assert status.success?, "#{name}: #{error}"
+        messages = output.each_line.map { |line| JSON.parse(line) }
+        assert_equal "ready", messages.fetch(0).fetch("type"), name
+        assert_equal "render", messages.fetch(1).fetch("type"), name
+        assert messages.fetch(1).fetch("surfaces").key?("main"), name
+      end
     end
   end
 end

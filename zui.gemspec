@@ -17,7 +17,9 @@ Gem::Specification.new do |spec|
   spec.files = Dir[
     "bin/*", "lib/**/*.rb", "*.qml", "Components/**/*", "Controls/**/*", "Theme/**/*", "Fonts/**/*",
     "README.md", "LICENSE", "THIRD_PARTY_NOTICES.md"
-  ].reject { |path| path.match?(%r{\Alib/zui/client_(?:builder|packager)\.rb\z}) }
+  ].reject do |path|
+    path.match?(%r{\Alib/zui/(?:client_(?:builder|packager)|lite_runtime_packager)\.rb\z})
+  end
   spec.require_paths = ["lib"]
   spec.bindir = "bin"
   spec.executables = ["zui"]

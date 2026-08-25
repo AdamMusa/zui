@@ -5,10 +5,13 @@ require "rbconfig"
 require "tmpdir"
 require "zlib"
 
-archive = File.expand_path(ARGV.fetch(0) { abort "Usage: dist_smoke.rb CLIENT.tar.gz ZUI_CLI" })
-cli = File.expand_path(ARGV.fetch(1) { abort "Usage: dist_smoke.rb CLIENT.tar.gz ZUI_CLI" })
+archive = File.expand_path(ARGV.fetch(0) { abort "Usage: dist_smoke.rb CLIENT.tar.gz LITE.tar.gz ZUI_CLI" })
+lite_archive = File.expand_path(ARGV.fetch(1) { abort "Usage: dist_smoke.rb CLIENT.tar.gz LITE.tar.gz ZUI_CLI" })
+cli = File.expand_path(ARGV.fetch(2) { abort "Usage: dist_smoke.rb CLIENT.tar.gz LITE.tar.gz ZUI_CLI" })
 abort "client archive is missing: #{archive}" unless File.file?(archive)
 abort "client checksum is missing: #{archive}.sha256" unless File.file?("#{archive}.sha256")
+abort "lite runtime archive is missing: #{lite_archive}" unless File.file?(lite_archive)
+abort "lite runtime checksum is missing: #{lite_archive}.sha256" unless File.file?("#{lite_archive}.sha256")
 abort "installed Zui CLI is missing: #{cli}" unless File.file?(cli)
 
 def png_chunk(type, data)
@@ -61,7 +64,9 @@ Dir.mktmpdir("zui-dist-smoke-") do |directory|
   environment = {
     "ZUI_CACHE_HOME" => cache,
     "ZUI_CLIENT_ARCHIVE" => archive,
-    "ZUI_CLIENT_CHECKSUM" => "#{archive}.sha256"
+    "ZUI_CLIENT_CHECKSUM" => "#{archive}.sha256",
+    "ZUI_LITE_RUNTIME_ARCHIVE" => lite_archive,
+    "ZUI_LITE_RUNTIME_CHECKSUM" => "#{lite_archive}.sha256"
   }
   abort "distribution smoke could not configure the native client" unless system(
     environment, RbConfig.ruby, cli, "doctor", "--fix"

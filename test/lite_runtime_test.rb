@@ -4,6 +4,7 @@ require "json"
 require "minitest/autorun"
 require "tmpdir"
 require_relative "../lib/zui"
+require_relative "../lib/zui/lite_runtime_packager"
 
 class LiteRuntimeTest < Minitest::Test
   def test_verified_archive_configures_and_installs_a_standalone_lite_program
