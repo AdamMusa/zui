@@ -3,7 +3,6 @@ name: Native platforms
 on:
   push:
     branches: [main]
-    tags: ["v*"]
   pull_request:
   workflow_dispatch:
 
@@ -70,14 +69,51 @@ jobs:
             tmp/runtime-smoke-*.log
 
   release-clients:
-    name: Publish native clients
-    if: startsWith(github.ref, 'refs/tags/v')
+    name: Tag release and publish native clients
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: native
     runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
+      - name: Check out verified source
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - name: Resolve release tag
+        id: release
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=$(sed -n 's/.*VERSION = "\([^"]*\)".*/\1/p' lib/zui.rb)
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
+            echo "Invalid Zui version: $version" >&2
+            exit 1
+          }
+          tag="v$version"
+          remote_commit=$(git ls-remote origin "refs/tags/$tag^{}" | awk 'NR == 1 { print $1 }')
+          if [ -z "$remote_commit" ]; then
+            remote_commit=$(git ls-remote origin "refs/tags/$tag" | awk 'NR == 1 { print $1 }')
+          fi
+
+          if [ -z "$remote_commit" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git tag -a "$tag" "$GITHUB_SHA" -m "Zui $version"
+            git push origin "$tag"
+            release=true
+          elif [ "$remote_commit" = "$GITHUB_SHA" ]; then
+            release=true
+          else
+            echo "Tag $tag already points to $remote_commit; current commit is $GITHUB_SHA. Skipping release."
+            release=false
+          fi
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "release=$release" >> "$GITHUB_OUTPUT"
+
       - name: Download verified platform artifacts
+        if: steps.release.outputs.release == 'true'
         uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
           pattern: zui-*
@@ -85,10 +121,14 @@ jobs:
           merge-multiple: true
 
       - name: Create release and attach client archives
+        if: steps.release.outputs.release == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
         run: |
-          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || gh release create "$GITHUB_REF_NAME" --generate-notes
+          gh release view "$RELEASE_TAG" >/dev/null 2>&1 || \
+            gh release create "$RELEASE_TAG" --title "Zui $RELEASE_VERSION" --generate-notes --target "$GITHUB_SHA"
           find release-assets -type f \( -name '*.tar.gz' -o -name '*.sha256' \) -print0 |
-            xargs -0 gh release upload "$GITHUB_REF_NAME" --clobber
+            xargs -0 gh release upload "$RELEASE_TAG" --clobber
