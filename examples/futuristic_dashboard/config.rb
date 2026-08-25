@@ -9,6 +9,9 @@ Zui::Dist.configure do
   license "MIT"
   homepage "https://github.com/AdamMusa/zui"
 
-  icon linux: "assets/neural-core.svg"
-  categories "Utility"
+  icon linux: "assets/neural-core.svg",
+        macos: "assets/ruby.icns",
+        windows: "assets/ruby.jpg"
+
+  categories "Utility", "Development"
 end
