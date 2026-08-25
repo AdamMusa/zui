@@ -40,7 +40,10 @@ Package it for the current platform with `zui bundle`:
 
 ```bash
 zui bundle examples/tesla_drive_dashboard
+# or embed private CRuby and the locked project gems
+zui bundle --full examples/tesla_drive_dashboard
 ```
 
 Generated bundles are placed under each application's `dist/` directory and
-are intentionally ignored by Git.
+are intentionally ignored by Git. Every example has a checked-in `Gemfile.lock`, so both the
+default standalone mruby mode and full standalone CRuby mode are reproducible.

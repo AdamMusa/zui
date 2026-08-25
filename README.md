@@ -56,8 +56,8 @@ a window.
 
 ## Quick start
 
-Install Ruby 3.1 or newer and the gem. Zui downloads its version-matched native client only when
-you explicitly configure it:
+Install Ruby 3.1 or newer and the gem. Zui downloads its version-matched native client and small
+mruby bundle runtime only when you explicitly configure it:
 
 ```bash
 gem install zui
@@ -70,9 +70,9 @@ zui run main.rb
 That is the complete development setup. You do not need a Qt SDK, CMake, a C++ compiler, or a
 system-wide Qt installation.
 
-`zui doctor --fix` downloads the native client for the installed Zui version, verifies its
-SHA-256 checksum and manifest, and activates it atomically in the user cache. It does not modify
-shell startup files or global Qt environment variables.
+`zui doctor --fix` downloads the native client and lite mruby runtime for the installed Zui
+version, verifies their SHA-256 checksums and manifests, and activates them atomically in the user
+cache. It does not modify shell startup files or global Qt environment variables.
 
 ## Your first application
 
@@ -178,10 +178,9 @@ matching native client.
 | macOS | Intel x86-64 | `zui-client-macos-x86_64` | Standard `.app` bundle | Supported and CI verified |
 | Windows | x86-64 | `zui-client-windows-x86_64` | Portable application directory | Supported and CI verified |
 
-The application bundle expects Ruby 3.1 or newer on the destination. Its launcher prefers
-`ZUI_RUBY`, then the Ruby executable that created the bundle when that path is still available,
-and finally a `ruby` executable on `PATH`. Installers that carry a private Ruby can point
-`ZUI_RUBY` at that executable.
+Application bundles do not require Ruby on the destination. The default `--lite` mode embeds Zui's
+versioned mruby runtime. `--full` embeds a private CRuby plus only the non-Zui gems resolved by the
+project's `Gemfile.lock`.
 
 Unsupported architectures fail explicitly during configuration. Zui never silently compiles Qt,
 uses a system Qt installation, or downloads an asset for a different platform. See the complete
@@ -218,12 +217,13 @@ an explicit error.
 
 | Command | Purpose |
 | --- | --- |
-| `zui new NAME` | Generate a pure-Ruby application with a reusable UI module and tests |
+| `zui new NAME` | Generate a pure-Ruby application, `Gemfile`, distribution config, and reusable UI module |
 | `zui doctor` | Report Ruby, platform, native-client, run, and bundle readiness without changing anything |
-| `zui doctor --fix` | Download, verify, and install the missing versioned native client |
-| `zui configure` | Perform the same explicit native-client installation directly |
+| `zui doctor --fix` | Download, verify, and install the missing native client and lite mruby runtime |
+| `zui configure` | Perform the same explicit runtime installation directly |
 | `zui run FILE` | Launch a Ruby entry point through the private native client |
-| `zui bundle [DIRECTORY]` | Tree-shake and assemble the application, Zui framework, and native runtime for the current OS |
+| `zui bundle [DIRECTORY]` | Build the default standalone `--lite` bundle with embedded mruby |
+| `zui bundle --full [DIRECTORY]` | Embed private CRuby and only the gems locked by the project |
 | `zui bundle --name NAME --output PATH` | Override the generated product name and destination |
 | `zui bundle --no-tree-shake` | Retain the complete component and Qt feature catalog for metaprogrammed applications |
 | `zui bundle --dist [DIRECTORY]` | Build release installers from the required project-root `config.rb` |
@@ -284,11 +284,12 @@ zui bundle
 zui bundle path/to/application --name "Telemetry Console"
 ```
 
-Every distribution combines three deliberately separate payloads:
+Every distribution combines four deliberately separate payloads:
 
 ```text
 application Ruby source and assets
   + Zui Ruby/QML framework runtime
+  + selected private Ruby runtime (`mruby` or `cruby`)
   + configured native Qt/QML client
 ```
 
@@ -298,8 +299,14 @@ application Ruby source and assets
 | macOS | Standard `.app` directory | Sign, notarize, and distribute with the application's release identity |
 | Windows | Self-contained directory with `run.cmd` | MSIX, MSI, WiX, Inno Setup, or another installer |
 
-No system Qt installation is used by the finished bundle. Signing, notarization, installer format,
-store submission, and application identity remain the release owner's responsibility.
+No system Ruby or Qt installation is used by the finished bundle. Signing, notarization, installer
+format, store submission, and application identity remain the release owner's responsibility.
+
+`--lite` is the default. It compiles the project's local Ruby source into one mruby-compatible
+program and rejects external gem `require` calls with a `--full` hint. Use `--full` for ordinary
+CRuby behavior or third-party gems. Full bundles require a locked project `Gemfile`; run
+`bundle install` after changing dependencies. Both modes are built for the current target OS and
+architecture, and both use the same project-specific QML/native tree-shaking pass.
 
 `zui bundle` statically analyzes every production Ruby source file, including code in conditional
 branches, and retains only the referenced Zui adapters, QML modules, plugins, and native library
@@ -354,10 +361,9 @@ directory, and existing artifacts are never overwritten. Linux RPM creation requ
 (`rpm-build` or `rpm-tools`), macOS uses the system `hdiutil`, and Windows requires Inno Setup 6's
 `ISCC.exe` on `PATH`.
 
-The installers carry the application, Zui, Qt, and the selected native dependencies. Like the
-directory bundle, Ruby 3.1 or newer is currently required on the destination; DEB and RPM metadata
-declare that dependency. Code signing, Apple notarization, and Windows Authenticode signing remain
-release-owner steps.
+The installers carry the application, selected Ruby runtime, Zui, Qt, and selected native
+dependencies. They do not declare or require system Ruby. Code signing, Apple notarization, and
+Windows Authenticode signing remain release-owner steps.
 
 ## Showcase applications
 
@@ -412,19 +418,21 @@ Build and install the gem directly:
 
 ```bash
 gem build zui.gemspec
-gem install ./zui-0.0.7.gem
+gem install ./zui-*.gem
 ```
 
-Release CI additionally constructs and audits a relocatable native client, installs the built gem,
-repairs a fresh client cache, and launches a real application on every supported target.
+Release CI additionally builds the pinned mruby runtime, audits both release archives, installs the
+built gem, repairs a fresh cache, and launches real `--lite` and `--full` bundles on every supported
+target.
 
 ## Troubleshooting
 
 | Symptom | Resolution |
 | --- | --- |
 | `Client: not configured` | Run `zui doctor --fix` once for the installed Zui version |
+| `Lite runtime: not configured` | Run `zui doctor --fix` to install the checksummed mruby archive |
 | Platform or architecture is unsupported | Use one of the release-gated targets above or add a verified native-client runner and artifact |
-| A bundle cannot find Ruby | Install Ruby 3.1+ or point `ZUI_RUBY` at an application-private Ruby executable |
+| `--lite` rejects a gem `require` | Use `--full` and lock the gem in the project `Gemfile.lock` |
 | A component reports a resource or module error | Check the declared asset path and run `zui doctor`; Zui will not substitute another component |
 | Audio, camera, or capture is unavailable | Confirm OS permissions, devices, codecs, and platform media services |
 | The native client looks stale after a framework update | Run `zui doctor --fix`; client caches are isolated by Zui version |

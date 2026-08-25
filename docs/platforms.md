@@ -6,7 +6,7 @@ Application source never goes into that development client.
 
 ## Setup
 
-Install Ruby 3.1 or newer and the gem, then configure the matching native client:
+Install Ruby 3.1 or newer and the gem, then configure the matching native client and lite runtime:
 
 ```bash
 gem install zui
@@ -15,12 +15,12 @@ zui doctor
 zui run main.rb
 ```
 
-`zui doctor --fix` downloads `zui-client-<platform>-<architecture>.tar.gz` and its checksum from the
-matching GitHub release. (`zui configure` is the equivalent explicit setup command.) Zui checks
-the checksum, archive paths, manifest format, framework version, platform, executable, and bundle
-capability before atomically activating it. The native archive is not part of the RubyGem. CMake,
-C++, Qt SDKs, Homebrew Qt packages, and Linux Qt development packages are not end-user
-prerequisites.
+`zui doctor --fix` downloads `zui-client-<platform>-<architecture>.tar.gz` and
+`zui-runtime-lite-<platform>-<architecture>.tar.gz` with their checksums from the matching GitHub
+release. (`zui configure` is the equivalent explicit setup command.) Zui checks each checksum,
+archive path, manifest, version, platform, and executable before atomic activation. These archives
+are not part of the RubyGem. CMake, C++, mruby build tools, Qt SDKs, Homebrew Qt packages, and Linux
+Qt development packages are not end-user prerequisites.
 
 The client contains only:
 
@@ -51,11 +51,12 @@ when a native release runner and client artifact are added.
 
 ## Application bundles
 
-`zui bundle` starts from an OS-specific distribution template and inserts three separate payloads:
+`zui bundle` starts from an OS-specific distribution template and inserts four separate payloads:
 
 ```text
 application source/assets
   + Zui Ruby/QML framework runtime
+  + private mruby (`--lite`) or CRuby (`--full`)
   + configured native Qt/QML client
 ```
 
@@ -73,9 +74,9 @@ come from the required project-root `config.rb`. Linux emits DEB and RPM package
 DMG, and Windows emits an Inno Setup executable. Packaging is native to the target operating system,
 validates its icon before bundling, creates artifacts transactionally, and refuses to overwrite an
 existing release file.
-The current templates expect Ruby 3.1 or newer on the destination. Launchers use `ZUI_RUBY` when
-set, otherwise prefer the Ruby that assembled the bundle while it remains at the same path, then
-fall back to `ruby` on `PATH`. An installer can point `ZUI_RUBY` at a private Ruby executable.
+The current templates require no Ruby installation on the destination. `--lite` is the default and
+uses the pinned, platform-specific mruby runtime; applications with external gem requirements use
+`--full`, which copies private CRuby and only dependencies resolved by `Gemfile.lock`.
 
 ### Linux
 
@@ -83,6 +84,7 @@ fall back to `ruby` on `PATH`. An installer can point `ZUI_RUBY` at a private Ru
 application-linux-x86_64/
 ├── app/                    # Ruby application and assets
 ├── runtime/lib/            # Zui Ruby framework
+├── runtime/ruby/           # private mruby or CRuby
 ├── runtime/qml/            # renderer, theme, controls, catalog
 ├── runtime/native/         # complete configured Linux client
 ├── share/applications/     # desktop entry
@@ -103,6 +105,7 @@ Application.app/
     └── Resources/
         ├── app/
         ├── runtime/lib/
+        ├── runtime/ruby/    # private mruby or CRuby
         ├── runtime/qml/
         ├── runtime/native/  # deployed and patched macOS client bundle
         └── zui-bundle.json
@@ -117,10 +120,10 @@ is required on the destination Mac.
 application-windows-x86_64/
 ├── app/                    # Ruby application and assets
 ├── runtime/lib/            # Zui Ruby framework
+├── runtime/ruby/           # private mruby or CRuby
 ├── runtime/qml/            # renderer, theme, controls, catalog
 ├── runtime/native/         # host, Qt DLLs, QML modules, plugins
 ├── run.cmd
-├── run.rb
 └── zui-bundle.json
 ```
 
@@ -129,9 +132,10 @@ The directory can be used as input to MSIX, MSI, WiX, Inno Setup, or another Win
 ## Release construction
 
 CMake, a C++17 toolchain, and the Qt SDK are release-infrastructure dependencies only. Native CI
-uses Qt's deployment tooling on macOS and Windows and a relocatable Qt layout on Linux, writes a
-strict `client.json`, packages a tar archive, verifies installation through `zui doctor --fix`, and
-launches a real offscreen Zui application before publishing an asset.
+uses Qt's deployment tooling on macOS and Windows and a relocatable Qt layout on Linux. It also
+builds exact pinned mruby and mruby-json revisions for each target. CI validates both manifests and
+checksums, installs them through `zui doctor --fix`, and launches standalone `--lite` and `--full`
+applications before publishing the archives.
 
 ## Adapter boundary
 
