@@ -178,7 +178,7 @@ class DistributionTest < Minitest::Test
 
       if Gem.win_platform?
         launcher = File.read(File.join(destination, "run"))
-        assert_includes launcher, "%ruby_root%\\bin\\mruby.exe"
+        assert_includes launcher, 'ruby_command="$ruby_root/bin/mruby"'
         next
       end
 
