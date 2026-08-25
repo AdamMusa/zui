@@ -189,7 +189,7 @@ uses a system Qt installation, or downloads an asset for a different platform. S
 
 ## Component catalog
 
-Zui 0.0.6 registers **241 built-in components**. Every entry has a named Ruby builder method,
+Zui 0.0.7 registers **241 built-in components**. Every entry has a named Ruby builder method,
 property and event schema, native QML renderer, reactive patch support, and contract tests.
 
 | Category | Count | Representative components |
@@ -412,7 +412,7 @@ Build and install the gem directly:
 
 ```bash
 gem build zui.gemspec
-gem install ./zui-0.0.6.gem
+gem install ./zui-0.0.7.gem
 ```
 
 Release CI additionally constructs and audits a relocatable native client, installs the built gem,
