@@ -115,6 +115,12 @@ class DistributionTest < Minitest::Test
       destination = Zui::Distribution.new(client:, platform:, ruby: RbConfig.ruby).bundle(project)
       argument_log = File.join(project, "native-arguments.log")
 
+      if Gem.win_platform?
+        launcher = File.read(File.join(destination, "run"))
+        assert_includes launcher, "packaged_ruby='#{RbConfig.ruby}'"
+        next
+      end
+
       launched = system(
         { "PATH" => "/usr/bin:/bin", "ZUI_RUBY" => nil, "ZUI_ARGUMENT_LOG" => argument_log },
         File.join(destination, "run"), out: File::NULL, err: File::NULL

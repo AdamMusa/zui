@@ -19,7 +19,8 @@ class DistConfigTest < Minitest::Test
       assert_equal "1.2.3", config.version
       assert_equal "signal-board", config.package_name
       assert_equal %w[Utility Development], config.categories
-      assert_equal File.join(project, "assets", "icon.png"), config.icon_path(project, Zui::Platform.new(os: :linux, arch: :x86_64))
+      assert_equal File.realpath(File.join(project, "assets", "icon.png")),
+                   config.icon_path(project, Zui::Platform.new(os: :linux, arch: :x86_64))
     end
   end
 
@@ -57,7 +58,7 @@ class DistConfigTest < Minitest::Test
       config = Zui::Dist.load(
         project:, platform: Zui::Platform.new(os: :macos, arch: :arm64)
       )
-      assert_equal File.join(project, "assets", "icon.icns"),
+      assert_equal File.realpath(File.join(project, "assets", "icon.icns")),
                    config.icon_path(project, Zui::Platform.new(os: :macos, arch: :arm64))
     end
   end
