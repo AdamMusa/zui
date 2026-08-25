@@ -7,6 +7,16 @@ require_relative "../lib/zui"
 require_relative "support/client_fixture"
 
 class DistPackagerTest < Minitest::Test
+  FakeRuntimeBuilder = Struct.new(:platform) do
+    def install(project:, destination:)
+      executable = platform.windows? ? "bin/ruby.exe" : "bin/ruby"
+      FileUtils.mkdir_p(File.join(destination, "bin"))
+      File.write(File.join(destination, executable), "runtime-fixture")
+      FileUtils.chmod(0o755, File.join(destination, executable)) unless platform.windows?
+      Zui::ApplicationRuntime.new(engine: "cruby", version: "3.3.0", executable:).write(destination)
+    end
+  end
+
   def test_linux_dist_produces_deb_and_rpm_artifacts
     skip "POSIX packaging fixture" if Gem.win_platform?
 
@@ -117,6 +127,37 @@ class DistPackagerTest < Minitest::Test
 
       assert_includes error.message, "rpmbuild"
       refute File.exist?(File.join(project, "releases"))
+    end
+  end
+
+  def test_full_linux_packages_do_not_depend_on_system_ruby
+    skip "POSIX packaging fixture" if Gem.win_platform?
+
+    platform = Zui::Platform.new(os: :linux, arch: :x86_64)
+    with_project(platform) do |project, client, tools|
+      write_tool(tools, "rpmbuild", <<~SH)
+        #!/bin/sh
+        topdir=""
+        while [ "$#" -gt 0 ]; do
+          if [ "$1" = "--define" ]; then
+            shift
+            topdir=${1#_topdir }
+          fi
+          shift
+        done
+        mkdir -p "$topdir/RPMS/x86_64"
+        cp "$topdir/SPECS/signal-board.spec" "$topdir/RPMS/x86_64/signal-board.rpm"
+      SH
+      packager = Zui::DistPackager.new(
+        client:, platform:, environment: { "PATH" => tools }, runtime_mode: :full,
+        runtime_builder: FakeRuntimeBuilder.new(platform)
+      )
+
+      deb, rpm = packager.package(project, output: File.join(project, "releases"))
+      control = tar_gzip_entries(ar_members(deb).fetch("control.tar.gz")).fetch("./control")
+
+      refute_includes control, "Depends: ruby"
+      refute_includes File.read(rpm), "Requires: ruby"
     end
   end
 

@@ -11,7 +11,8 @@ module Zui
     attr_reader :platform, :tree_shake_report, :runtime_mode
 
     def initialize(client: nil, platform: Platform.current, framework_root: FRAMEWORK_ROOT,
-                   ruby: RbConfig.ruby, tree_shake: true, release_config: nil, runtime_mode: :lite)
+                   ruby: RbConfig.ruby, tree_shake: true, release_config: nil, runtime_mode: :lite,
+                   runtime_builder: nil)
       @platform = platform.assert_supported!
       @client = client || Client.new(platform: @platform)
       @framework_root = framework_root
@@ -23,6 +24,8 @@ module Zui
       end
       @tree_shake_report = nil
       @release_config = release_config
+      @runtime_builder = runtime_builder
+      @application_runtime = nil
     end
 
     def bundle(source, name: nil, destination: nil)
@@ -58,6 +61,7 @@ module Zui
                          File.join(destination, "runtime"), File.join(destination, "share", "applications")])
       install_application(project, File.join(destination, "app"))
       install_runtime(File.join(destination, "runtime"))
+      install_application_runtime(project, File.join(destination, "runtime"))
       @client.copy_to(File.join(destination, "runtime", "native"))
       shake_bundle(project, File.join(destination, "runtime"))
       write_linux_launcher(destination, app_name)
@@ -80,6 +84,7 @@ module Zui
       FileUtils.mkdir_p([macos, File.join(resources, "app"), File.join(resources, "runtime")])
       install_application(project, File.join(resources, "app"))
       install_runtime(File.join(resources, "runtime"))
+      install_application_runtime(project, File.join(resources, "runtime"))
       @client.copy_to(File.join(resources, "runtime", "native"))
       shake_bundle(project, File.join(resources, "runtime"))
       icon_name = install_macos_release_icon(resources)
@@ -94,11 +99,16 @@ module Zui
                          File.join(destination, "runtime")])
       install_application(project, File.join(destination, "app"))
       install_runtime(File.join(destination, "runtime"))
+      install_application_runtime(project, File.join(destination, "runtime"))
       @client.copy_to(File.join(destination, "runtime", "native"))
       shake_bundle(project, File.join(destination, "runtime"))
       install_windows_release_icon(destination)
-      File.write(File.join(destination, "run.rb"), windows_ruby_launcher(app_name))
-      File.write(File.join(destination, "run.cmd"), windows_command_launcher)
+      if @application_runtime
+        File.write(File.join(destination, "run.cmd"), windows_private_runtime_launcher(app_name))
+      else
+        File.write(File.join(destination, "run.rb"), windows_ruby_launcher(app_name))
+        File.write(File.join(destination, "run.cmd"), windows_command_launcher)
+      end
       write_manifest(destination, app_name)
     end
 
@@ -120,6 +130,13 @@ module Zui
       FileUtils.mkdir_p(target)
       entries = Dir.children(source).reject { |entry| %w[client_builder.rb client_packager.rb].include?(entry) }
       FileUtils.cp_r(entries.map { |entry| File.join(source, entry) }, target) unless entries.empty?
+    end
+
+    def install_application_runtime(project, destination)
+      return unless runtime_mode == :full
+
+      builder = @runtime_builder || FullRuntime.new(platform:, ruby: @ruby)
+      @application_runtime = builder.install(project:, destination: File.join(destination, "ruby"))
     end
 
     def write_linux_launcher(destination, app_name)
@@ -196,6 +213,35 @@ module Zui
       CMD
     end
 
+    def windows_private_runtime_launcher(app_name)
+      executable = @application_runtime.executable.tr("/", "\\")
+      host = @client.executable_relative_path.tr("/", "\\")
+      environment = @application_runtime.environment.map do |name, paths|
+        value = paths.map { |path| "%ruby_root%\\#{path.tr('/', '\\')}" }.join(";")
+        if name == "PATH"
+          %(set "PATH=#{value};%PATH%")
+        else
+          %(set "#{name}=#{value}")
+        end
+      end
+      environment.unshift(%(set "PATH=%ruby_root%\\bin;%ruby_root%\\lib;%PATH%"))
+      <<~CMD.gsub("\n", "\r\n")
+        @echo off
+        setlocal
+        set "bundle_dir=%~dp0"
+        set "ruby_root=%bundle_dir%runtime\\ruby"
+        #{environment.join("\n")}
+        "%bundle_dir%runtime\\native\\#{host}" ^
+          --qml-root "%bundle_dir%runtime\\qml" ^
+          --project "%bundle_dir%app" ^
+          --program "%bundle_dir%app\\main.rb" ^
+          --ruby "%ruby_root%\\#{executable}" ^
+          --load-path "%bundle_dir%runtime\\lib" ^
+          --name #{windows_quote(app_name)}
+        exit /b %ERRORLEVEL%
+      CMD
+    end
+
     def info_plist(app_name, icon_name: nil)
       identifier = @release_config&.identifier || "dev.zui.#{slug(app_name).tr("-", ".")}"
       application_version = @release_config&.version || VERSION
@@ -262,6 +308,7 @@ module Zui
     def titleize(value) = value.split(/[-_]/).map(&:capitalize).join(" ")
     def slug(value) = value.downcase.gsub(/[^a-z0-9]+/, "-").gsub(/\A-|-\z/, "")
     def shell_quote(value) = "'#{value.to_s.gsub("'", %q('"'"'))}'"
+    def windows_quote(value) = %Q("#{value.to_s.gsub('%', '%%').gsub('"', '""')}")
     def xml_escape(value) = value.to_s.gsub("&", "&amp;").gsub("<", "&lt;").gsub(">", "&gt;")
 
     def posix_client_environment
@@ -276,6 +323,8 @@ module Zui
     end
 
     def posix_ruby_command
+      return posix_private_ruby_command if @application_runtime
+
       <<~SH.chomp
         ruby_command=${ZUI_RUBY:-}
         if [ -z "$ruby_command" ]; then
@@ -288,6 +337,25 @@ module Zui
           fi
         fi
       SH
+    end
+
+    def posix_private_ruby_command
+      lines = ["ruby_root=\"$bundle_dir/runtime/ruby\""]
+      if platform.macos?
+        lines[0] = "ruby_root=\"$resources/runtime/ruby\""
+      end
+      @application_runtime.environment.each do |name, paths|
+        value = paths.map { |path| "${ruby_root}/#{path}" }.join(File::PATH_SEPARATOR)
+        if %w[LD_LIBRARY_PATH DYLD_LIBRARY_PATH].include?(name)
+          lines << "zui_environment=\"#{value}\""
+          lines << "[ -z \"${#{name}:-}\" ] || zui_environment=\"$zui_environment:${#{name}}\""
+          lines << "export #{name}=\"$zui_environment\""
+        else
+          lines << "export #{name}=\"#{value}\""
+        end
+      end
+      lines << "ruby_command=\"$ruby_root/#{@application_runtime.executable}\""
+      lines.join("\n")
     end
 
     def windows_client_environment = @client.environment_entries

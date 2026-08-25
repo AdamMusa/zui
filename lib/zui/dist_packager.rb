@@ -12,7 +12,8 @@ module Zui
     attr_reader :platform, :config, :tree_shake_report, :runtime_mode
 
     def initialize(client: nil, platform: Platform.current, framework_root: FRAMEWORK_ROOT,
-                   ruby: RbConfig.ruby, tree_shake: true, environment: ENV, runtime_mode: :lite)
+                   ruby: RbConfig.ruby, tree_shake: true, environment: ENV, runtime_mode: :lite,
+                   runtime_builder: nil)
       @platform = platform.assert_supported!
       @client = client || Client.new(platform: @platform)
       @framework_root = framework_root
@@ -23,6 +24,7 @@ module Zui
         raise ArgumentError, "unsupported application runtime: #{runtime_mode}"
       end
       @environment = environment.to_h
+      @runtime_builder = runtime_builder
       @config = nil
       @tree_shake_report = nil
     end
@@ -66,7 +68,8 @@ module Zui
                     end
       distribution = Distribution.new(
         client: @client, platform:, framework_root: @framework_root, ruby: @ruby,
-        tree_shake: @tree_shake, release_config: config, runtime_mode:
+        tree_shake: @tree_shake, release_config: config, runtime_mode:,
+        runtime_builder: @runtime_builder
       )
       distribution.bundle(project, name: config.name, destination:)
       @tree_shake_report = distribution.tree_shake_report
@@ -168,9 +171,9 @@ module Zui
         "Architecture: #{deb_architecture}",
         "Maintainer: #{config.publisher}",
         "Installed-Size: #{installed_size}",
-        "Depends: ruby (>= 3.1)",
         "Description: #{config.description}"
       ]
+      values.insert(-1, "Depends: ruby (>= 3.1)") unless runtime_mode == :full
       values.insert(-2, "Homepage: #{config.homepage}") if config.homepage
       "#{values.join("\n")}\n"
     end
@@ -200,7 +203,7 @@ module Zui
         License: #{rpm_escape(config.license)}
         #{homepage}BuildArch: #{rpm_architecture}
         AutoReqProv: no
-        Requires: ruby >= 3.1
+        #{runtime_mode == :full ? "" : "Requires: ruby >= 3.1"}
 
         %description
         #{description}

@@ -8,6 +8,23 @@ require_relative "../lib/zui"
 require_relative "support/client_fixture"
 
 class DistributionTest < Minitest::Test
+  FakeRuntimeBuilder = Struct.new(:platform) do
+    def install(project:, destination:)
+      executable = platform.windows? ? "bin/ruby.exe" : "bin/ruby"
+      FileUtils.mkdir_p(File.join(destination, "bin"))
+      File.write(File.join(destination, executable), "runtime-fixture")
+      FileUtils.chmod(0o755, File.join(destination, executable)) unless platform.windows?
+      Zui::ApplicationRuntime.new(
+        engine: "cruby", version: "3.3.0", executable:,
+        environment: {
+          "RUBYLIB" => ["lib/ruby/3.3.0"],
+          "GEM_HOME" => ["gems"],
+          "GEM_PATH" => ["gems"]
+        }
+      ).write(destination)
+    end
+  end
+
   def test_linux_bundle_contains_app_framework_and_native_runtimes
     platform = Zui::Platform.new(os: :linux, arch: :x86_64)
     with_project(platform) do |project, client|
@@ -88,6 +105,40 @@ class DistributionTest < Minitest::Test
         Zui::Distribution.new(client:, platform:).bundle(project, destination:)
       end
       assert_equal "keep", File.read(File.join(destination, "personal.txt"))
+    end
+  end
+
+  def test_full_linux_bundle_uses_only_its_private_cruby
+    platform = Zui::Platform.new(os: :linux, arch: :x86_64)
+    with_project(platform) do |project, client|
+      destination = Zui::Distribution.new(
+        client:, platform:, runtime_mode: :full, runtime_builder: FakeRuntimeBuilder.new(platform)
+      ).bundle(project)
+
+      launcher = File.read(File.join(destination, "run"))
+      assert_includes launcher, 'ruby_root="$bundle_dir/runtime/ruby"'
+      assert_includes launcher, 'ruby_command="$ruby_root/bin/ruby"'
+      assert_includes launcher, 'export GEM_HOME="${ruby_root}/gems"'
+      refute_includes launcher, "command -v ruby"
+      assert File.file?(File.join(destination, "runtime", "ruby", "runtime.json"))
+      manifest = JSON.parse(File.read(File.join(destination, "zui-bundle.json")))
+      assert_equal "full", manifest.fetch("ruby_runtime")
+    end
+  end
+
+  def test_full_windows_bundle_starts_the_host_without_system_ruby
+    platform = Zui::Platform.new(os: :windows, arch: :x86_64)
+    with_project(platform) do |project, client|
+      destination = Zui::Distribution.new(
+        client:, platform:, runtime_mode: :full, runtime_builder: FakeRuntimeBuilder.new(platform)
+      ).bundle(project)
+
+      launcher = File.read(File.join(destination, "run.cmd"))
+      assert_includes launcher, "%ruby_root%\\bin\\ruby.exe"
+      assert_includes launcher, "runtime\\native\\bin\\zui-host.exe"
+      assert_includes launcher, "--ruby"
+      refute File.exist?(File.join(destination, "run.rb"))
+      refute_match(/^ruby /, launcher)
     end
   end
 
