@@ -96,8 +96,7 @@ class FrameworkBoundaryTest < Minitest::Test
     refute_nil builder
     assert_raises(ArgumentError) { Zui::Application.new { app { component(:not_a_component) } } }
     assert_raises(ArgumentError) { Zui::Application.new { app { component(:web_view) } } }
-    assert_includes router, 'if (node.type === "image") return imageComponent'
-    assert_includes router, 'if (node.type === "vector_image") return vectorImageComponent'
+    assert_includes router, "sourceComponent: null"
     assert_includes router, "builtInSource(node.type)"
     assert_includes router, 'builtIn ? builtInSource(node.type) : bridge.componentSource(node.type)'
     refute_match(/node\.type === "model_view_3d"[^\n]+imageComponent/, router)

@@ -178,8 +178,10 @@ matching native client.
 | macOS | Intel x86-64 | `zui-client-macos-x86_64` | Standard `.app` bundle | Supported and CI verified |
 | Windows | x86-64 | `zui-client-windows-x86_64` | Portable application directory | Supported and CI verified |
 
-The application bundle expects Ruby 3.1 or newer on the destination. Installers that carry a
-private Ruby can point `ZUI_RUBY` at that executable.
+The application bundle expects Ruby 3.1 or newer on the destination. Its launcher prefers
+`ZUI_RUBY`, then the Ruby executable that created the bundle when that path is still available,
+and finally a `ruby` executable on `PATH`. Installers that carry a private Ruby can point
+`ZUI_RUBY` at that executable.
 
 Unsupported architectures fail explicitly during configuration. Zui never silently compiles Qt,
 uses a system Qt installation, or downloads an asset for a different platform. See the complete
@@ -221,8 +223,10 @@ an explicit error.
 | `zui doctor --fix` | Download, verify, and install the missing versioned native client |
 | `zui configure` | Perform the same explicit native-client installation directly |
 | `zui run FILE` | Launch a Ruby entry point through the private native client |
-| `zui bundle [DIRECTORY]` | Assemble the application, Zui framework, and native runtime for the current OS |
+| `zui bundle [DIRECTORY]` | Tree-shake and assemble the application, Zui framework, and native runtime for the current OS |
 | `zui bundle --name NAME --output PATH` | Override the generated product name and destination |
+| `zui bundle --no-tree-shake` | Retain the complete component and Qt feature catalog for metaprogrammed applications |
+| `zui bundle --dist [DIRECTORY]` | Build release installers from the required project-root `config.rb` |
 | `zui version` | Print the installed framework version |
 
 Zui has no separate validation command. Ruby, DSL, schema, resource, protocol, and renderer errors
@@ -296,6 +300,64 @@ application Ruby source and assets
 
 No system Qt installation is used by the finished bundle. Signing, notarization, installer format,
 store submission, and application identity remain the release owner's responsibility.
+
+`zui bundle` statically analyzes every production Ruby source file, including code in conditional
+branches, and retains only the referenced Zui adapters, QML modules, plugins, and native library
+dependency closure. Test, spec, vendor, temporary, and previous distribution directories do not
+affect the result. The selected components and byte savings are recorded in `zui-bundle.json`.
+
+Ruby can compute method names at runtime, so applications that invoke components through
+metaprogramming must declare those possible types in `.zui-bundle.json`:
+
+```json
+{
+  "components": ["camera", "video_output"]
+}
+```
+
+Use `--no-tree-shake` only when the possible component set cannot be declared.
+
+### Native installers
+
+`zui bundle --dist` creates the same tree-shaken application bundle and then packages it for the
+current operating system:
+
+| Host platform | Distribution artifacts |
+|---|---|
+| Linux | `.deb` and `.rpm` |
+| macOS | `.dmg` containing the `.app` and an Applications shortcut |
+| Windows | Inno Setup `.exe` installer |
+
+Release packaging requires a `config.rb` file in the project root. It is executable Ruby using a
+validated Zui DSL:
+
+```ruby
+Zui::Dist.configure do
+  name "Telemetry Console"
+  identifier "com.example.telemetry-console"
+  version "1.0.0"
+  publisher "Example Company <dev@example.com>"
+  description "A native telemetry dashboard."
+  license "MIT"
+  homepage "https://example.com/telemetry-console"
+
+  icon linux: "assets/icon.png",
+       macos: "assets/icon.icns",
+       windows: "assets/icon.ico"
+  categories "Utility", "Development"
+end
+```
+
+Only the current platform's icon is required when packaging: PNG or SVG on Linux, ICNS on macOS,
+and ICO on Windows. Paths must remain inside the project. `--output DIRECTORY` selects the artifact
+directory, and existing artifacts are never overwritten. Linux RPM creation requires `rpmbuild`
+(`rpm-build` or `rpm-tools`), macOS uses the system `hdiutil`, and Windows requires Inno Setup 6's
+`ISCC.exe` on `PATH`.
+
+The installers carry the application, Zui, Qt, and the selected native dependencies. Like the
+directory bundle, Ruby 3.1 or newer is currently required on the destination; DEB and RPM metadata
+declare that dependency. Code signing, Apple notarization, and Windows Authenticode signing remain
+release-owner steps.
 
 ## Showcase applications
 

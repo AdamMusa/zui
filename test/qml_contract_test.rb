@@ -23,11 +23,18 @@ class QmlContractTest < Minitest::Test
     ([contents] + extracted).join("\n")
   end
 
+  def assert_dynamic_component_route(renderer, component)
+    assert_match(/readonly property bool builtIn: \[.*"#{Regexp.escape(component)}"/m, renderer)
+    assert_includes renderer, "builtInSource(node.type)"
+    assert_includes renderer, "sourceComponent: null"
+  end
+
   def test_each_builtin_renderer_lives_in_its_own_qml_file
     router = File.read(File.join(ROOT, "ControlNode.qml"))
-    renderer_names = router.scan(/Builtins\.(\w+) \{ renderer: root \}/).flatten
 
-    assert_equal renderer_names.uniq.sort, renderer_names.sort
+    refute_includes router, 'import "Components/Builtins" as Builtins'
+    refute_match(/Builtins\.\w+ \{ renderer: root \}/, router)
+    assert_includes router, "sourceComponent: null"
     assert_includes router, "function builtInSource(typeName)"
     assert_includes router, "builtInSource(node.type)"
 
@@ -86,6 +93,7 @@ class QmlContractTest < Minitest::Test
     assert_includes qml, "transport.write(JSON.stringify("
     assert_includes qml, "transport.start(runtimeExecutable, program, projectDir, rubyLoadPath)"
     assert_includes qml, "function onLineReceived(line)"
+    assert_includes qml, 'summary + "\\n\\n" + root.runtimeDiagnostics'
     assert_includes native, "QProcess::SeparateChannels"
     assert_includes native, "m_process.write(data.toUtf8())"
     assert_includes native, "m_crashed = true"
@@ -104,6 +112,15 @@ class QmlContractTest < Minitest::Test
     assert_includes qml, "commitNodeIndex(nextIndex)"
     assert_includes qml, "nodeIndex[node.id] = replacement"
     refute_match(/^\s*nodeIndex\s*=/, qml)
+  end
+
+  def test_renderer_keeps_loaded_adapters_across_reactive_revisions
+    renderer = source("ControlNode.qml")
+
+    assert_includes renderer, 'if (!node) {'
+    assert_includes renderer, 'if (loadedAdapterKey === adapterKey && item) return'
+    refute_includes renderer, 'sourceComponent !== null'
+    refute_includes renderer, 'onSourceComponentChanged:'
   end
 
   def test_framework_loads_bundled_cross_platform_text_and_icon_fonts
@@ -144,8 +161,7 @@ class QmlContractTest < Minitest::Test
   def test_round_button_has_a_specific_native_checkable_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "round_button"'
-    assert_includes renderer, "id: roundButtonComponent"
+    assert_dynamic_component_route(renderer, "round_button")
     assert_includes renderer, "QQC.RoundButton {"
     assert_includes renderer, '"change", { value: checked }'
   end
@@ -153,8 +169,7 @@ class QmlContractTest < Minitest::Test
   def test_tool_button_has_a_specific_native_toolbar_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "tool_button"'
-    assert_includes renderer, "id: toolButtonComponent"
+    assert_dynamic_component_route(renderer, "tool_button")
     assert_includes renderer, "QQC.ToolButton {"
     assert_includes renderer, 'nativeToolButton.hovered ? Color.popups.background'
   end
@@ -162,8 +177,7 @@ class QmlContractTest < Minitest::Test
   def test_delay_button_has_a_specific_native_hold_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "delay_button"'
-    assert_includes renderer, "id: delayButtonComponent"
+    assert_dynamic_component_route(renderer, "delay_button")
     assert_includes renderer, "QQC.DelayButton {"
     assert_includes renderer, '"activate", {}'
     assert_includes renderer, '"progress", { value: progress }'
@@ -218,8 +232,7 @@ class QmlContractTest < Minitest::Test
   def test_aspect_ratio_has_a_specific_reactive_container_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "aspect_ratio"'
-    assert_includes renderer, "id: aspectRatioComponent"
+    assert_dynamic_component_route(renderer, "aspect_ratio")
     assert_includes renderer, 'Number(requestedWidth) / aspect'
     assert_includes renderer, "Repeater { model: root.node.children || []; delegate: childDelegate }"
   end
@@ -227,8 +240,7 @@ class QmlContractTest < Minitest::Test
   def test_constrained_box_has_a_specific_bounded_container_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "constrained_box"'
-    assert_includes renderer, "id: constrainedBoxComponent"
+    assert_dynamic_component_route(renderer, "constrained_box")
     assert_includes renderer, 'root.prop("min_width", 0)'
     assert_includes renderer, 'root.prop("max_height", Number.MAX_VALUE)'
   end
@@ -236,8 +248,7 @@ class QmlContractTest < Minitest::Test
   def test_fitted_box_has_a_specific_scaling_container_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "fitted_box"'
-    assert_includes renderer, "id: fittedBoxComponent"
+    assert_dynamic_component_route(renderer, "fitted_box")
     assert_includes renderer, 'fitMode === "cover"'
     assert_includes renderer, "Scale { xScale: fittedXScale; yScale: fittedYScale }"
   end
@@ -245,8 +256,7 @@ class QmlContractTest < Minitest::Test
   def test_wrap_has_a_specific_responsive_flow_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "wrap"'
-    assert_includes renderer, "id: wrapComponent"
+    assert_dynamic_component_route(renderer, "wrap")
     assert_includes renderer, 'root.prop("layout_direction", "left_to_right")'
     assert_includes renderer, "Flow.TopToBottom : Flow.LeftToRight"
   end
@@ -254,8 +264,7 @@ class QmlContractTest < Minitest::Test
   def test_split_view_has_a_specific_native_resizable_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "split_view"'
-    assert_includes renderer, "id: splitViewComponent"
+    assert_dynamic_component_route(renderer, "split_view")
     assert_includes renderer, "QQC.SplitView {"
     assert_includes renderer, '"resize", { sizes: currentSizes() }'
     assert_includes renderer, "QQC.SplitView.preferredWidth"
@@ -264,8 +273,7 @@ class QmlContractTest < Minitest::Test
   def test_stack_layout_has_a_specific_native_indexed_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "stack_layout"'
-    assert_includes renderer, "id: stackLayoutComponent"
+    assert_dynamic_component_route(renderer, "stack_layout")
     assert_includes renderer, "StackLayout {"
     assert_includes renderer, 'root.prop("current_index", 0)'
   end
@@ -273,8 +281,7 @@ class QmlContractTest < Minitest::Test
   def test_layout_item_proxy_has_a_specific_native_layout_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "layout_item_proxy"'
-    assert_includes renderer, "id: layoutItemProxyComponent"
+    assert_dynamic_component_route(renderer, "layout_item_proxy")
     assert_includes renderer, "LayoutItemProxy {"
     assert_includes renderer, "root.findRenderedItem(targetId)"
     assert_includes renderer, "Layout.preferredWidth"
@@ -284,8 +291,7 @@ class QmlContractTest < Minitest::Test
   def test_window_has_a_specific_native_secondary_window_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "window"'
-    assert_includes renderer, "id: windowComponent"
+    assert_dynamic_component_route(renderer, "window")
     assert_includes renderer, "Window {"
     assert_includes renderer, 'root.prop("modality", "none")'
     assert_includes renderer, 'root.prop("flags", "window")'
@@ -296,8 +302,7 @@ class QmlContractTest < Minitest::Test
   def test_application_window_has_a_specific_controls_window_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "application_window"'
-    assert_includes renderer, "id: applicationWindowComponent"
+    assert_dynamic_component_route(renderer, "application_window")
     assert_includes renderer, "QQC.ApplicationWindow {"
     assert_includes renderer, 'root.prop("background", "transparent")'
     assert_includes renderer, "onActiveFocusControlChanged"
@@ -308,8 +313,7 @@ class QmlContractTest < Minitest::Test
   def test_loader_has_a_specific_lazy_native_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "loader"'
-    assert_includes renderer, "id: lazyLoaderComponent"
+    assert_dynamic_component_route(renderer, "loader")
     assert_includes renderer, 'source: active ? Qt.resolvedUrl("ControlNode.qml") : ""'
     assert_includes renderer, 'root.subscribed("loaded")'
   end
@@ -317,8 +321,7 @@ class QmlContractTest < Minitest::Test
   def test_flickable_has_a_specific_native_kinetic_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "flickable"'
-    assert_includes renderer, "id: flickableComponent"
+    assert_dynamic_component_route(renderer, "flickable")
     assert_includes renderer, "Flickable.HorizontalAndVerticalFlick"
     assert_includes renderer, '"flick_end", positionPayload()'
   end
@@ -326,8 +329,7 @@ class QmlContractTest < Minitest::Test
   def test_focus_scope_has_a_specific_native_focus_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "focus_scope"'
-    assert_includes renderer, "id: focusScopeComponent"
+    assert_dynamic_component_route(renderer, "focus_scope")
     assert_includes renderer, "FocusScope {"
     assert_includes renderer, "forceActiveFocus()"
   end
@@ -335,8 +337,7 @@ class QmlContractTest < Minitest::Test
   def test_flipable_has_a_specific_native_two_face_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "flipable"'
-    assert_includes renderer, "id: flipableComponent"
+    assert_dynamic_component_route(renderer, "flipable")
     assert_includes renderer, "Flipable {"
     assert_includes renderer, "Behavior on angle"
     assert_includes renderer, "root.configureFace(item, root.node.children[1])"
@@ -345,8 +346,7 @@ class QmlContractTest < Minitest::Test
   def test_border_image_has_a_specific_native_nine_slice_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "border_image"'
-    assert_includes renderer, "id: borderImageComponent"
+    assert_dynamic_component_route(renderer, "border_image")
     assert_includes renderer, "BorderImage {"
     assert_includes renderer, 'border.left: Number(root.prop("border_left", 0))'
     assert_includes renderer, "BorderImage.Round"
@@ -355,8 +355,7 @@ class QmlContractTest < Minitest::Test
   def test_label_has_a_specific_native_styled_text_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "label"'
-    assert_includes renderer, "id: labelComponent"
+    assert_dynamic_component_route(renderer, "label")
     assert_includes renderer, "QQC.Label {"
     assert_includes renderer, "Text.MarkdownText"
     assert_includes renderer, '"link", { value: link }'
@@ -365,8 +364,7 @@ class QmlContractTest < Minitest::Test
   def test_rich_text_has_an_explicit_native_markup_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "rich_text"'
-    assert_includes renderer, "id: richTextComponent"
+    assert_dynamic_component_route(renderer, "rich_text")
     assert_includes renderer, "textFormat: Text.RichText"
     assert_includes renderer, "linkColor: root.prop"
   end
@@ -374,8 +372,7 @@ class QmlContractTest < Minitest::Test
   def test_markdown_has_a_specific_native_document_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "markdown"'
-    assert_includes renderer, "id: markdownComponent"
+    assert_dynamic_component_route(renderer, "markdown")
     assert_includes renderer, "textFormat: Text.MarkdownText"
     assert_includes renderer, 'baseUrl: String(root.prop("base_url", ""))'
   end
@@ -383,8 +380,7 @@ class QmlContractTest < Minitest::Test
   def test_selectable_text_has_a_specific_native_selection_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "selectable_text"'
-    assert_includes renderer, "id: selectableTextComponent"
+    assert_dynamic_component_route(renderer, "selectable_text")
     assert_includes renderer, "selectByMouse: true"
     assert_includes renderer, '"selection", {'
   end
@@ -392,8 +388,7 @@ class QmlContractTest < Minitest::Test
   def test_animated_image_has_a_specific_native_playback_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "animated_image"'
-    assert_includes renderer, "id: animatedImageComponent"
+    assert_dynamic_component_route(renderer, "animated_image")
     assert_includes renderer, "AnimatedImage {"
     assert_includes renderer, 'root.prop("speed", 1)'
     assert_includes renderer, '"frame", { value: currentFrame, count: frameCount }'
@@ -403,8 +398,7 @@ class QmlContractTest < Minitest::Test
     renderer = source("ControlNode.qml")
 
     assert_includes renderer, "import QtQuick.VectorImage"
-    assert_includes renderer, 'node.type === "vector_image"'
-    assert_includes renderer, "id: vectorImageComponent"
+    assert_dynamic_component_route(renderer, "vector_image")
     assert_includes renderer, "VectorImage.CurveRenderer"
     vector_image = source("Components/Builtins/VectorImage.qml")
     assert_includes vector_image, 'source: renderer.assetUrl(renderer.prop("source", ""))'
@@ -451,8 +445,7 @@ class QmlContractTest < Minitest::Test
   def test_font_loader_has_a_specific_native_resource_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "font_loader"'
-    assert_includes renderer, "id: fontLoaderComponent"
+    assert_dynamic_component_route(renderer, "font_loader")
     assert_includes renderer, "FontLoader {"
     assert_includes renderer, '"loaded", { name: name }'
   end
@@ -460,8 +453,7 @@ class QmlContractTest < Minitest::Test
   def test_text_metrics_has_a_specific_native_measurement_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "text_metrics"'
-    assert_includes renderer, "id: textMetricsComponent"
+    assert_dynamic_component_route(renderer, "text_metrics")
     assert_includes renderer, "TextMetrics {"
     assert_includes renderer, "advance_width: advanceWidth"
     assert_includes renderer, "tight_bounding_rect:"
@@ -506,8 +498,7 @@ class QmlContractTest < Minitest::Test
   def test_avatar_has_a_specific_image_and_initials_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "avatar"'
-    assert_includes renderer, "id: avatarComponent"
+    assert_dynamic_component_route(renderer, "avatar")
     assert_includes renderer, "id: avatarImage"
     assert_includes renderer, "Image.PreserveAspectCrop"
     assert_includes renderer, ").toUpperCase()"
@@ -518,8 +509,7 @@ class QmlContractTest < Minitest::Test
   def test_badge_has_a_specific_value_and_dot_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "badge"'
-    assert_includes renderer, "id: badgeComponent"
+    assert_dynamic_component_route(renderer, "badge")
     assert_includes renderer, 'String(maximum) + "+"'
     assert_includes renderer, 'root.prop("dot", false)'
   end
@@ -527,8 +517,7 @@ class QmlContractTest < Minitest::Test
   def test_chip_has_a_specific_selectable_and_deletable_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "chip"'
-    assert_includes renderer, "id: chipComponent"
+    assert_dynamic_component_route(renderer, "chip")
     assert_includes renderer, 'root.prop("deletable", false)'
     assert_includes renderer, '"delete", {}'
     assert_includes renderer, '"change", { value: !chipRoot.selected }'
@@ -537,8 +526,7 @@ class QmlContractTest < Minitest::Test
   def test_divider_has_a_specific_oriented_line_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "divider"'
-    assert_includes renderer, "id: dividerComponent"
+    assert_dynamic_component_route(renderer, "divider")
     assert_includes renderer, 'root.prop("end_indent", 0)'
     assert_includes renderer, "parent.vertical ? parent.lineThickness"
   end
@@ -579,11 +567,11 @@ class QmlContractTest < Minitest::Test
     renderer = source("ControlNode.qml")
 
     assert_includes renderer, "import QtQuick.Layouts"
-    assert_includes renderer, 'node.type === "row_layout"'
-    assert_includes renderer, 'node.type === "column_layout"'
-    assert_includes renderer, 'node.type === "grid_layout"'
-    assert_includes renderer, 'node.type === "flow"'
-    assert_includes renderer, 'node.type === "card"'
+    assert_dynamic_component_route(renderer, "row_layout")
+    assert_dynamic_component_route(renderer, "column_layout")
+    assert_dynamic_component_route(renderer, "grid_layout")
+    assert_dynamic_component_route(renderer, "flow")
+    assert_dynamic_component_route(renderer, "card")
     assert_includes renderer, "Layout.fillWidth"
     assert_includes renderer, 'root.structuralContainer && root.subscribed("click")'
     assert_includes renderer, 'phone: "\\uf3cd"'
@@ -594,7 +582,7 @@ class QmlContractTest < Minitest::Test
   def test_tooltip_uses_the_native_zui_panel_tooltip
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "tooltip"'
+    assert_dynamic_component_route(renderer, "tooltip")
     assert_includes renderer, "ZuiControls.PanelToolTip"
     assert_includes renderer, 'panelBackground: root.prop("background", Color.tooltip.background)'
   end
@@ -602,7 +590,7 @@ class QmlContractTest < Minitest::Test
   def test_bar_icon_button_uses_native_optical_bar_control
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "bar_icon_button"'
+    assert_dynamic_component_route(renderer, "bar_icon_button")
     assert_includes renderer, "ZuiControls.BarIconButton"
     assert_includes renderer, 'slotSize: Number(root.prop("slot_size", Style.bar.iconSlot))'
     assert_includes renderer, '"middle_click"'
@@ -614,7 +602,7 @@ class QmlContractTest < Minitest::Test
   def test_bar_indicator_uses_native_active_inactive_control
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "bar_indicator"'
+    assert_dynamic_component_route(renderer, "bar_indicator")
     assert_includes renderer, "ZuiControls.BarIndicator"
     assert_includes renderer, 'activeText: root.iconGlyph(root.prop("active_icon", ""))'
     assert_includes renderer, 'indicatorBlock: String(root.prop("indicator_block", "single"))'
@@ -623,7 +611,7 @@ class QmlContractTest < Minitest::Test
   def test_border_overlay_uses_native_gradient_border_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "border_overlay"'
+    assert_dynamic_component_route(renderer, "border_overlay")
     assert_includes renderer, "ZuiControls.BorderOverlay"
     assert_includes renderer, 'gradient: { colors: colors, angle: Number(root.prop("gradient_angle", 0)), enabled: true }'
   end
@@ -632,7 +620,7 @@ class QmlContractTest < Minitest::Test
     renderer = source("ControlNode.qml")
     key_catcher = source("Controls/PanelKeyCatcher.qml")
 
-    assert_includes renderer, 'node.type === "key_catcher"'
+    assert_dynamic_component_route(renderer, "key_catcher")
     assert_includes renderer, "ZuiControls.PanelKeyCatcher"
     assert_includes renderer, '"move", { dx: dx, dy: dy }'
     assert_includes renderer, '"tab", { direction: direction }'
@@ -649,7 +637,7 @@ class QmlContractTest < Minitest::Test
   def test_checkbox_has_omarchy_styling_and_value_event
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "checkbox"'
+    assert_dynamic_component_route(renderer, "checkbox")
     assert_includes renderer, "QQC.CheckBox"
     assert_includes renderer, 'root.iconGlyph("check")'
     assert_includes renderer, '"change", { value: checked }'
@@ -658,8 +646,7 @@ class QmlContractTest < Minitest::Test
   def test_radio_button_has_a_specific_native_selection_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "radio_button"'
-    assert_includes renderer, "id: radioButtonComponent"
+    assert_dynamic_component_route(renderer, "radio_button")
     assert_includes renderer, "QQC.RadioButton {"
     assert_includes renderer, 'option: root.prop("value", null)'
   end
@@ -667,8 +654,7 @@ class QmlContractTest < Minitest::Test
   def test_radio_group_has_a_specific_native_exclusive_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "radio_group"'
-    assert_includes renderer, "id: radioGroupComponent"
+    assert_dynamic_component_route(renderer, "radio_group")
     assert_includes renderer, "QQC.ButtonGroup { id: exclusiveRadioGroup }"
     assert_includes renderer, "QQC.ButtonGroup.group: exclusiveRadioGroup"
     assert_includes renderer, '"change", { value: optionValue, index: index }'
@@ -677,8 +663,7 @@ class QmlContractTest < Minitest::Test
   def test_line_chart_has_a_specific_canvas_renderer_and_events
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "line_chart"'
-    assert_includes renderer, "id: lineChartComponent"
+    assert_dynamic_component_route(renderer, "line_chart")
     assert_includes renderer, 'root.prop("fill_color", "")'
     assert_includes renderer, '"select", payload(mouse)'
     assert_includes renderer, '"hover", payload(mouse)'
@@ -687,16 +672,14 @@ class QmlContractTest < Minitest::Test
   def test_bar_chart_has_a_specific_canvas_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "bar_chart"'
-    assert_includes renderer, "id: barChartComponent"
+    assert_dynamic_component_route(renderer, "bar_chart")
     assert_includes renderer, 'ctx.fillRect(left, top, Math.max(1, slot - gap), barHeight)'
   end
 
   def test_area_chart_has_a_specific_canvas_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "area_chart"'
-    assert_includes renderer, "id: areaChartComponent"
+    assert_dynamic_component_route(renderer, "area_chart")
     assert_includes renderer, 'ctx.fillStyle = root.prop("fill_color", root.prop("color", Color.accent))'
   end
 
@@ -715,8 +698,7 @@ class QmlContractTest < Minitest::Test
     renderer = source("ControlNode.qml")
     text_area = source("Components/Builtins/TextArea.qml")
 
-    assert_includes renderer, 'node.type === "text_area"'
-    assert_includes renderer, "id: textAreaComponent"
+    assert_dynamic_component_route(renderer, "text_area")
     assert_includes renderer, "QQC.TextArea {"
     assert_includes renderer, '"selection", { start: selectionStart'
     assert_includes text_area, 'nativeTextArea["textEdited"]'
@@ -729,8 +711,7 @@ class QmlContractTest < Minitest::Test
     renderer = source("ControlNode.qml")
     search_field = source("Components/Builtins/SearchField.qml")
 
-    assert_includes renderer, 'node.type === "search_field"'
-    assert_includes renderer, "id: searchFieldComponent"
+    assert_dynamic_component_route(renderer, "search_field")
     assert_includes search_field, "QQC.TextField {"
     assert_includes search_field, 'suggestionModel: renderer.prop("suggestions", [])'
     assert_includes search_field, "id: suggestionPopup"
@@ -743,8 +724,7 @@ class QmlContractTest < Minitest::Test
   def test_password_field_has_a_specific_masked_reveal_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "password_field"'
-    assert_includes renderer, "id: passwordFieldComponent"
+    assert_dynamic_component_route(renderer, "password_field")
     assert_includes renderer, "password: !passwordRoot.revealState"
     assert_includes renderer, '"reveal", { value: passwordRoot.revealState }'
   end
@@ -752,8 +732,7 @@ class QmlContractTest < Minitest::Test
   def test_range_slider_has_a_specific_native_two_handle_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "range_slider"'
-    assert_includes renderer, "id: rangeSliderComponent"
+    assert_dynamic_component_route(renderer, "range_slider")
     assert_includes renderer, "QQC.RangeSlider {"
     assert_includes renderer, "first.onMoved:"
     assert_includes renderer, "return { lower: first.value, upper: second.value }"
@@ -762,8 +741,7 @@ class QmlContractTest < Minitest::Test
   def test_dial_has_a_specific_native_angular_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "dial"'
-    assert_includes renderer, "id: dialComponent"
+    assert_dynamic_component_route(renderer, "dial")
     assert_includes renderer, "QQC.Dial {"
     assert_includes renderer, "QQC.Dial.Circular"
     assert_includes renderer, '"input", { value: value, angle: angle }'
@@ -772,8 +750,7 @@ class QmlContractTest < Minitest::Test
   def test_spin_box_has_a_specific_native_integer_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "spin_box"'
-    assert_includes renderer, "id: spinBoxComponent"
+    assert_dynamic_component_route(renderer, "spin_box")
     assert_includes renderer, "QQC.SpinBox {"
     assert_includes renderer, "textFromValue: function(value, locale)"
     assert_includes renderer, '"increase", { value: value }'
@@ -783,8 +760,7 @@ class QmlContractTest < Minitest::Test
     renderer = source("ControlNode.qml")
     double_spin_box = source("Components/Builtins/DoubleSpinBox.qml")
 
-    assert_includes renderer, 'node.type === "double_spin_box"'
-    assert_includes renderer, "id: doubleSpinBoxComponent"
+    assert_dynamic_component_route(renderer, "double_spin_box")
     assert_includes double_spin_box, "QQC.SpinBox {"
     assert_includes double_spin_box, "readonly property real scaleFactor"
     assert_includes double_spin_box, "readonly property real realValue"
@@ -796,8 +772,7 @@ class QmlContractTest < Minitest::Test
   def test_color_picker_has_a_specific_native_dialog_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "color_picker"'
-    assert_includes renderer, "id: colorPickerComponent"
+    assert_dynamic_component_route(renderer, "color_picker")
     assert_includes renderer, "ColorDialog {"
     assert_includes renderer, 'selectedColor: root.prop("color", "#ffffff")'
     assert_includes renderer, "ColorDialog.ShowAlphaChannel"
@@ -810,8 +785,7 @@ class QmlContractTest < Minitest::Test
   def test_date_picker_has_a_specific_native_calendar_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "date_picker"'
-    assert_includes renderer, "id: datePickerComponent"
+    assert_dynamic_component_route(renderer, "date_picker")
     assert_includes renderer, "Basic.MonthGrid {"
     assert_includes renderer, 'root.prop("minimum", "")'
     assert_includes renderer, 'root.prop("maximum", "")'
@@ -823,8 +797,7 @@ class QmlContractTest < Minitest::Test
   def test_time_picker_has_a_specific_native_spin_control_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "time_picker"'
-    assert_includes renderer, "id: timePickerComponent"
+    assert_dynamic_component_route(renderer, "time_picker")
     assert_includes renderer, "QQC.SpinBox {"
     assert_includes renderer, 'root.prop("use_24_hour", true)'
     assert_includes renderer, 'root.prop("show_seconds", false)'
@@ -838,8 +811,7 @@ class QmlContractTest < Minitest::Test
   def test_file_picker_has_specific_native_file_and_folder_dialog_renderers
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "file_picker"'
-    assert_includes renderer, "id: filePickerComponent"
+    assert_dynamic_component_route(renderer, "file_picker")
     assert_includes renderer, "FileDialog {"
     assert_includes renderer, "FolderDialog {"
     assert_includes renderer, "FileDialog.OpenFiles"
@@ -852,8 +824,7 @@ class QmlContractTest < Minitest::Test
   def test_folder_picker_has_a_specific_native_directory_dialog_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "folder_picker"'
-    assert_includes renderer, "id: folderPickerComponent"
+    assert_dynamic_component_route(renderer, "folder_picker")
     assert_includes renderer, "FolderDialog {"
     assert_includes renderer, 'root.prop("current_folder", root.prop("path", ""))'
     assert_includes renderer, "FolderDialog.DontUseNativeDialog"
@@ -865,8 +836,7 @@ class QmlContractTest < Minitest::Test
   def test_font_picker_has_a_specific_native_font_dialog_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "font_picker"'
-    assert_includes renderer, "id: fontPickerComponent"
+    assert_dynamic_component_route(renderer, "font_picker")
     assert_includes renderer, "FontDialog {"
     assert_includes renderer, "Qt.font(specification)"
     assert_includes renderer, "family: value.family"
@@ -879,8 +849,7 @@ class QmlContractTest < Minitest::Test
   def test_dialog_button_box_has_a_specific_native_role_aware_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "dialog_button_box"'
-    assert_includes renderer, "id: dialogButtonBoxComponent"
+    assert_dynamic_component_route(renderer, "dialog_button_box")
     assert_includes renderer, "QQC.DialogButtonBox {"
     assert_includes renderer, "standardButtons: standardButtonsValue"
     assert_includes renderer, "QQC.DialogButtonBox.buttonRole: box.roleValue"
@@ -895,8 +864,7 @@ class QmlContractTest < Minitest::Test
   def test_action_has_a_specific_native_nonvisual_command_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "action"'
-    assert_includes renderer, "id: actionComponent"
+    assert_dynamic_component_route(renderer, "action")
     assert_includes renderer, "QQC.Action {"
     assert_includes renderer, "property alias nativeAction: nativeAction"
     assert_includes renderer, 'shortcut: root.prop("shortcut", "")'
@@ -909,8 +877,7 @@ class QmlContractTest < Minitest::Test
   def test_action_group_resolves_ruby_action_nodes_into_a_native_group
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "action_group"'
-    assert_includes renderer, "id: actionGroupComponent"
+    assert_dynamic_component_route(renderer, "action_group")
     assert_includes renderer, "QQC.ActionGroup {"
     assert_includes renderer, 'root.prop("action_ids", [])'
     assert_includes renderer, "root.findRenderedItem(actionId)"
@@ -925,8 +892,7 @@ class QmlContractTest < Minitest::Test
   def test_page_has_a_specific_native_navigation_container_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "page"'
-    assert_includes renderer, "id: pageComponent"
+    assert_dynamic_component_route(renderer, "page")
     assert_includes renderer, "QQC.Page {"
     assert_includes renderer, 'title: String(root.prop("title", ""))'
     assert_includes renderer, 'root.prop("header_text", pageRoot.title)'
@@ -940,8 +906,7 @@ class QmlContractTest < Minitest::Test
   def test_pane_has_a_specific_native_content_surface_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "pane"'
-    assert_includes renderer, "id: paneComponent"
+    assert_dynamic_component_route(renderer, "pane")
     assert_includes renderer, "QQC.Pane {"
     assert_includes renderer, 'root.prop("left_padding", padding)'
     assert_includes renderer, 'root.prop("right_padding", padding)'
@@ -956,8 +921,7 @@ class QmlContractTest < Minitest::Test
   def test_frame_has_a_specific_native_bordered_container_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "frame"'
-    assert_includes renderer, "id: frameComponent"
+    assert_dynamic_component_route(renderer, "frame")
     assert_includes renderer, "QQC.Frame {"
     assert_includes renderer, 'root.prop("border_width", Style.normalBorderWidth)'
     assert_includes renderer, 'root.prop("border_color", Color.border)'
@@ -971,8 +935,7 @@ class QmlContractTest < Minitest::Test
   def test_group_box_has_a_specific_native_titled_container_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "group_box"'
-    assert_includes renderer, "id: groupBoxComponent"
+    assert_dynamic_component_route(renderer, "group_box")
     assert_includes renderer, "QQC.GroupBox {"
     assert_includes renderer, 'title: String(root.prop("title", ""))'
     assert_includes renderer, 'root.prop("title_alignment", "left")'
@@ -985,8 +948,7 @@ class QmlContractTest < Minitest::Test
   def test_tabs_has_a_specific_native_bar_and_stack_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "tabs"'
-    assert_includes renderer, "id: tabsComponent"
+    assert_dynamic_component_route(renderer, "tabs")
     assert_includes renderer, "QQC.TabBar {"
     assert_includes renderer, "QQC.TabButton {"
     assert_includes renderer, "StackLayout {"
@@ -1002,8 +964,7 @@ class QmlContractTest < Minitest::Test
   def test_tab_bar_has_a_specific_native_selection_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "tab_bar"'
-    assert_includes renderer, "id: tabBarComponent"
+    assert_dynamic_component_route(renderer, "tab_bar")
     assert_includes renderer, "QQC.TabBar {"
     assert_includes renderer, "QQC.TabButton {"
     assert_includes renderer, 'root.prop("items", [])'
@@ -1019,8 +980,7 @@ class QmlContractTest < Minitest::Test
   def test_tab_button_has_a_specific_native_button_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "tab_button"'
-    assert_includes renderer, "id: tabButtonComponent"
+    assert_dynamic_component_route(renderer, "tab_button")
     assert_includes renderer, "QQC.TabButton {"
     assert_includes renderer, 'checked: root.prop("checked", false) === true'
     assert_includes renderer, 'autoExclusive: root.prop("auto_exclusive", true) !== false'
@@ -1036,8 +996,7 @@ class QmlContractTest < Minitest::Test
   def test_page_indicator_has_a_specific_native_paging_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "page_indicator"'
-    assert_includes renderer, "id: pageIndicatorComponent"
+    assert_dynamic_component_route(renderer, "page_indicator")
     assert_includes renderer, "QQC.PageIndicator {"
     assert_includes renderer, 'count: Math.max(0, Number(root.prop("count", 0)))'
     assert_includes renderer, 'root.prop("current_index", 0)'
@@ -1051,8 +1010,7 @@ class QmlContractTest < Minitest::Test
   def test_stack_view_has_a_specific_native_push_pop_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "stack_view"'
-    assert_includes renderer, "id: stackViewComponent"
+    assert_dynamic_component_route(renderer, "stack_view")
     assert_includes renderer, "QQC.StackView {"
     assert_includes renderer, 'root.prop("current_index", 0)'
     assert_includes renderer, "childDelegate.createObject"
@@ -1069,8 +1027,7 @@ class QmlContractTest < Minitest::Test
   def test_swipe_view_has_a_specific_native_gesture_paging_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "swipe_view"'
-    assert_includes renderer, "id: swipeViewComponent"
+    assert_dynamic_component_route(renderer, "swipe_view")
     assert_includes renderer, "QQC.SwipeView {"
     assert_includes renderer, 'root.prop("current_index", 0)'
     assert_includes renderer, 'interactive: root.prop("interactive", true) !== false'
@@ -1084,8 +1041,7 @@ class QmlContractTest < Minitest::Test
   def test_drawer_has_a_specific_native_edge_popup_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "drawer"'
-    assert_includes renderer, "id: drawerComponent"
+    assert_dynamic_component_route(renderer, "drawer")
     assert_includes renderer, "QQC.Drawer {"
     assert_includes renderer, 'root.prop("opened", false) === true'
     assert_includes renderer, 'edgeValue(root.prop("edge", "left"))'
@@ -1103,8 +1059,7 @@ class QmlContractTest < Minitest::Test
   def test_navigation_rail_has_a_specific_native_destination_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "navigation_rail"'
-    assert_includes renderer, "id: navigationRailComponent"
+    assert_dynamic_component_route(renderer, "navigation_rail")
     assert_includes renderer, "QQC.Pane {"
     assert_includes renderer, "QQC.ToolButton {"
     assert_includes renderer, 'root.prop("items", [])'
@@ -1120,8 +1075,7 @@ class QmlContractTest < Minitest::Test
   def test_breadcrumb_has_a_specific_native_trail_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "breadcrumb"'
-    assert_includes renderer, "id: breadcrumbComponent"
+    assert_dynamic_component_route(renderer, "breadcrumb")
     assert_includes renderer, "QQC.Pane {"
     assert_includes renderer, "QQC.ToolButton {"
     assert_includes renderer, 'root.prop("items", [])'
@@ -1137,8 +1091,7 @@ class QmlContractTest < Minitest::Test
   def test_pagination_has_a_specific_native_bounded_page_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "pagination"'
-    assert_includes renderer, "id: paginationComponent"
+    assert_dynamic_component_route(renderer, "pagination")
     assert_includes renderer, "QQC.Pane {"
     assert_includes renderer, "QQC.ToolButton {"
     assert_includes renderer, 'root.prop("count", 0)'
@@ -1156,8 +1109,7 @@ class QmlContractTest < Minitest::Test
   def test_expansion_panel_has_a_specific_native_reveal_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "expansion_panel"'
-    assert_includes renderer, "id: expansionPanelComponent"
+    assert_dynamic_component_route(renderer, "expansion_panel")
     assert_includes renderer, "QQC.Control {"
     assert_includes renderer, "QQC.ToolButton {"
     assert_includes renderer, 'root.prop("expanded", false) === true'
@@ -1174,8 +1126,7 @@ class QmlContractTest < Minitest::Test
   def test_accordion_has_a_specific_native_multi_section_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "accordion"'
-    assert_includes renderer, "id: accordionComponent"
+    assert_dynamic_component_route(renderer, "accordion")
     assert_includes renderer, "QQC.Control {"
     assert_includes renderer, "QQC.ToolButton {"
     assert_includes renderer, 'root.prop("titles", [])'
@@ -1192,8 +1143,7 @@ class QmlContractTest < Minitest::Test
   def test_tool_bar_has_a_specific_native_container_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "tool_bar"'
-    assert_includes renderer, "id: toolBarComponent"
+    assert_dynamic_component_route(renderer, "tool_bar")
     assert_includes renderer, "QQC.ToolBar {"
     assert_includes renderer, 'root.prop("position", "header")'
     assert_includes renderer, "QQC.ToolBar.Footer"
@@ -1207,8 +1157,7 @@ class QmlContractTest < Minitest::Test
   def test_tool_separator_has_a_specific_native_separator_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "tool_separator"'
-    assert_includes renderer, "id: toolSeparatorComponent"
+    assert_dynamic_component_route(renderer, "tool_separator")
     assert_includes renderer, "QQC.ToolSeparator {"
     assert_includes renderer, 'root.prop("orientation", "vertical")'
     assert_includes renderer, 'orientation: String(root.prop("orientation", "vertical")) === "vertical"'
@@ -1223,8 +1172,7 @@ class QmlContractTest < Minitest::Test
     renderer = source("ControlNode.qml")
     menu = source("Components/Builtins/Menu.qml")
 
-    assert_includes renderer, 'node.type === "menu"'
-    assert_includes renderer, "id: menuComponent"
+    assert_dynamic_component_route(renderer, "menu")
     assert_includes renderer, "QQC.Menu {"
     assert_includes renderer, "QQC.MenuItem {"
     assert_includes renderer, "QQC.MenuSeparator {"
@@ -1248,8 +1196,7 @@ class QmlContractTest < Minitest::Test
   def test_menu_item_has_a_specific_native_entry_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "menu_item"'
-    assert_includes renderer, "id: menuItemComponent"
+    assert_dynamic_component_route(renderer, "menu_item")
     assert_includes renderer, "QQC.MenuItem {"
     assert_includes renderer, 'text: String(root.prop("text", ""))'
     assert_includes renderer, 'checkable: root.prop("checkable", false) === true'
@@ -1266,8 +1213,7 @@ class QmlContractTest < Minitest::Test
   def test_menu_separator_has_a_specific_native_separator_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "menu_separator"'
-    assert_includes renderer, "id: menuSeparatorComponent"
+    assert_dynamic_component_route(renderer, "menu_separator")
     assert_includes renderer, "QQC.MenuSeparator {"
     assert_includes renderer, 'root.prop("thickness", 1)'
     assert_includes renderer, 'root.prop("width", 220)'
@@ -1281,8 +1227,7 @@ class QmlContractTest < Minitest::Test
     renderer = source("ControlNode.qml")
     menu_bar = source("Components/Builtins/MenuBar.qml")
 
-    assert_includes renderer, 'node.type === "menu_bar"'
-    assert_includes renderer, "id: menuBarComponent"
+    assert_dynamic_component_route(renderer, "menu_bar")
     assert_includes renderer, "QQC.MenuBar {"
     assert_includes renderer, "QQC.Menu {"
     assert_includes renderer, "QQC.MenuItem {"
@@ -1304,8 +1249,7 @@ class QmlContractTest < Minitest::Test
     renderer = source("ControlNode.qml")
     context_menu = source("Components/Builtins/ContextMenu.qml")
 
-    assert_includes renderer, 'node.type === "context_menu"'
-    assert_includes renderer, "id: contextMenuComponent"
+    assert_dynamic_component_route(renderer, "context_menu")
     assert_includes renderer, "QQC.Menu {"
     assert_includes renderer, "QQC.MenuItem {"
     assert_includes renderer, "QQC.MenuSeparator {"
@@ -1326,8 +1270,7 @@ class QmlContractTest < Minitest::Test
   def test_popup_has_a_specific_native_container_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "popup"'
-    assert_includes renderer, "id: popupComponent"
+    assert_dynamic_component_route(renderer, "popup")
     assert_includes renderer, "QQC.Popup {"
     assert_includes renderer, 'root.prop("opened", false) === true'
     assert_includes renderer, 'modal: root.prop("modal", false) === true'
@@ -1346,8 +1289,7 @@ class QmlContractTest < Minitest::Test
   def test_dialog_has_a_specific_native_standard_button_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "dialog"'
-    assert_includes renderer, "id: dialogComponent"
+    assert_dynamic_component_route(renderer, "dialog")
     assert_includes renderer, "QQC.Dialog {"
     assert_includes renderer, 'title: String(root.prop("title", ""))'
     assert_includes renderer, 'standardButtonsValue(root.prop("standard_buttons", ["ok", "cancel"]))'
@@ -1369,8 +1311,7 @@ class QmlContractTest < Minitest::Test
     renderer = source("ControlNode.qml")
     alert = source("Components/Builtins/AlertDialog.qml")
 
-    assert_includes renderer, 'node.type === "alert_dialog"'
-    assert_includes renderer, "id: alertDialogComponent"
+    assert_dynamic_component_route(renderer, "alert_dialog")
     assert_includes alert, "QQC.Dialog {"
     assert_includes alert, 'renderer.prop("severity", "info")'
     assert_includes alert, 'renderer.prop("show_icon", true)'
@@ -1409,8 +1350,7 @@ class QmlContractTest < Minitest::Test
   def test_message_dialog_has_a_specific_platform_native_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "message_dialog"'
-    assert_includes renderer, "id: messageDialogComponent"
+    assert_dynamic_component_route(renderer, "message_dialog")
     assert_includes renderer, "Dialogs.MessageDialog {"
     assert_includes renderer, 'root.prop("message", "")'
     assert_includes renderer, 'root.prop("informative_text", "")'
@@ -1427,8 +1367,7 @@ class QmlContractTest < Minitest::Test
   def test_bottom_sheet_has_a_specific_draggable_popup_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "bottom_sheet"'
-    assert_includes renderer, "id: bottomSheetComponent"
+    assert_dynamic_component_route(renderer, "bottom_sheet")
     assert_includes renderer, "id: sheetRoot"
     assert_includes renderer, "QQC.Popup {"
     assert_includes renderer, 'parent.height - height - sheetMargin'
@@ -1445,8 +1384,7 @@ class QmlContractTest < Minitest::Test
   def test_modal_sheet_has_a_specific_edge_attached_popup_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "modal_sheet"'
-    assert_includes renderer, "id: modalSheetComponent"
+    assert_dynamic_component_route(renderer, "modal_sheet")
     assert_includes renderer, "id: modalSheetRoot"
     assert_includes renderer, 'root.prop("edge", "right")'
     assert_includes renderer, 'root.prop("max_width", 720)'
@@ -1464,8 +1402,7 @@ class QmlContractTest < Minitest::Test
   def test_snackbar_has_a_specific_timed_action_popup_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "snackbar"'
-    assert_includes renderer, "id: snackbarComponent"
+    assert_dynamic_component_route(renderer, "snackbar")
     assert_includes renderer, "id: snackbarRoot"
     assert_includes renderer, 'root.prop("position", "bottom_center")'
     assert_includes renderer, 'root.prop("duration", 4000)'
@@ -1483,8 +1420,7 @@ class QmlContractTest < Minitest::Test
   def test_banner_has_a_specific_severity_notice_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "banner"'
-    assert_includes renderer, "id: bannerComponent"
+    assert_dynamic_component_route(renderer, "banner")
     assert_includes renderer, "id: bannerRoot"
     assert_includes renderer, "QQC.Pane {"
     assert_includes renderer, 'root.prop("severity", "info")'
@@ -1503,8 +1439,7 @@ class QmlContractTest < Minitest::Test
   def test_toast_has_a_specific_timed_severity_popup_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "toast"'
-    assert_includes renderer, "id: toastComponent"
+    assert_dynamic_component_route(renderer, "toast")
     assert_includes renderer, "id: toastRoot"
     assert_includes renderer, 'root.prop("position", "top_right")'
     assert_includes renderer, 'root.prop("severity", "info")'
@@ -1523,8 +1458,7 @@ class QmlContractTest < Minitest::Test
   def test_busy_indicator_has_a_specific_native_activity_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "busy_indicator"'
-    assert_includes renderer, "id: busyIndicatorComponent"
+    assert_dynamic_component_route(renderer, "busy_indicator")
     assert_includes renderer, "QQC.BusyIndicator {"
     assert_includes renderer, 'root.prop("running", true)'
     assert_includes renderer, 'root.prop("width", 48)'
@@ -1537,8 +1471,7 @@ class QmlContractTest < Minitest::Test
   def test_progress_ring_has_a_specific_circular_progress_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "progress_ring"'
-    assert_includes renderer, "id: progressRingComponent"
+    assert_dynamic_component_route(renderer, "progress_ring")
     assert_includes renderer, "id: ringRoot"
     assert_includes renderer, "Canvas {"
     assert_includes renderer, 'root.prop("minimum", 0)'
@@ -1558,8 +1491,7 @@ class QmlContractTest < Minitest::Test
   def test_skeleton_has_a_specific_multivariant_shimmer_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "skeleton"'
-    assert_includes renderer, "id: skeletonComponent"
+    assert_dynamic_component_route(renderer, "skeleton")
     assert_includes renderer, "id: skeletonRoot"
     assert_includes renderer, 'root.prop("variant", "rectangle")'
     assert_includes renderer, 'root.prop("lines", 3)'
@@ -1576,8 +1508,7 @@ class QmlContractTest < Minitest::Test
   def test_item_delegate_has_a_specific_native_collection_row_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "item_delegate"'
-    assert_includes renderer, "id: itemDelegateComponent"
+    assert_dynamic_component_route(renderer, "item_delegate")
     assert_includes renderer, "QQC.ItemDelegate {"
     assert_includes renderer, 'root.prop("description", "")'
     assert_includes renderer, 'root.prop("icon_source", "")'
@@ -1596,8 +1527,7 @@ class QmlContractTest < Minitest::Test
   def test_check_delegate_has_a_specific_native_tristate_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "check_delegate"'
-    assert_includes renderer, "id: checkDelegateComponent"
+    assert_dynamic_component_route(renderer, "check_delegate")
     assert_includes renderer, "QQC.CheckDelegate {"
     assert_includes renderer, 'root.prop("tristate", false)'
     assert_includes renderer, 'root.prop("check_state"'
@@ -1615,8 +1545,7 @@ class QmlContractTest < Minitest::Test
   def test_radio_delegate_has_a_specific_native_exclusive_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "radio_delegate"'
-    assert_includes renderer, "id: radioDelegateComponent"
+    assert_dynamic_component_route(renderer, "radio_delegate")
     assert_includes renderer, "QQC.RadioDelegate {"
     assert_includes renderer, 'root.prop("checked", false)'
     assert_includes renderer, 'root.prop("auto_exclusive", true)'
@@ -1633,8 +1562,7 @@ class QmlContractTest < Minitest::Test
   def test_switch_delegate_has_a_specific_native_animated_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "switch_delegate"'
-    assert_includes renderer, "id: switchDelegateComponent"
+    assert_dynamic_component_route(renderer, "switch_delegate")
     assert_includes renderer, "QQC.SwitchDelegate {"
     assert_includes renderer, 'root.prop("checked", false)'
     assert_includes renderer, 'root.prop("indicator_width", 44)'
@@ -1652,8 +1580,7 @@ class QmlContractTest < Minitest::Test
   def test_swipe_delegate_has_a_specific_native_action_lane_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "swipe_delegate"'
-    assert_includes renderer, "id: swipeDelegateComponent"
+    assert_dynamic_component_route(renderer, "swipe_delegate")
     assert_includes renderer, "QQC.SwipeDelegate {"
     assert_includes renderer, 'root.prop("left_action", "")'
     assert_includes renderer, 'root.prop("right_action", "")'
@@ -1673,8 +1600,7 @@ class QmlContractTest < Minitest::Test
   def test_grid_view_has_a_specific_native_virtualized_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "grid_view"'
-    assert_includes renderer, "id: gridViewComponent"
+    assert_dynamic_component_route(renderer, "grid_view")
     assert_includes renderer, "id: gridControl"
     assert_includes renderer, "GridView {"
     assert_includes renderer, 'root.prop("items", [])'
@@ -1696,8 +1622,7 @@ class QmlContractTest < Minitest::Test
   def test_table_view_has_a_specific_dynamic_native_table_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "table_view"'
-    assert_includes renderer, "id: tableViewComponent"
+    assert_dynamic_component_route(renderer, "table_view")
     assert_includes renderer, "id: tableControl"
     assert_includes renderer, "TableView {"
     assert_includes renderer, 'root.prop("rows", [])'
@@ -1726,8 +1651,7 @@ class QmlContractTest < Minitest::Test
   def test_tree_view_has_a_specific_dynamic_native_tree_renderer
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'node.type === "tree_view"'
-    assert_includes renderer, "id: treeViewComponent"
+    assert_dynamic_component_route(renderer, "tree_view")
     assert_includes renderer, "TreeView {"
     assert_includes renderer, 'root.prop("children_field", "children")'
     assert_includes renderer, 'Qt.createQmlObject(modelSource(), treeRoot, "ZuiDynamicTreeModel")'

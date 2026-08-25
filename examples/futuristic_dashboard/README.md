@@ -19,3 +19,14 @@ zui run main.rb
 ```
 
 Try **Initiate scan**, **Engage overdrive**, the navigation rail, and the neural-copilot switch.
+
+## Distribution
+
+Release metadata and the Linux application icon are declared in `config.rb`. Build native Linux
+packages with:
+
+```bash
+zui bundle --dist
+```
+
+This creates both DEB and RPM artifacts in `dist/`.

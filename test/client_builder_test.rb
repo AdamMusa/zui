@@ -80,8 +80,17 @@ class ClientBuilderTest < Minitest::Test
 
       assert File.file?(File.join(stage, "plugins", "platforms", "catalog-plugin.so"))
       assert File.file?(File.join(stage, "plugins", "multimedia", "catalog-plugin.so"))
+      assert File.file?(File.join(stage, "plugins", "wayland-shell-integration", "catalog-plugin.so"))
       refute File.exist?(File.join(stage, "plugins", "imageformats", "libqpdf.so"))
       refute File.exist?(File.join(stage, "plugins", "designer"))
+    end
+  end
+
+  def test_linux_runtime_carries_the_direct_ffmpeg_abi
+    prefixes = Zui::ClientBuilder::LINUX_PRIVATE_LIBRARY_PREFIXES
+
+    %w[libavcodec libavformat libavutil libswresample libswscale].each do |name|
+      assert_includes prefixes, name
     end
   end
 

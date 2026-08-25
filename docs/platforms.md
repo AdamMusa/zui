@@ -63,8 +63,19 @@ The native client carries the Qt libraries, QML modules, media backends, image p
 and optional 3D support needed by the desktop catalog. Browser-engine payloads are not part of Zui.
 Release builds scan a clean copy of the Zui runtime and package only catalog modules plus their linked
 Qt dependencies; they never copy the host machine's complete Qt installation.
-The current templates expect Ruby 3.1 or newer on the destination; an installer can point
-`ZUI_RUBY` at a private Ruby executable.
+Application bundling then performs a second, project-specific tree-shaking pass. It analyzes
+production Ruby sources, lazily routes component adapters, resolves transitive QML imports, and
+retains the native binary dependency closure for the components that application can create.
+Computed component names can be declared in `.zui-bundle.json`; `--no-tree-shake` is the explicit
+fallback for applications whose metaprogramming cannot be bounded.
+`zui bundle --dist` adds a native installer layer around this bundle. Release identity and artwork
+come from the required project-root `config.rb`. Linux emits DEB and RPM packages, macOS emits a
+DMG, and Windows emits an Inno Setup executable. Packaging is native to the target operating system,
+validates its icon before bundling, creates artifacts transactionally, and refuses to overwrite an
+existing release file.
+The current templates expect Ruby 3.1 or newer on the destination. Launchers use `ZUI_RUBY` when
+set, otherwise prefer the Ruby that assembled the bundle while it remains at the same path, then
+fall back to `ruby` on `PATH`. An installer can point `ZUI_RUBY` at a private Ruby executable.
 
 ### Linux
 

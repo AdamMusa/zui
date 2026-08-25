@@ -25,9 +25,13 @@ class DistributionTest < Minitest::Test
       manifest = JSON.parse(File.read(File.join(destination, "zui-bundle.json")))
       assert_equal "linux", manifest.fetch("platform")
       assert_equal Zui::VERSION, manifest.fetch("client_version")
+      assert_equal true, manifest.fetch("tree_shaken")
+      assert_includes manifest.fetch("tree_shake").fetch("components"), "text"
+      refute File.exist?(File.join(destination, "runtime", "qml", "Components", "Builtins", "Camera.qml"))
       assert_equal 1, Dir[File.join(destination, "share", "applications", "*.desktop")].length
       launcher = File.read(File.join(destination, "run"))
-      assert_includes launcher, '${ZUI_RUBY:-ruby}'
+      assert_includes launcher, 'ruby_command=${ZUI_RUBY:-}'
+      assert_includes launcher, "packaged_ruby='#{RbConfig.ruby}'"
       assert_includes launcher, '$native_dir/lib'
     end
   end
@@ -45,6 +49,9 @@ class DistributionTest < Minitest::Test
       assert File.file?(File.join(contents, "Resources", "app", "main.rb"))
       assert File.file?(File.join(contents, "Resources", "runtime", "qml", "Desktop.qml"))
       assert_includes File.read(File.join(contents, "Info.plist")), "CFBundlePackageType"
+      launcher = File.read(File.join(contents, "MacOS", "run"))
+      assert_includes launcher, 'ruby_command=${ZUI_RUBY:-}'
+      assert_includes launcher, "packaged_ruby='#{RbConfig.ruby}'"
     end
   end
 
@@ -80,6 +87,42 @@ class DistributionTest < Minitest::Test
         Zui::Distribution.new(client:, platform:).bundle(project, destination:)
       end
       assert_equal "keep", File.read(File.join(destination, "personal.txt"))
+    end
+  end
+
+  def test_tree_shaking_can_be_disabled_for_metaprogrammed_projects
+    platform = Zui::Platform.new(os: :linux, arch: :x86_64)
+    with_project(platform) do |project, client|
+      destination = File.join(project, "unshaken")
+      distribution = Zui::Distribution.new(client:, platform:, tree_shake: false)
+      distribution.bundle(project, destination:)
+
+      assert_nil distribution.tree_shake_report
+      manifest = JSON.parse(File.read(File.join(destination, "zui-bundle.json")))
+      assert_equal false, manifest.fetch("tree_shaken")
+      assert File.file?(File.join(destination, "runtime", "qml", "Components", "Builtins", "Camera.qml"))
+    end
+  end
+
+  def test_linux_launcher_uses_the_ruby_that_built_the_bundle_with_a_gui_path
+    platform = Zui::Platform.new(os: :linux, arch: :x86_64)
+    with_project(platform) do |project, client|
+      File.write(client.executable, <<~SH)
+        #!/bin/sh
+        printf '%s\n' "$@" > "$ZUI_ARGUMENT_LOG"
+      SH
+      FileUtils.chmod(0o755, client.executable)
+      destination = Zui::Distribution.new(client:, platform:, ruby: RbConfig.ruby).bundle(project)
+      argument_log = File.join(project, "native-arguments.log")
+
+      launched = system(
+        { "PATH" => "/usr/bin:/bin", "ZUI_RUBY" => nil, "ZUI_ARGUMENT_LOG" => argument_log },
+        File.join(destination, "run"), out: File::NULL, err: File::NULL
+      )
+
+      assert launched
+      arguments = File.readlines(argument_log, chomp: true)
+      assert_equal RbConfig.ruby, arguments.fetch(arguments.index("--ruby") + 1)
     end
   end
 

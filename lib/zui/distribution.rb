@@ -2,20 +2,27 @@
 
 require "fileutils"
 require "json"
+require "rbconfig"
 
 module Zui
   class Distribution
-    attr_reader :platform
+    attr_reader :platform, :tree_shake_report
 
-    def initialize(client: nil, platform: Platform.current, framework_root: FRAMEWORK_ROOT)
+    def initialize(client: nil, platform: Platform.current, framework_root: FRAMEWORK_ROOT,
+                   ruby: RbConfig.ruby, tree_shake: true, release_config: nil)
       @platform = platform.assert_supported!
       @client = client || Client.new(platform: @platform)
       @framework_root = framework_root
+      @ruby = File.expand_path(ruby)
+      @tree_shake = tree_shake == true
+      @tree_shake_report = nil
+      @release_config = release_config
     end
 
     def bundle(source, name: nil, destination: nil)
       created = false
       project = File.expand_path(source)
+      @project = project
       raise ArgumentError, "project directory not found: #{project}" unless File.directory?(project)
       raise ArgumentError, "main.rb not found: #{project}" unless File.file?(File.join(project, "main.rb"))
       unless @client.configured?
@@ -46,6 +53,7 @@ module Zui
       install_application(project, File.join(destination, "app"))
       install_runtime(File.join(destination, "runtime"))
       @client.copy_to(File.join(destination, "runtime", "native"))
+      shake_bundle(project, File.join(destination, "runtime"))
       write_linux_launcher(destination, app_name)
       desktop_name = "#{slug(app_name)}.desktop"
       File.write(File.join(destination, "share", "applications", desktop_name), <<~DESKTOP)
@@ -67,9 +75,11 @@ module Zui
       install_application(project, File.join(resources, "app"))
       install_runtime(File.join(resources, "runtime"))
       @client.copy_to(File.join(resources, "runtime", "native"))
+      shake_bundle(project, File.join(resources, "runtime"))
+      icon_name = install_macos_release_icon(resources)
       File.write(File.join(macos, "run"), macos_launcher(app_name))
       FileUtils.chmod(0o755, File.join(macos, "run"))
-      File.write(File.join(contents, "Info.plist"), info_plist(app_name))
+      File.write(File.join(contents, "Info.plist"), info_plist(app_name, icon_name:))
       write_manifest(resources, app_name)
     end
 
@@ -79,6 +89,8 @@ module Zui
       install_application(project, File.join(destination, "app"))
       install_runtime(File.join(destination, "runtime"))
       @client.copy_to(File.join(destination, "runtime", "native"))
+      shake_bundle(project, File.join(destination, "runtime"))
+      install_windows_release_icon(destination)
       File.write(File.join(destination, "run.rb"), windows_ruby_launcher(app_name))
       File.write(File.join(destination, "run.cmd"), windows_command_launcher)
       write_manifest(destination, app_name)
@@ -87,7 +99,8 @@ module Zui
     def install_application(source, destination)
       entries = Dir.children(source).reject do |entry|
         entry_path = File.join(source, entry)
-        %w[.git dist].include?(entry) || destination.start_with?("#{entry_path}#{File::SEPARATOR}")
+        %w[.git dist config.rb].include?(entry) ||
+          destination.start_with?("#{entry_path}#{File::SEPARATOR}")
       end
       FileUtils.cp_r(entries.map { |entry| File.join(source, entry) }, destination) unless entries.empty?
     end
@@ -110,7 +123,7 @@ module Zui
         bundle_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
         native_dir="$bundle_dir/runtime/native"
         #{posix_client_environment}
-        ruby_command=${ZUI_RUBY:-ruby}
+        #{posix_ruby_command}
         exec "$native_dir/#{@client.executable_relative_path}" \
           --qml-root "$bundle_dir/runtime/qml" \
           --project "$bundle_dir/app" \
@@ -130,7 +143,7 @@ module Zui
         resources="$contents/Resources"
         native_dir="$resources/runtime/native"
         #{posix_client_environment}
-        ruby_command=${ZUI_RUBY:-ruby}
+        #{posix_ruby_command}
         exec "$native_dir/#{@client.executable_relative_path}" \
           --qml-root "$resources/runtime/qml" \
           --project "$resources/app" \
@@ -177,8 +190,10 @@ module Zui
       CMD
     end
 
-    def info_plist(app_name)
-      identifier = "dev.zui.#{slug(app_name).tr("-", ".")}"
+    def info_plist(app_name, icon_name: nil)
+      identifier = @release_config&.identifier || "dev.zui.#{slug(app_name).tr("-", ".")}"
+      application_version = @release_config&.version || VERSION
+      icon_entry = icon_name ? "<key>CFBundleIconFile</key><string>#{xml_escape(icon_name)}</string>" : ""
       <<~PLIST
         <?xml version="1.0" encoding="UTF-8"?>
         <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -187,18 +202,50 @@ module Zui
           <key>CFBundleIdentifier</key><string>#{identifier}</string>
           <key>CFBundleName</key><string>#{xml_escape(app_name)}</string>
           <key>CFBundlePackageType</key><string>APPL</string>
-          <key>CFBundleShortVersionString</key><string>#{VERSION}</string>
+          <key>CFBundleShortVersionString</key><string>#{xml_escape(application_version)}</string>
+          <key>CFBundleVersion</key><string>#{xml_escape(application_version)}</string>
+          #{icon_entry}
           <key>NSHighResolutionCapable</key><true/>
         </dict></plist>
       PLIST
     end
 
     def write_manifest(directory, app_name)
-      File.write(File.join(directory, "zui-bundle.json"), JSON.pretty_generate(
+      manifest = {
         "format" => 1, "framework" => "zui", "version" => VERSION,
         "platform" => platform.os.to_s, "architecture" => platform.arch.to_s,
-        "name" => app_name, "client_version" => @client.manifest.fetch("client_version")
-      ))
+        "name" => app_name, "client_version" => @client.manifest.fetch("client_version"),
+        "tree_shaken" => !@tree_shake_report.nil?
+      }
+      manifest["tree_shake"] = @tree_shake_report.to_h if @tree_shake_report
+      if @release_config
+        manifest["identifier"] = @release_config.identifier
+        manifest["application_version"] = @release_config.version
+      end
+      File.write(File.join(directory, "zui-bundle.json"), JSON.pretty_generate(manifest))
+    end
+
+    def install_macos_release_icon(resources)
+      return nil unless @release_config
+
+      source = @release_config.icon_path(@project, platform)
+      name = "Application.icns"
+      FileUtils.cp(source, File.join(resources, name))
+      name
+    end
+
+    def install_windows_release_icon(destination)
+      return unless @release_config
+
+      FileUtils.cp(@release_config.icon_path(@project, platform), File.join(destination, "app.ico"))
+    end
+
+    def shake_bundle(project, runtime)
+      return unless @tree_shake
+
+      @tree_shake_report = TreeShaker.new(
+        project:, framework: File.join(runtime, "qml"), native: File.join(runtime, "native"), platform:
+      ).shake!
     end
 
     def default_destination(project, app_name)
@@ -220,6 +267,21 @@ module Zui
           export #{name}="$zui_environment"
         SH
       end.join("\n")
+    end
+
+    def posix_ruby_command
+      <<~SH.chomp
+        ruby_command=${ZUI_RUBY:-}
+        if [ -z "$ruby_command" ]; then
+          packaged_ruby=#{shell_quote(@ruby)}
+          if [ -x "$packaged_ruby" ]; then
+            ruby_command=$packaged_ruby
+          else
+            ruby_command=$(command -v ruby || true)
+            [ -n "$ruby_command" ] || ruby_command=ruby
+          fi
+        fi
+      SH
     end
 
     def windows_client_environment = @client.environment_entries

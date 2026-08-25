@@ -19,12 +19,20 @@ module Zui
     LINUX_PLUGIN_DIRECTORIES = %w[
       assetimporters generic iconengines imageformats multimedia networkinformation platforminputcontexts
       platforms platformthemes tls wayland-decoration-client wayland-graphics-integration-client
+      wayland-shell-integration
       xcbglintegrations
     ].freeze
     LINUX_TRANSLATION_GLOBS = %w[
       qtbase_*.qm qtdeclarative_*.qm qtmultimedia_*.qm qtquickcontrols2_*.qm
     ].freeze
-    LINUX_PRIVATE_LIBRARY_PREFIXES = %w[libQt6 libicu].freeze
+    # Qt's FFmpeg backend is loaded at runtime, so its codec libraries are not
+    # reachable from the host executable. Keep the direct FFmpeg ABI alongside
+    # Qt just like the Qt and ICU libraries; otherwise a system FFmpeg upgrade
+    # can leave an already-installed Zui client unable to play media.
+    LINUX_PRIVATE_LIBRARY_PREFIXES = %w[
+      libQt6 libicu libavcodec libavdevice libavfilter libavformat libavutil libpostproc
+      libswresample libswscale
+    ].freeze
     BROWSER_PAYLOAD_PATTERN = %r{
       (?:\A|/)(?:
         QtWebEngine[^/]* |

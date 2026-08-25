@@ -5,7 +5,7 @@ require "rbconfig"
 
 module Zui
   class CLI
-    USAGE = "Usage: zui <new NAME|configure|doctor [--fix]|run FILE|bundle [DIRECTORY]|version>"
+    USAGE = "Usage: zui <new NAME|configure|doctor [--fix]|run FILE|bundle [--dist] [--no-tree-shake] [DIRECTORY]|version>"
 
     def self.run(arguments, out: $stdout, err: $stderr)
       new(out:, err:).run(arguments.dup)
@@ -56,11 +56,32 @@ module Zui
     def bundle_project(arguments)
       name = option_value(arguments, "--name")
       destination = option_value(arguments, "--output")
+      create_installers = !arguments.delete("--dist").nil?
+      tree_shake = arguments.delete("--no-tree-shake").nil?
       source = File.expand_path(arguments.shift || Dir.pwd)
       raise ArgumentError, "bundle accepts one directory" unless arguments.empty?
-      path = Distribution.new.bundle(source, name:, destination:)
+
+      if create_installers
+        raise ArgumentError, "--name cannot be used with --dist; set name in config.rb" if name
+
+        packager = DistPackager.new(tree_shake:)
+        paths = packager.package(source, output: destination)
+        paths.each { |path| @out.puts("Created distribution artifact #{path}") }
+        report_tree_shaking(packager.tree_shake_report)
+        return 0
+      end
+
+      distribution = Distribution.new(tree_shake:)
+      path = distribution.bundle(source, name:, destination:)
       @out.puts("Bundled #{Platform.current.os} application in #{path}")
+      report_tree_shaking(distribution.tree_shake_report)
       0
+    end
+
+    def report_tree_shaking(report)
+      return unless report
+
+      @out.puts("Tree-shaken runtime: #{report.components.length} components, #{format_bytes(report.saved_bytes)} removed")
     end
 
     def doctor(arguments)
@@ -116,6 +137,17 @@ module Zui
       result = value.to_s.downcase.gsub(/[^a-z0-9]+/, "-").gsub(/\A-|-\z/, "")
       raise ArgumentError, "name must contain letters or numbers" if result.empty?
       result
+    end
+
+    def format_bytes(bytes)
+      units = %w[B KB MB GB]
+      value = bytes.to_f
+      unit = units.shift
+      while value >= 1024 && !units.empty?
+        value /= 1024
+        unit = units.shift
+      end
+      value >= 10 || unit == "B" ? "#{value.round} #{unit}" : format("%.1f %s", value, unit)
     end
   end
 end

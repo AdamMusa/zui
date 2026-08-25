@@ -13,6 +13,7 @@ Item {
   property bool ready: false
   property bool stopping: false
   property string lastError: ""
+  property string runtimeDiagnostics: ""
   property var surfaces: ({})
   property var surfaceOptions: ({})
   property var nodeIndex: ({})
@@ -411,6 +412,7 @@ Item {
 
   function startRuby() {
     if (stopping || projectDir === "" || program === "" || transport.running) return
+    runtimeDiagnostics = ""
     transport.start(runtimeExecutable, program, projectDir, rubyLoadPath)
   }
 
@@ -429,14 +431,24 @@ Item {
     function onLineReceived(line) { root.handleLine(line) }
     function onErrorLineReceived(line) {
       var message = String(line || "").trim()
-      if (message !== "") console.warn("zui ruby:", message)
+      if (message === "") return
+      console.warn("zui ruby:", message)
+      var separator = root.runtimeDiagnostics === "" ? "" : "\n"
+      root.runtimeDiagnostics = (root.runtimeDiagnostics + separator + message).slice(0, 512)
+      Qt.callLater(function() {
+        if (!root.ready && !root.transport.running && root.runtimeDiagnostics !== "")
+          root.lastError = root.runtimeDiagnostics
+      })
     }
     function onExited(exitCode) {
       root.ready = false
       if (root.stopping || root.projectDir === "") return
-      root.lastError = exitCode === 0
+      var summary = exitCode === 0
         ? "Zui runtime stopped"
         : "Zui runtime crashed (exit " + exitCode + ")"
+      root.lastError = root.runtimeDiagnostics === ""
+        ? summary
+        : summary + "\n\n" + root.runtimeDiagnostics
       restartTimer.interval = root.restartDelayMs
       restartTimer.start()
       root.restartDelayMs = Math.min(30000, root.restartDelayMs * 2)

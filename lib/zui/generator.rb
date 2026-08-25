@@ -15,6 +15,9 @@ module Zui
       FileUtils.mkdir_p(File.join(@path, "components"))
       File.write(File.join(@path, "main.rb"), main_program)
       File.write(File.join(@path, "components", "welcome.rb"), welcome_component)
+      File.write(File.join(@path, "config.rb"), distribution_config)
+      FileUtils.mkdir_p(File.join(@path, "assets"))
+      File.write(File.join(@path, "assets", "README.md"), icon_readme)
       File.write(File.join(@path, "README.md"), readme)
       @path
     rescue StandardError
@@ -72,7 +75,37 @@ module Zui
         zui doctor --fix # once for each Zui version
         zui run main.rb
         zui bundle
+        zui bundle --dist # after adding the icons declared in config.rb
         ```
+      MARKDOWN
+    end
+
+    def distribution_config
+      <<~RUBY
+        # frozen_string_literal: true
+
+        Zui::Dist.configure do
+          name #{@name.dump}
+          identifier #{"com.example.#{slug_name}".dump}
+          version "0.1.0"
+          publisher "Your Name <you@example.com>"
+          description #{"A native #{@name} desktop application.".dump}
+          license "Proprietary"
+          icon linux: "assets/icon.png",
+               macos: "assets/icon.icns",
+               windows: "assets/icon.ico"
+          categories "Utility"
+        end
+      RUBY
+    end
+
+    def icon_readme
+      <<~MARKDOWN
+        Add the release icons referenced by `config.rb` here:
+
+        - `icon.png` for Linux
+        - `icon.icns` for macOS
+        - `icon.ico` for Windows
       MARKDOWN
     end
 
@@ -80,6 +113,11 @@ module Zui
       value = @name.scan(/[a-z0-9]+/i).map { |part| part[0].upcase + part[1..].to_s }.join
       value = "Application#{value}" if value.match?(/\A\d/)
       value.empty? ? "ZuiApplication" : value
+    end
+
+    def slug_name
+      value = @name.downcase.gsub(/[^a-z0-9]+/, "-").gsub(/\A-|-\z/, "")
+      value.match?(/\A\d/) ? "app-#{value}" : value
     end
   end
 end

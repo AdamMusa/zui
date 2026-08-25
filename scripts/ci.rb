@@ -44,5 +44,6 @@ cli_path = Gem.bin_path("zui", "zui", Zui::VERSION)
 run!(RbConfig.ruby, cli_path, "version")
 run!(RbConfig.ruby, File.join(ROOT, "scripts", "client_smoke.rb"), client_archive, cli_path,
      File.join(ROOT, "test", "fixtures", "smoke_app.rb"))
+run!(RbConfig.ruby, File.join(ROOT, "scripts", "dist_smoke.rb"), client_archive, cli_path)
 
 puts "Zui native CI passed on #{platform.id}."

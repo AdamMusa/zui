@@ -64,11 +64,14 @@ QQC.ApplicationWindow {
     }
     Text {
       anchors.horizontalCenter: parent.horizontalCenter
+      width: Math.max(0, Math.min(680, window.width - 48))
       text: service.lastError !== "" ? service.lastError
         : (Fonts.failed ? "Zui could not load its bundled fonts" : "Starting Zui…")
       color: Color.foreground
       font.family: Style.font.family
       font.pixelSize: Style.font.body
+      horizontalAlignment: Text.AlignHCenter
+      wrapMode: Text.Wrap
     }
   }
 

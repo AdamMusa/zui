@@ -37,7 +37,8 @@ class CLITest < Minitest::Test
       assert_includes main, "SignalBoard.run"
       refute_match(/Omarchy|Quickshell/, main)
       refute_includes component, "Zui::Builder.include"
-      assert_equal %w[README.md components main.rb], Dir.children(project).sort
+      assert_equal %w[README.md assets components config.rb main.rb], Dir.children(project).sort
+      assert_includes File.read(File.join(project, "config.rb")), "Zui::Dist.configure"
     end
   end
 
@@ -63,6 +64,51 @@ class CLITest < Minitest::Test
 
     assert_equal 0, status
     assert_equal File.join(__dir__, "fixtures", "smoke_app.rb"), requested
+  end
+
+  def test_bundle_can_explicitly_disable_tree_shaking
+    options = nil
+    distribution = Object.new
+    distribution.define_singleton_method(:bundle) { |_source, **_arguments| "/tmp/Demo.app" }
+    distribution.define_singleton_method(:tree_shake_report) { nil }
+
+    status = Zui::Distribution.stub(:new, lambda { |**arguments|
+      options = arguments
+      distribution
+    }) do
+      Zui::CLI.run(["bundle", "--no-tree-shake", File.join(__dir__, "fixtures")],
+                   out: StringIO.new, err: StringIO.new)
+    end
+
+    assert_equal 0, status
+    assert_equal false, options.fetch(:tree_shake)
+  end
+
+  def test_bundle_dist_uses_the_release_packager
+    options = nil
+    request = nil
+    packager = Object.new
+    packager.define_singleton_method(:package) do |source, **arguments|
+      request = [source, arguments]
+      ["/tmp/demo.deb", "/tmp/demo.rpm"]
+    end
+    packager.define_singleton_method(:tree_shake_report) { nil }
+    output = StringIO.new
+
+    status = Zui::DistPackager.stub(:new, lambda { |**arguments|
+      options = arguments
+      packager
+    }) do
+      Zui::CLI.run(["bundle", "--dist", "--output", "/tmp/releases", File.join(__dir__, "fixtures")],
+                   out: output, err: StringIO.new)
+    end
+
+    assert_equal 0, status
+    assert_equal true, options.fetch(:tree_shake)
+    assert_equal File.join(__dir__, "fixtures"), request.first
+    assert_equal({ output: "/tmp/releases" }, request.last)
+    assert_includes output.string, "/tmp/demo.deb"
+    assert_includes output.string, "/tmp/demo.rpm"
   end
 
   def test_configure_installs_the_client_and_enables_run_and_bundle
