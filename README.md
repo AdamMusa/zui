@@ -188,7 +188,7 @@ uses a system Qt installation, or downloads an asset for a different platform. S
 
 ## Component catalog
 
-Zui 0.0.7 registers **241 built-in components**. Every entry has a named Ruby builder method,
+Zui 0.0.8 registers **241 built-in components**. Every entry has a named Ruby builder method,
 property and event schema, native QML renderer, reactive patch support, and contract tests.
 
 | Category | Count | Representative components |
