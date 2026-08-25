@@ -1,7 +1,20 @@
 # frozen_string_literal: true
 
 module Zui
-  Component = Struct.new(:name, :qml, :properties, :events, :property_map, :event_map, :container, :auto_bind, keyword_init: true) do
+  class Component
+    attr_reader :name, :qml, :properties, :events, :property_map, :event_map, :container, :auto_bind
+
+    def initialize(name:, qml:, properties:, events:, property_map:, event_map:, container:, auto_bind:)
+      @name = name
+      @qml = qml
+      @properties = properties
+      @events = events
+      @property_map = property_map
+      @event_map = event_map
+      @container = container
+      @auto_bind = auto_bind
+    end
+
     def to_h
       {
         "qml" => qml,

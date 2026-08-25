@@ -98,17 +98,27 @@ module Zui
       return 1 unless platform.supported?
 
       client = Client.new(platform:)
-      if client.configured?
-        report_ready(client)
+      lite_runtime = LiteRuntime.new(platform:)
+      client_ready = client.configured?
+      lite_ready = lite_runtime.configured?
+      if client_ready && lite_ready
+        report_ready(client, lite_runtime)
         0
       elsif fix
-        @out.puts("Repair: downloading the verified native client from GitHub Releases...")
-        client.configure!
-        report_ready(client)
+        unless client_ready
+          @out.puts("Repair: downloading the verified native client from GitHub Releases...")
+          client.configure!
+        end
+        unless lite_ready
+          @out.puts("Repair: downloading the verified lite mruby runtime from GitHub Releases...")
+          lite_runtime.configure!
+        end
+        report_ready(client, lite_runtime)
         0
       else
-        @out.puts("Client: not configured")
-        @out.puts("Run `zui doctor --fix` to install the native client and bundle support.")
+        @out.puts(client_ready ? "Client: #{client.root}" : "Client: not configured")
+        @out.puts(lite_ready ? "Lite runtime: #{lite_runtime.root}" : "Lite runtime: not configured")
+        @out.puts("Run `zui doctor --fix` to install the native client and lite bundle runtime.")
         1
       end
     end
@@ -117,16 +127,20 @@ module Zui
       raise ArgumentError, "configure accepts no arguments" unless arguments.empty?
       platform = Platform.current.assert_supported!
       client = Client.new(platform:)
+      lite_runtime = LiteRuntime.new(platform:)
       @out.puts("Configuring Zui #{VERSION} for #{platform.id}...")
       client.configure!
-      report_ready(client)
+      lite_runtime.configure!
+      report_ready(client, lite_runtime)
       0
     end
 
-    def report_ready(client)
+    def report_ready(client, lite_runtime)
       @out.puts("Client: #{client.root}")
+      @out.puts("Lite runtime: #{lite_runtime.root}")
       @out.puts("Run: ready")
-      @out.puts("Bundle: ready")
+      @out.puts("Bundle --lite: ready")
+      @out.puts("Bundle --full: ready (uses this Ruby and the project's locked gems)")
     end
 
     def option_value(arguments, name)

@@ -7,13 +7,22 @@ require_relative "../lib/zui"
 require_relative "support/client_fixture"
 
 class DistPackagerTest < Minitest::Test
-  FakeRuntimeBuilder = Struct.new(:platform) do
+  FakeRuntimeBuilder = Struct.new(:platform, :engine) do
+    def initialize(platform, engine = "mruby") = super
+
     def install(project:, destination:)
-      executable = platform.windows? ? "bin/ruby.exe" : "bin/ruby"
+      name = engine == "mruby" ? "mruby" : "ruby"
+      name = "#{name}.exe" if platform.windows?
+      executable = "bin/#{name}"
       FileUtils.mkdir_p(File.join(destination, "bin"))
       File.write(File.join(destination, executable), "runtime-fixture")
       FileUtils.chmod(0o755, File.join(destination, executable)) unless platform.windows?
-      Zui::ApplicationRuntime.new(engine: "cruby", version: "3.3.0", executable:).write(destination)
+      File.write(File.join(destination, "app.rb"), "# lite fixture\n") if engine == "mruby"
+      Zui::ApplicationRuntime.new(
+        engine:, version: engine == "mruby" ? "4.0.0" : "3.3.0", executable:,
+        program: engine == "mruby" ? "app.rb" : nil,
+        load_path: engine == "mruby" ? "" : nil
+      ).write(destination)
     end
   end
 
@@ -35,8 +44,7 @@ class DistPackagerTest < Minitest::Test
         printf 'rpm-fixture' > "$topdir/RPMS/x86_64/signal-board.rpm"
       SH
       output = File.join(project, "releases")
-      packager = Zui::DistPackager.new(client:, platform: client.platform,
-                                       environment: { "PATH" => tools })
+      packager = lite_packager(client:, tools:)
 
       artifacts = packager.package(project, output:)
 
@@ -50,6 +58,7 @@ class DistPackagerTest < Minitest::Test
       data_entries = tar_gzip_entries(members.fetch("data.tar.gz"))
       assert_includes control_entries.keys, "./control"
       assert_includes control_entries.fetch("./control"), "Package: signal-board"
+      refute_includes control_entries.fetch("./control"), "Depends: ruby"
       assert_includes data_entries.keys, "./opt/signal-board/run"
       assert_includes data_entries.keys, "./usr/share/applications/signal-board.desktop"
       assert_includes data_entries.keys, "./usr/share/icons/hicolor/256x256/apps/signal-board.png"
@@ -77,8 +86,7 @@ class DistPackagerTest < Minitest::Test
         grep -q '<string>1.2.3</string>' "$source/Signal Board.app/Contents/Info.plist" || exit 22
         printf 'dmg-fixture' > "$output"
       SH
-      packager = Zui::DistPackager.new(client:, platform: client.platform,
-                                       environment: { "PATH" => tools })
+      packager = lite_packager(client:, tools:)
 
       artifacts = packager.package(project, output: File.join(project, "releases"))
 
@@ -105,8 +113,7 @@ class DistPackagerTest < Minitest::Test
         mkdir -p "$output"
         printf 'setup-fixture' > "$output/$base.exe"
       SH
-      packager = Zui::DistPackager.new(client:, platform: client.platform,
-                                       environment: { "PATH" => tools })
+      packager = lite_packager(client:, tools:)
 
       artifacts = packager.package(project, output: File.join(project, "releases"))
 
@@ -118,8 +125,10 @@ class DistPackagerTest < Minitest::Test
 
   def test_dist_fails_before_bundling_when_the_platform_tool_is_missing
     with_project(Zui::Platform.new(os: :linux, arch: :x86_64)) do |project, client, _tools|
-      packager = Zui::DistPackager.new(client:, platform: client.platform,
-                                       environment: { "PATH" => "" })
+      packager = Zui::DistPackager.new(
+        client:, platform: client.platform, environment: { "PATH" => "" },
+        runtime_builder: FakeRuntimeBuilder.new(client.platform)
+      )
 
       error = assert_raises(ArgumentError) do
         packager.package(project, output: File.join(project, "releases"))
@@ -150,7 +159,7 @@ class DistPackagerTest < Minitest::Test
       SH
       packager = Zui::DistPackager.new(
         client:, platform:, environment: { "PATH" => tools }, runtime_mode: :full,
-        runtime_builder: FakeRuntimeBuilder.new(platform)
+        runtime_builder: FakeRuntimeBuilder.new(platform, "cruby")
       )
 
       deb, rpm = packager.package(project, output: File.join(project, "releases"))
@@ -162,6 +171,13 @@ class DistPackagerTest < Minitest::Test
   end
 
   private
+
+  def lite_packager(client:, tools:)
+    Zui::DistPackager.new(
+      client:, platform: client.platform, environment: { "PATH" => tools },
+      runtime_builder: FakeRuntimeBuilder.new(client.platform)
+    )
+  end
 
   def with_project(platform)
     Dir.mktmpdir do |directory|

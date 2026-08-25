@@ -6,9 +6,9 @@ module Zui
   class ApplicationRuntime
     FORMAT = 1
 
-    attr_reader :engine, :version, :executable, :environment, :gems
+    attr_reader :engine, :version, :executable, :environment, :gems, :program, :load_path
 
-    def initialize(engine:, version:, executable:, environment: {}, gems: [])
+    def initialize(engine:, version:, executable:, environment: {}, gems: [], program: nil, load_path: nil)
       @engine = engine.to_s
       @version = version.to_s
       @executable = executable.to_s
@@ -16,6 +16,8 @@ module Zui
         Array(paths).map(&:to_s).freeze
       end.freeze
       @gems = Array(gems).map(&:to_s).sort.freeze
+      @program = program&.to_s
+      @load_path = load_path&.to_s
       freeze
     end
 
@@ -25,7 +27,7 @@ module Zui
     end
 
     def to_h
-      {
+      result = {
         "format" => FORMAT,
         "engine" => engine,
         "version" => version,
@@ -33,6 +35,9 @@ module Zui
         "environment" => environment,
         "gems" => gems
       }
+      result["program"] = program unless program.nil?
+      result["load_path"] = load_path unless load_path.nil?
+      result
     end
   end
 end

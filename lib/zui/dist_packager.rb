@@ -173,7 +173,6 @@ module Zui
         "Installed-Size: #{installed_size}",
         "Description: #{config.description}"
       ]
-      values.insert(-1, "Depends: ruby (>= 3.1)") unless runtime_mode == :full
       values.insert(-2, "Homepage: #{config.homepage}") if config.homepage
       "#{values.join("\n")}\n"
     end
@@ -203,7 +202,6 @@ module Zui
         License: #{rpm_escape(config.license)}
         #{homepage}BuildArch: #{rpm_architecture}
         AutoReqProv: no
-        #{runtime_mode == :full ? "" : "Requires: ruby >= 3.1"}
 
         %description
         #{description}

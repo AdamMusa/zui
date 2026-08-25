@@ -8,19 +8,28 @@ require_relative "../lib/zui"
 require_relative "support/client_fixture"
 
 class DistributionTest < Minitest::Test
-  FakeRuntimeBuilder = Struct.new(:platform) do
+  FakeRuntimeBuilder = Struct.new(:platform, :engine) do
+    def initialize(platform, engine = "mruby") = super
+
     def install(project:, destination:)
-      executable = platform.windows? ? "bin/ruby.exe" : "bin/ruby"
+      name = engine == "mruby" ? "mruby" : "ruby"
+      name = "#{name}.exe" if platform.windows?
+      executable = "bin/#{name}"
       FileUtils.mkdir_p(File.join(destination, "bin"))
       File.write(File.join(destination, executable), "runtime-fixture")
       FileUtils.chmod(0o755, File.join(destination, executable)) unless platform.windows?
+      if engine == "mruby"
+        File.write(File.join(destination, "app.rb"), Zui::LiteSource.new(project:).call)
+      end
       Zui::ApplicationRuntime.new(
-        engine: "cruby", version: "3.3.0", executable:,
-        environment: {
+        engine:, version: engine == "mruby" ? "4.0.0" : "3.3.0", executable:,
+        program: engine == "mruby" ? "app.rb" : nil,
+        load_path: engine == "mruby" ? "" : nil,
+        environment: engine == "cruby" ? {
           "RUBYLIB" => ["lib/ruby/3.3.0"],
           "GEM_HOME" => ["gems"],
           "GEM_PATH" => ["gems"]
-        }
+        } : {}
       ).write(destination)
     end
   end
@@ -28,7 +37,7 @@ class DistributionTest < Minitest::Test
   def test_linux_bundle_contains_app_framework_and_native_runtimes
     platform = Zui::Platform.new(os: :linux, arch: :x86_64)
     with_project(platform) do |project, client|
-      destination = Zui::Distribution.new(client:, platform:).bundle(project)
+      destination = lite_distribution(client:, platform:).bundle(project)
 
       assert_posix_executable File.join(destination, "run")
       assert_posix_executable File.join(destination, "runtime", "native", "bin", "zui-host")
@@ -48,8 +57,10 @@ class DistributionTest < Minitest::Test
       refute File.exist?(File.join(destination, "runtime", "qml", "Components", "Builtins", "Camera.qml"))
       assert_equal 1, Dir[File.join(destination, "share", "applications", "*.desktop")].length
       launcher = File.read(File.join(destination, "run"))
-      assert_includes launcher, 'ruby_command=${ZUI_RUBY:-}'
-      assert_includes launcher, "packaged_ruby='#{RbConfig.ruby}'"
+      assert_includes launcher, 'ruby_command="$ruby_root/bin/mruby"'
+      assert_includes launcher, '--program "$bundle_dir/runtime/ruby/app.rb"'
+      assert_includes launcher, '--load-path ""'
+      refute_includes launcher, "command -v ruby"
       assert_includes launcher, '$native_dir/lib'
     end
   end
@@ -58,7 +69,7 @@ class DistributionTest < Minitest::Test
     platform = Zui::Platform.new(os: :macos, arch: :arm64)
     with_project(platform) do |project, client|
       destination = File.join(project, "package", "Demo.app")
-      Zui::Distribution.new(client:, platform:).bundle(project, destination:)
+      lite_distribution(client:, platform:).bundle(project, destination:)
 
       contents = File.join(destination, "Contents")
       assert_posix_executable File.join(contents, "MacOS", "run")
@@ -68,29 +79,27 @@ class DistributionTest < Minitest::Test
       assert File.file?(File.join(contents, "Resources", "runtime", "qml", "Desktop.qml"))
       assert_includes File.read(File.join(contents, "Info.plist")), "CFBundlePackageType"
       launcher = File.read(File.join(contents, "MacOS", "run"))
-      assert_includes launcher, 'ruby_command=${ZUI_RUBY:-}'
-      assert_includes launcher, "packaged_ruby='#{RbConfig.ruby}'"
+      assert_includes launcher, 'ruby_command="$ruby_root/bin/mruby"'
+      assert_includes launcher, '--program "$resources/runtime/ruby/app.rb"'
     end
   end
 
   def test_windows_bundle_has_native_runtime_and_safe_launchers
     platform = Zui::Platform.new(os: :windows, arch: :x86_64)
     with_project(platform) do |project, client|
-      destination = Zui::Distribution.new(client:, platform:).bundle(project)
+      destination = lite_distribution(client:, platform:).bundle(project)
 
       assert File.file?(File.join(destination, "run.cmd"))
-      assert File.file?(File.join(destination, "run.rb"))
+      refute File.exist?(File.join(destination, "run.rb"))
       assert File.file?(File.join(destination, "runtime", "native", "bin", "zui-host.exe"))
       assert File.file?(File.join(destination, "app", "main.rb"))
       assert File.file?(File.join(destination, "runtime", "lib", "zui.rb"))
       assert File.file?(File.join(destination, "runtime", "qml", "Desktop.qml"))
       assert_equal "windows", JSON.parse(File.read(File.join(destination, "zui-bundle.json"))).fetch("platform")
-      assert_includes File.read(File.join(destination, "run.cmd")), "%ZUI_RUBY%"
-      launcher = File.read(File.join(destination, "run.rb"))
-      assert_includes launcher, "exec(environment, *arguments)"
-      assert_includes launcher, 'runtime", "native'
+      launcher = File.read(File.join(destination, "run.cmd"))
+      assert_includes launcher, "%ruby_root%\\bin\\mruby.exe"
+      assert_includes launcher, "%ruby_root%\\app.rb"
       refute_includes launcher, "Omarchy"
-      assert system(RbConfig.ruby, "-c", File.join(destination, "run.rb"), out: File::NULL)
     end
   end
 
@@ -102,7 +111,7 @@ class DistributionTest < Minitest::Test
       File.write(File.join(destination, "personal.txt"), "keep")
 
       assert_raises(ArgumentError) do
-        Zui::Distribution.new(client:, platform:).bundle(project, destination:)
+        lite_distribution(client:, platform:).bundle(project, destination:)
       end
       assert_equal "keep", File.read(File.join(destination, "personal.txt"))
     end
@@ -112,7 +121,7 @@ class DistributionTest < Minitest::Test
     platform = Zui::Platform.new(os: :linux, arch: :x86_64)
     with_project(platform) do |project, client|
       destination = Zui::Distribution.new(
-        client:, platform:, runtime_mode: :full, runtime_builder: FakeRuntimeBuilder.new(platform)
+        client:, platform:, runtime_mode: :full, runtime_builder: FakeRuntimeBuilder.new(platform, "cruby")
       ).bundle(project)
 
       launcher = File.read(File.join(destination, "run"))
@@ -130,7 +139,7 @@ class DistributionTest < Minitest::Test
     platform = Zui::Platform.new(os: :windows, arch: :x86_64)
     with_project(platform) do |project, client|
       destination = Zui::Distribution.new(
-        client:, platform:, runtime_mode: :full, runtime_builder: FakeRuntimeBuilder.new(platform)
+        client:, platform:, runtime_mode: :full, runtime_builder: FakeRuntimeBuilder.new(platform, "cruby")
       ).bundle(project)
 
       launcher = File.read(File.join(destination, "run.cmd"))
@@ -146,7 +155,7 @@ class DistributionTest < Minitest::Test
     platform = Zui::Platform.new(os: :linux, arch: :x86_64)
     with_project(platform) do |project, client|
       destination = File.join(project, "unshaken")
-      distribution = Zui::Distribution.new(client:, platform:, tree_shake: false)
+      distribution = lite_distribution(client:, platform:, tree_shake: false)
       distribution.bundle(project, destination:)
 
       assert_nil distribution.tree_shake_report
@@ -164,12 +173,12 @@ class DistributionTest < Minitest::Test
         printf '%s\n' "$@" > "$ZUI_ARGUMENT_LOG"
       SH
       FileUtils.chmod(0o755, client.executable)
-      destination = Zui::Distribution.new(client:, platform:, ruby: RbConfig.ruby).bundle(project)
+      destination = lite_distribution(client:, platform:, ruby: RbConfig.ruby).bundle(project)
       argument_log = File.join(project, "native-arguments.log")
 
       if Gem.win_platform?
         launcher = File.read(File.join(destination, "run"))
-        assert_includes launcher, "packaged_ruby='#{RbConfig.ruby}'"
+        assert_includes launcher, "%ruby_root%\\bin\\mruby.exe"
         next
       end
 
@@ -180,7 +189,8 @@ class DistributionTest < Minitest::Test
 
       assert launched
       arguments = File.readlines(argument_log, chomp: true)
-      assert_equal RbConfig.ruby, arguments.fetch(arguments.index("--ruby") + 1)
+      assert_equal File.join(destination, "runtime", "ruby", "bin", "mruby"),
+                   arguments.fetch(arguments.index("--ruby") + 1)
     end
   end
 
@@ -205,6 +215,12 @@ class DistributionTest < Minitest::Test
   def assert_posix_executable(path)
     assert File.file?(path)
     assert File.executable?(path) unless Gem.win_platform?
+  end
+
+  def lite_distribution(client:, platform:, **options)
+    Zui::Distribution.new(
+      client:, platform:, runtime_builder: FakeRuntimeBuilder.new(platform), **options
+    )
   end
 
   def with_project(platform)

@@ -133,9 +133,11 @@ module Zui
     end
 
     def install_application_runtime(project, destination)
-      return unless runtime_mode == :full
-
-      builder = @runtime_builder || FullRuntime.new(platform:, ruby: @ruby)
+      builder = @runtime_builder || if runtime_mode == :full
+                                      FullRuntime.new(platform:, ruby: @ruby)
+                                    else
+                                      LiteRuntime.new(platform:)
+                                    end
       @application_runtime = builder.install(project:, destination: File.join(destination, "ruby"))
     end
 
@@ -150,9 +152,9 @@ module Zui
         exec "$native_dir/#{@client.executable_relative_path}" \
           --qml-root "$bundle_dir/runtime/qml" \
           --project "$bundle_dir/app" \
-          --program "$bundle_dir/app/main.rb" \
+          --program #{posix_program("$bundle_dir")} \
           --ruby "$ruby_command" \
-          --load-path "$bundle_dir/runtime/lib" \
+          --load-path #{posix_load_path("$bundle_dir")} \
           --name #{shell_quote(app_name)}
       SH
       FileUtils.chmod(0o755, File.join(destination, "run"))
@@ -170,9 +172,9 @@ module Zui
         exec "$native_dir/#{@client.executable_relative_path}" \
           --qml-root "$resources/runtime/qml" \
           --project "$resources/app" \
-          --program "$resources/app/main.rb" \
+          --program #{posix_program("$resources")} \
           --ruby "$ruby_command" \
-          --load-path "$resources/runtime/lib" \
+          --load-path #{posix_load_path("$resources")} \
           --name #{shell_quote(app_name)}
       SH
     end
@@ -234,9 +236,9 @@ module Zui
         "%bundle_dir%runtime\\native\\#{host}" ^
           --qml-root "%bundle_dir%runtime\\qml" ^
           --project "%bundle_dir%app" ^
-          --program "%bundle_dir%app\\main.rb" ^
+          --program #{windows_program} ^
           --ruby "%ruby_root%\\#{executable}" ^
-          --load-path "%bundle_dir%runtime\\lib" ^
+          --load-path #{windows_load_path} ^
           --name #{windows_quote(app_name)}
         exit /b %ERRORLEVEL%
       CMD
@@ -356,6 +358,34 @@ module Zui
       end
       lines << "ruby_command=\"$ruby_root/#{@application_runtime.executable}\""
       lines.join("\n")
+    end
+
+    def posix_program(bundle_root)
+      relative = @application_runtime&.program
+      relative ? %("#{bundle_root}/runtime/ruby/#{relative}") : %("#{bundle_root}/app/main.rb")
+    end
+
+    def posix_load_path(bundle_root)
+      relative = @application_runtime&.load_path
+      return %("#{bundle_root}/runtime/lib") if relative.nil?
+      return '""' if relative.empty?
+
+      %("#{bundle_root}/runtime/ruby/#{relative}")
+    end
+
+    def windows_program
+      relative = @application_runtime&.program
+      return '"%bundle_dir%app\\main.rb"' unless relative
+
+      %("%ruby_root%\\#{relative.tr('/', '\\')}")
+    end
+
+    def windows_load_path
+      relative = @application_runtime&.load_path
+      return '"%bundle_dir%runtime\\lib"' if relative.nil?
+      return '""' if relative.empty?
+
+      %("%ruby_root%\\#{relative.tr('/', '\\')}")
     end
 
     def windows_client_environment = @client.environment_entries

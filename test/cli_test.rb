@@ -146,55 +146,63 @@ class CLITest < Minitest::Test
 
   def test_configure_installs_the_client_and_enables_run_and_bundle
     client = FakeClient.new("/tmp/zui-client", false, 0)
+    lite_runtime = FakeClient.new("/tmp/zui-lite", false, 0)
     output = StringIO.new
 
-    status = Zui::Client.stub(:new, client) do
+    status = with_runtimes(client, lite_runtime) do
       Zui::CLI.run(["configure"], out: output, err: StringIO.new)
     end
 
     assert_equal 0, status
     assert_equal 1, client.configure_calls
+    assert_equal 1, lite_runtime.configure_calls
     assert_includes output.string, "Run: ready"
-    assert_includes output.string, "Bundle: ready"
+    assert_includes output.string, "Bundle --lite: ready"
   end
 
   def test_doctor_is_read_only_and_points_to_fix
     client = FakeClient.new("/tmp/zui-client", false, 0)
+    lite_runtime = FakeClient.new("/tmp/zui-lite", false, 0)
     output = StringIO.new
 
-    status = Zui::Client.stub(:new, client) do
+    status = with_runtimes(client, lite_runtime) do
       Zui::CLI.run(["doctor"], out: output, err: StringIO.new)
     end
 
     assert_equal 1, status
     assert_equal 0, client.configure_calls
+    assert_equal 0, lite_runtime.configure_calls
     assert_includes output.string, "zui doctor --fix"
   end
 
   def test_doctor_fix_installs_the_client_and_enables_run_and_bundle
     client = FakeClient.new("/tmp/zui-client", false, 0)
+    lite_runtime = FakeClient.new("/tmp/zui-lite", false, 0)
     output = StringIO.new
 
-    status = Zui::Client.stub(:new, client) do
+    status = with_runtimes(client, lite_runtime) do
       Zui::CLI.run(["doctor", "--fix"], out: output, err: StringIO.new)
     end
 
     assert_equal 0, status
     assert_equal 1, client.configure_calls
+    assert_equal 1, lite_runtime.configure_calls
     assert_includes output.string, "GitHub Releases"
     assert_includes output.string, "Run: ready"
-    assert_includes output.string, "Bundle: ready"
+    assert_includes output.string, "Bundle --lite: ready"
   end
 
   def test_doctor_fix_does_not_reinstall_a_ready_client
     client = FakeClient.new("/tmp/zui-client", true, 0)
+    lite_runtime = FakeClient.new("/tmp/zui-lite", true, 0)
 
-    status = Zui::Client.stub(:new, client) do
+    status = with_runtimes(client, lite_runtime) do
       Zui::CLI.run(["doctor", "--fix"], out: StringIO.new, err: StringIO.new)
     end
 
     assert_equal 0, status
     assert_equal 0, client.configure_calls
+    assert_equal 0, lite_runtime.configure_calls
   end
 
   def test_doctor_rejects_other_arguments
@@ -209,5 +217,13 @@ class CLITest < Minitest::Test
     assert_equal 64, Zui::CLI.run(["validate"], out: StringIO.new, err: error)
     refute_includes error.string, "validate [DIRECTORY]"
     assert_equal 64, Zui::CLI.run(["launch"], out: StringIO.new, err: StringIO.new)
+  end
+
+  private
+
+  def with_runtimes(client, lite_runtime, &block)
+    Zui::Client.stub(:new, client) do
+      Zui::LiteRuntime.stub(:new, lite_runtime, &block)
+    end
   end
 end

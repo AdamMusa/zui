@@ -25,6 +25,27 @@ module Zui
     end
   end
 
-  Binding = Struct.new(:node, :property, :reader, :last_value, :animation, keyword_init: true)
-  StructuralBinding = Struct.new(:node, :renderer, :last_children, keyword_init: true)
+  class Binding
+    attr_accessor :last_value
+    attr_reader :node, :property, :reader, :animation
+
+    def initialize(node:, property:, reader:, last_value:, animation:)
+      @node = node
+      @property = property
+      @reader = reader
+      @last_value = last_value
+      @animation = animation
+    end
+  end
+
+  class StructuralBinding
+    attr_accessor :last_children
+    attr_reader :node, :renderer
+
+    def initialize(node:, renderer:, last_children:)
+      @node = node
+      @renderer = renderer
+      @last_children = last_children
+    end
+  end
 end
