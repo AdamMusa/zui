@@ -14,6 +14,7 @@ module Zui
       created = true
       FileUtils.mkdir_p(File.join(@path, "components"))
       File.write(File.join(@path, "main.rb"), main_program)
+      File.write(File.join(@path, "Gemfile"), gemfile)
       File.write(File.join(@path, "components", "welcome.rb"), welcome_component)
       File.write(File.join(@path, "config.rb"), distribution_config)
       FileUtils.mkdir_p(File.join(@path, "assets"))
@@ -47,6 +48,16 @@ module Zui
         end
 
         #{constant_name}.run
+      RUBY
+    end
+
+    def gemfile
+      <<~RUBY
+        source "https://rubygems.org"
+
+        gem "zui", "~> #{VERSION}"
+
+        # Add application gems here. They are included by `zui bundle --full`.
       RUBY
     end
 

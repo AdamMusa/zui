@@ -6,15 +6,21 @@ require "rbconfig"
 
 module Zui
   class Distribution
-    attr_reader :platform, :tree_shake_report
+    RUNTIME_MODES = %i[lite full].freeze
+
+    attr_reader :platform, :tree_shake_report, :runtime_mode
 
     def initialize(client: nil, platform: Platform.current, framework_root: FRAMEWORK_ROOT,
-                   ruby: RbConfig.ruby, tree_shake: true, release_config: nil)
+                   ruby: RbConfig.ruby, tree_shake: true, release_config: nil, runtime_mode: :lite)
       @platform = platform.assert_supported!
       @client = client || Client.new(platform: @platform)
       @framework_root = framework_root
       @ruby = File.expand_path(ruby)
       @tree_shake = tree_shake == true
+      @runtime_mode = runtime_mode.to_sym
+      unless RUNTIME_MODES.include?(@runtime_mode)
+        raise ArgumentError, "unsupported application runtime: #{runtime_mode}"
+      end
       @tree_shake_report = nil
       @release_config = release_config
     end
@@ -215,7 +221,7 @@ module Zui
         "format" => 1, "framework" => "zui", "version" => VERSION,
         "platform" => platform.os.to_s, "architecture" => platform.arch.to_s,
         "name" => app_name, "client_version" => @client.manifest.fetch("client_version"),
-        "tree_shaken" => !@tree_shake_report.nil?
+        "tree_shaken" => !@tree_shake_report.nil?, "ruby_runtime" => runtime_mode.to_s
       }
       manifest["tree_shake"] = @tree_shake_report.to_h if @tree_shake_report
       if @release_config

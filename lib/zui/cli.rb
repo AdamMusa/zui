@@ -5,7 +5,7 @@ require "rbconfig"
 
 module Zui
   class CLI
-    USAGE = "Usage: zui <new NAME|configure|doctor [--fix]|run FILE|bundle [--dist] [--no-tree-shake] [DIRECTORY]|version>"
+    USAGE = "Usage: zui <new NAME|configure|doctor [--fix]|run FILE|bundle [--dist] [--lite|--full] [--no-tree-shake] [DIRECTORY]|version>"
 
     def self.run(arguments, out: $stdout, err: $stderr)
       new(out:, err:).run(arguments.dup)
@@ -58,20 +58,24 @@ module Zui
       destination = option_value(arguments, "--output")
       create_installers = !arguments.delete("--dist").nil?
       tree_shake = arguments.delete("--no-tree-shake").nil?
+      lite = !arguments.delete("--lite").nil?
+      full = !arguments.delete("--full").nil?
+      raise ArgumentError, "bundle accepts only one of --lite or --full" if lite && full
+      runtime_mode = full ? :full : :lite
       source = File.expand_path(arguments.shift || Dir.pwd)
       raise ArgumentError, "bundle accepts one directory" unless arguments.empty?
 
       if create_installers
         raise ArgumentError, "--name cannot be used with --dist; set name in config.rb" if name
 
-        packager = DistPackager.new(tree_shake:)
+        packager = DistPackager.new(tree_shake:, runtime_mode:)
         paths = packager.package(source, output: destination)
         paths.each { |path| @out.puts("Created distribution artifact #{path}") }
         report_tree_shaking(packager.tree_shake_report)
         return 0
       end
 
-      distribution = Distribution.new(tree_shake:)
+      distribution = Distribution.new(tree_shake:, runtime_mode:)
       path = distribution.bundle(source, name:, destination:)
       @out.puts("Bundled #{Platform.current.os} application in #{path}")
       report_tree_shaking(distribution.tree_shake_report)

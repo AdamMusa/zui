@@ -26,6 +26,7 @@ class DistributionTest < Minitest::Test
       assert_equal "linux", manifest.fetch("platform")
       assert_equal Zui::VERSION, manifest.fetch("client_version")
       assert_equal true, manifest.fetch("tree_shaken")
+      assert_equal "lite", manifest.fetch("ruby_runtime")
       assert_includes manifest.fetch("tree_shake").fetch("components"), "text"
       refute File.exist?(File.join(destination, "runtime", "qml", "Components", "Builtins", "Camera.qml"))
       assert_equal 1, Dir[File.join(destination, "share", "applications", "*.desktop")].length

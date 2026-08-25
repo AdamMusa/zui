@@ -9,15 +9,19 @@ require "zlib"
 
 module Zui
   class DistPackager
-    attr_reader :platform, :config, :tree_shake_report
+    attr_reader :platform, :config, :tree_shake_report, :runtime_mode
 
     def initialize(client: nil, platform: Platform.current, framework_root: FRAMEWORK_ROOT,
-                   ruby: RbConfig.ruby, tree_shake: true, environment: ENV)
+                   ruby: RbConfig.ruby, tree_shake: true, environment: ENV, runtime_mode: :lite)
       @platform = platform.assert_supported!
       @client = client || Client.new(platform: @platform)
       @framework_root = framework_root
       @ruby = File.expand_path(ruby)
       @tree_shake = tree_shake == true
+      @runtime_mode = runtime_mode.to_sym
+      unless Distribution::RUNTIME_MODES.include?(@runtime_mode)
+        raise ArgumentError, "unsupported application runtime: #{runtime_mode}"
+      end
       @environment = environment.to_h
       @config = nil
       @tree_shake_report = nil
@@ -62,7 +66,7 @@ module Zui
                     end
       distribution = Distribution.new(
         client: @client, platform:, framework_root: @framework_root, ruby: @ruby,
-        tree_shake: @tree_shake, release_config: config
+        tree_shake: @tree_shake, release_config: config, runtime_mode:
       )
       distribution.bundle(project, name: config.name, destination:)
       @tree_shake_report = distribution.tree_shake_report

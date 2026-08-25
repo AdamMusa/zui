@@ -37,7 +37,10 @@ class CLITest < Minitest::Test
       assert_includes main, "SignalBoard.run"
       refute_match(/Omarchy|Quickshell/, main)
       refute_includes component, "Zui::Builder.include"
-      assert_equal %w[README.md assets components config.rb main.rb], Dir.children(project).sort
+      assert_equal %w[Gemfile README.md assets components config.rb main.rb], Dir.children(project).sort
+      gemfile = File.read(File.join(project, "Gemfile"))
+      assert_includes gemfile, 'gem "zui"'
+      assert_includes gemfile, "zui bundle --full"
       assert_includes File.read(File.join(project, "config.rb")), "Zui::Dist.configure"
     end
   end
@@ -82,6 +85,7 @@ class CLITest < Minitest::Test
 
     assert_equal 0, status
     assert_equal false, options.fetch(:tree_shake)
+    assert_equal :lite, options.fetch(:runtime_mode)
   end
 
   def test_bundle_dist_uses_the_release_packager
@@ -105,10 +109,39 @@ class CLITest < Minitest::Test
 
     assert_equal 0, status
     assert_equal true, options.fetch(:tree_shake)
+    assert_equal :lite, options.fetch(:runtime_mode)
     assert_equal File.join(__dir__, "fixtures"), request.first
     assert_equal({ output: "/tmp/releases" }, request.last)
     assert_includes output.string, "/tmp/demo.deb"
     assert_includes output.string, "/tmp/demo.rpm"
+  end
+
+  def test_bundle_full_selects_the_private_cruby_runtime
+    options = nil
+    distribution = Object.new
+    distribution.define_singleton_method(:bundle) { |_source, **_arguments| "/tmp/Demo.app" }
+    distribution.define_singleton_method(:tree_shake_report) { nil }
+
+    status = Zui::Distribution.stub(:new, lambda { |**arguments|
+      options = arguments
+      distribution
+    }) do
+      Zui::CLI.run(["bundle", "--full", File.join(__dir__, "fixtures")],
+                   out: StringIO.new, err: StringIO.new)
+    end
+
+    assert_equal 0, status
+    assert_equal :full, options.fetch(:runtime_mode)
+  end
+
+  def test_bundle_rejects_lite_and_full_together
+    error = StringIO.new
+
+    status = Zui::CLI.run(["bundle", "--lite", "--full", File.join(__dir__, "fixtures")],
+                          out: StringIO.new, err: error)
+
+    assert_equal 1, status
+    assert_includes error.string, "only one of --lite or --full"
   end
 
   def test_configure_installs_the_client_and_enables_run_and_bundle
