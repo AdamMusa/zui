@@ -22,6 +22,63 @@ class CLITest < Minitest::Test
     end
   end
 
+  def test_general_help_is_available_from_every_standard_entry_point
+    [[], ["help"], ["-h"], ["--help"]].each do |arguments|
+      output = StringIO.new
+      error = StringIO.new
+
+      assert_equal 0, Zui::CLI.run(arguments, out: output, err: error), arguments.inspect
+      assert_empty error.string
+      assert_includes output.string, "Zui #{Zui::VERSION}"
+      assert_includes output.string, "Usage:"
+      Zui::CLI::COMMANDS.each_key { |command| assert_includes output.string, command }
+      assert_includes output.string, "zui help COMMAND"
+    end
+  end
+
+  def test_every_command_supports_direct_and_help_command_documentation
+    Zui::CLI::COMMANDS.each_key do |command|
+      [[command, "--help"], [command, "-h"], ["help", command]].each do |arguments|
+        output = StringIO.new
+        error = StringIO.new
+
+        assert_equal 0, Zui::CLI.run(arguments, out: output, err: error), arguments.inspect
+        assert_empty error.string
+        assert_includes output.string, "Usage:"
+        assert_includes output.string, "zui #{command}"
+      end
+    end
+  end
+
+  def test_version_has_command_and_global_aliases
+    [["version"], ["--version"], ["-v"]].each do |arguments|
+      output = StringIO.new
+      error = StringIO.new
+
+      assert_equal 0, Zui::CLI.run(arguments, out: output, err: error)
+      assert_equal "#{Zui::VERSION}\n", output.string
+      assert_empty error.string
+    end
+  end
+
+  def test_unknown_commands_report_the_help_entry_point
+    output = StringIO.new
+    error = StringIO.new
+
+    assert_equal 64, Zui::CLI.run(["unknown"], out: output, err: error)
+    assert_empty output.string
+    assert_includes error.string, 'unknown command "unknown"'
+    assert_includes error.string, "zui --help"
+  end
+
+  def test_invalid_options_report_command_specific_help
+    error = StringIO.new
+
+    assert_equal 1, Zui::CLI.run(["bundle", "--unknown"], out: StringIO.new, err: error)
+    assert_includes error.string, "invalid option: --unknown"
+    assert_includes error.string, "zui help bundle"
+  end
+
   def test_new_generates_a_zui_only_ruby_application
     Dir.mktmpdir do |directory|
       output = StringIO.new
@@ -227,7 +284,8 @@ class CLITest < Minitest::Test
   def test_doctor_rejects_other_arguments
     error = StringIO.new
     assert_equal 1, Zui::CLI.run(["doctor", "--bundle"], out: StringIO.new, err: error)
-    assert_includes error.string, "doctor accepts only --fix"
+    assert_includes error.string, "invalid option: --bundle"
+    assert_includes error.string, "zui help doctor"
   end
 
   def test_removed_commands_are_not_public

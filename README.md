@@ -217,6 +217,8 @@ an explicit error.
 
 | Command | Purpose |
 | --- | --- |
+| `zui --help` | List every command and global option |
+| `zui help COMMAND` | Show detailed usage, options, and examples for one command |
 | `zui new NAME` | Generate a pure-Ruby application, `Gemfile`, distribution config, and reusable UI module |
 | `zui doctor` | Report Ruby, platform, native-client, run, and bundle readiness without changing anything |
 | `zui doctor --fix` | Download, verify, and install the missing native client and lite mruby runtime |
@@ -228,6 +230,9 @@ an explicit error.
 | `zui bundle --no-tree-shake` | Retain the complete component and Qt feature catalog for metaprogrammed applications |
 | `zui bundle --dist [DIRECTORY]` | Build release installers from the required project-root `config.rb` |
 | `zui version` | Print the installed framework version |
+
+Every command also supports `-h` and `--help` directly, such as `zui bundle --help`.
+Usage errors point to the relevant command help without starting downloads, builds, or applications.
 
 Zui has no separate validation command. Ruby, DSL, schema, resource, protocol, and renderer errors
 are reported by the operation that encounters them.
