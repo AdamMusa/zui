@@ -1,8 +1,9 @@
 # Platform support
 
 Zui applications use the same Ruby API, protocol, renderer, catalog, and source on Linux, macOS,
-and Windows. A small versioned client supplies the native Qt/QML engine for each operating system.
-Application source never goes into that development client.
+Windows, and iOS. A small versioned client supplies the native Qt/QML engine on desktop. An iOS
+build embeds that renderer and mruby inside the application bundle instead of starting a child
+process.
 
 ## Setup
 
@@ -20,7 +21,7 @@ zui run main.rb
 release. (`zui configure` is the equivalent explicit setup command.) Zui checks each checksum,
 archive path, manifest, version, platform, and executable before atomic activation. These archives
 are not part of the RubyGem. CMake, C++, mruby build tools, Qt SDKs, Homebrew Qt packages, and Linux
-Qt development packages are not end-user prerequisites.
+Qt development packages are not desktop end-user prerequisites.
 
 The client contains only:
 
@@ -45,9 +46,49 @@ Native CI builds, packages, installs, and launches clients on these target famil
 - macOS Intel;
 - Windows x86-64.
 
+iOS Simulator builds are currently a developer preview. They are built locally on macOS with
+Xcode, Qt 6.8 for iOS plus its matching host SDK, mruby 4.0, and mruby-json. The resulting `.app`
+does not require Ruby or Qt to be installed inside the simulator.
+
 An unavailable architecture fails explicitly during configuration. Zui does not silently compile a
 host from source or fall back to a system Qt installation. Additional architectures become supported
 when a native release runner and client artifact are added.
+
+## iOS Simulator
+
+The mobile host keeps the Qt event loop and Zui renderer native while replacing the desktop child
+process with an in-process mruby bridge:
+
+```text
+Application.app/
+├── native Qt/Zui executable
+├── embedded Zui QML and fonts
+├── embedded application Ruby and assets
+├── embedded mruby runtime
+└── compiled iOS app icon catalog
+```
+
+From a project containing `main.rb`, `config.rb`, and an iOS PNG icon:
+
+```bash
+zui mobile ios . \
+  --qt-ios /path/to/Qt/6.8.3/ios \
+  --qt-host /path/to/Qt/6.8.3/macos \
+  --mruby /path/to/mruby \
+  --mruby-json /path/to/mruby-json
+```
+
+The command builds a lean pinned mobile mruby configuration when necessary, precompiles the bundled
+Ruby source to bytecode, generates a Release Xcode project, selects a compatible installed
+simulator, builds, installs, and launches the application. The mruby VM and Qt renderer share one
+native process; mobile does not invoke the desktop `zui run` child-process launcher.
+Use `--simulator ID` for an explicit device and `--build-only` to skip installation. The dependency
+paths also accept `ZUI_QT_IOS`, `ZUI_QT_HOST`, `ZUI_MRUBY_ROOT`, and `ZUI_MRUBY_JSON`.
+
+The current mobile path is lite-only: application code must be mruby compatible and cannot require
+arbitrary CRuby gems. Physical-device signing and App Store submission remain application-owner
+steps. Android is recognized in project metadata, but an Android native build target is not yet
+released.
 
 ## Application bundles
 

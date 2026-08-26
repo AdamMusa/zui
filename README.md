@@ -1,11 +1,11 @@
 <p align="center">
-  <img src="docs/assets/readme-hero.svg" width="100%" alt="Zui — native desktop applications in pure Ruby">
+  <img src="docs/assets/readme-hero.svg" width="100%" alt="Zui — native applications in pure Ruby">
 </p>
 
-<h1 align="center">Native desktop applications in pure Ruby</h1>
+<h1 align="center">Native applications in pure Ruby</h1>
 
 <p align="center">
-  Build reactive Linux, macOS, and Windows interfaces with one Ruby API, a native Qt renderer,
+  Build reactive Linux, macOS, Windows, and iOS interfaces with one Ruby API, a native Qt renderer,
   and no application-owned QML or browser runtime.
 </p>
 
@@ -30,27 +30,26 @@
 
 ---
 
-Zui is a desktop UI framework for Ruby. Application code owns the interface, state, behavior,
+Zui is a native UI framework for Ruby. Application code owns the interface, state, behavior,
 and assets; Zui owns the rendering protocol, native host, platform-neutral QML implementation,
-and complete component catalog. The result is a normal desktop application—not a web page inside
-a window.
+and complete component catalog. The result is a native application—not a web page inside a window.
 
 <table>
   <tr>
     <td width="33%"><strong>One application language</strong><br>Compose UI, state, bindings, events, commands, timers, and application logic in Ruby.</td>
-    <td width="33%"><strong>Native desktop renderer</strong><br>Render through Qt Quick, Controls, Multimedia, GPU effects, Shapes, and optional 3D modules.</td>
+    <td width="33%"><strong>Native renderer</strong><br>Render through Qt Quick, Controls, Multimedia, GPU effects, Shapes, and optional 3D modules.</td>
     <td width="33%"><strong>Private verified runtime</strong><br>Install a checksummed native client without changing system Qt or shell configuration.</td>
   </tr>
   <tr>
     <td><strong>241 named components</strong><br>Use specific controls with validated properties and events instead of a generic markup escape hatch.</td>
     <td><strong>Reactive by default</strong><br>Update only changed properties and publish multi-value transactions as atomic patch batches.</td>
-    <td><strong>Portable source</strong><br>Run the same application on Linux, macOS, Windows, or through an environment adapter such as Omarchy UI.</td>
+    <td><strong>Portable source</strong><br>Run the same application on Linux, macOS, Windows, iOS, or through an environment adapter such as Omarchy UI.</td>
   </tr>
 </table>
 
 ## Beautiful user experiences
 
-Build polished, responsive desktop interfaces in Ruby—from focused utilities to immersive,
+Build polished, responsive interfaces in Ruby—from focused utilities to immersive,
 data-rich dashboards.
 
 <p align="center">
@@ -78,6 +77,27 @@ system-wide Qt installation.
 `zui doctor --fix` downloads the native client and lite mruby runtime for the installed Zui
 version, verifies their SHA-256 checksums and manifests, and activates them atomically in the user
 cache. It does not modify shell startup files or global Qt environment variables.
+
+### Run on an iPhone Simulator
+
+Mobile builds use the same Ruby source and native renderer, with mruby embedded directly in the
+iOS application. On a Mac with Xcode, a Qt 6.8 iOS SDK and matching host Qt SDK, mruby, and
+mruby-json, run:
+
+```bash
+zui mobile ios path/to/application \
+  --qt-ios ~/Qt/6.8.3/ios \
+  --qt-host ~/Qt/6.8.3/macos \
+  --mruby ~/src/mruby \
+  --mruby-json ~/src/mruby-json
+```
+
+Zui precompiles the app to mruby bytecode, creates an optimized native `.app`, selects a compatible
+simulator, installs it, and launches it. The VM and Qt renderer run in the same process; no Ruby
+child process is started. The
+paths can instead be set once through `ZUI_QT_IOS`, `ZUI_QT_HOST`, `ZUI_MRUBY_ROOT`, and
+`ZUI_MRUBY_JSON`. Use `--simulator ID` to select a device or `--build-only` to stop after building.
+The app name, bundle identifier, version, and 1024×1024 PNG icon come from `config.rb`.
 
 ## Your first application
 
@@ -173,17 +193,17 @@ end
 ## Platform support
 
 Zui uses the same Ruby API, protocol, renderer, catalog, and application source on every supported
-desktop target. Each release is gated by CI that builds, packages, installs, and launches the
-matching native client.
+target. Desktop releases use a versioned client; iOS embeds the renderer and mruby inside the app.
 
-| Operating system | Architecture | Native client | `zui bundle` output | Release status |
+| Operating system | Architecture | Runtime shape | Build output | Release status |
 | --- | --- | --- | --- | --- |
 | Linux | x86-64 | `zui-client-linux-x86_64` | Portable application directory | Supported and CI verified |
 | macOS | Apple Silicon | `zui-client-macos-arm64` | Standard `.app` bundle | Supported and CI verified |
 | macOS | Intel x86-64 | `zui-client-macos-x86_64` | Standard `.app` bundle | Supported and CI verified |
 | Windows | x86-64 | `zui-client-windows-x86_64` | Portable application directory | Supported and CI verified |
+| iOS Simulator | x86-64 | Embedded native host + mruby | Standard simulator `.app` | Mobile preview, install and launch verified |
 
-Application bundles do not require Ruby on the destination. The default `--lite` mode embeds Zui's
+Desktop application bundles do not require Ruby on the destination. The default `--lite` mode embeds Zui's
 versioned mruby runtime. `--full` embeds a private CRuby plus only the non-Zui gems resolved by the
 project's `Gemfile.lock`.
 
@@ -263,17 +283,19 @@ are reported by the operation that encounters them.
               Qt Quick · Controls · Multimedia · GPU · 3D
 ```
 
-The Ruby process owns application logic. The native client owns the Qt event loop and graphics
-runtime. The renderer applies validated trees and bounded reactive patch batches across the
-process boundary.
+Ruby owns application logic. The native client owns the Qt event loop and graphics runtime. On
+desktop, the versioned protocol crosses a private process boundary. On iOS, the same protocol is
+carried by an in-process mruby bridge. The renderer applies the same validated trees and bounded
+reactive patch batches in both forms.
 
-The client intentionally excludes browser-engine payloads. Zui is desktop-only and does not use
+The client intentionally excludes browser-engine payloads. Zui does not use
 HTML, CSS, JavaScript, WebView, Electron, or Qt WebEngine to render application interfaces.
 
 ## Native client integrity
 
-The RubyGem contains the Ruby framework and QML catalog, but not a platform client. Native clients
-are built by the release matrix and attached to the matching GitHub tag.
+The RubyGem contains the Ruby framework, QML catalog, and mobile host source, but not a prebuilt
+desktop platform client. Native desktop clients are built by the release matrix and attached to the
+matching GitHub tag.
 
 During setup, Zui verifies:
 
@@ -360,13 +382,14 @@ Zui::Dist.configure do
 
   icon linux: "assets/icon.png",
        macos: "assets/icon.icns",
-       windows: "assets/icon.ico"
+       windows: "assets/icon.ico",
+       ios: "assets/icon.png"
   categories "Utility", "Development"
 end
 ```
 
 Only the current platform's icon is required when packaging: PNG or SVG on Linux, ICNS on macOS,
-and ICO on Windows. Paths must remain inside the project. `--output DIRECTORY` selects the artifact
+ICO on Windows, and a 1024×1024 PNG on iOS. Paths must remain inside the project. `--output DIRECTORY` selects the artifact
 directory, and existing artifacts are never overwritten. Linux RPM creation requires `rpmbuild`
 (`rpm-build` or `rpm-tools`), macOS uses the system `hdiutil`, and Windows requires Inno Setup 6's
 `ISCC.exe` on `PATH`.
@@ -390,6 +413,7 @@ The repository includes complete Ruby applications rather than isolated visual s
 | [Quantum Market Terminal](examples/quantum_market_terminal/) | Portfolio state, trading simulation, charts, allocation controls, and transactions |
 | [Smart Home Energy](examples/smart_home_energy/) | Room imagery, lighting, device state, energy telemetry, and home simulation |
 | [Cinematic Music Studio](examples/cinematic_music_studio/) | Local and remote media, playback state, seeking, playlists, and audio controls |
+| [Mobile Counter](examples/mobile_counter/) | Embedded mruby, native iOS packaging, touch events, bindings, and simulator launch |
 
 Run any showcase through the normal client:
 
