@@ -103,6 +103,23 @@ class QmlContractTest < Minitest::Test
     refute_includes qml, "Process {"
   end
 
+  def test_mobile_host_embeds_ruby_and_framework_resources
+    host = source("native/main.cpp")
+    runtime = source("native/ZuiEmbeddedRuntime.cpp")
+    cmake = source("native/CMakeLists.txt")
+    desktop = source("Desktop.qml")
+
+    assert_includes host, "ZUI_EMBEDDED_RUNTIME"
+    assert_includes host, 'QStringLiteral(":/app/app.rb")'
+    assert_includes runtime, "mrb_load_nstring_cxt"
+    assert_includes runtime, 'mrb_define_module(m_state, "ZuiNative")'
+    assert_includes runtime, 'callZui("embedded_receive", &data)'
+    assert_includes cmake, 'PREFIX "/zui"'
+    assert_includes cmake, 'PREFIX "/app"'
+    assert_includes cmake, "qt_import_qml_plugins(zui-host)"
+    assert_includes desktop, 'visibility: zuiMobile || option("fullscreen", false) === true'
+  end
+
   def test_service_applies_reactive_patch_batches_with_one_visual_revision
     qml = source("Service.qml")
 

@@ -13,13 +13,38 @@ find_package(Qt6 6.8 REQUIRED COMPONENTS
   QuickControls2
 )
 
-qt_add_executable(zui-host
+option(ZUI_EMBEDDED_RUNTIME "Embed mruby for mobile application targets" OFF)
+set(ZUI_MRUBY_ROOT "" CACHE PATH "mruby source/build root for an embedded target")
+set(ZUI_MRUBY_BUILD "zui-ios-simulator" CACHE STRING "mruby build name")
+set(ZUI_MOBILE_APP_DIR "" CACHE PATH "Generated mobile application resource directory")
+set(ZUI_MOBILE_APP_NAME "Zui Mobile" CACHE STRING "Mobile application display name")
+set(ZUI_MOBILE_BUNDLE_ID "dev.zui.mobile" CACHE STRING "Mobile application bundle identifier")
+set(ZUI_MOBILE_APP_VERSION "0.1.0" CACHE STRING "Mobile application release version")
+set(ZUI_MOBILE_BUILD_VERSION "1" CACHE STRING "Mobile application build version")
+
+set(zui_host_sources
   main.cpp
   ZuiClipboard.cpp
   ZuiClipboard.h
-  ZuiProcess.cpp
-  ZuiProcess.h
 )
+
+if(ZUI_EMBEDDED_RUNTIME)
+  if(NOT IS_DIRECTORY "${ZUI_MRUBY_ROOT}/include")
+    message(FATAL_ERROR "ZUI_MRUBY_ROOT must point to a built mruby source tree")
+  endif()
+  if(NOT IS_DIRECTORY "${ZUI_MOBILE_APP_DIR}" OR NOT EXISTS "${ZUI_MOBILE_APP_DIR}/app.rb")
+    message(FATAL_ERROR "ZUI_MOBILE_APP_DIR must contain generated app.rb")
+  endif()
+  set(zui_mruby_library "${ZUI_MRUBY_ROOT}/build/${ZUI_MRUBY_BUILD}/lib/libmruby.a")
+  if(NOT EXISTS "${zui_mruby_library}")
+    message(FATAL_ERROR "Embedded mruby library not found: ${zui_mruby_library}")
+  endif()
+  list(APPEND zui_host_sources ZuiEmbeddedRuntime.cpp ZuiEmbeddedRuntime.h)
+else()
+  list(APPEND zui_host_sources ZuiProcess.cpp ZuiProcess.h)
+endif()
+
+qt_add_executable(zui-host ${zui_host_sources})
 
 set_target_properties(zui-host PROPERTIES
   MACOSX_BUNDLE TRUE
@@ -34,12 +59,60 @@ target_link_libraries(zui-host PRIVATE
   Qt6::QuickControls2
 )
 
+if(ZUI_EMBEDDED_RUNTIME)
+  string(REPLACE "\\" "\\\\" zui_mobile_app_name_definition "${ZUI_MOBILE_APP_NAME}")
+  string(REPLACE "\"" "\\\"" zui_mobile_app_name_definition "${zui_mobile_app_name_definition}")
+  target_include_directories(zui-host PRIVATE
+    "${ZUI_MRUBY_ROOT}/include"
+    "${ZUI_MRUBY_ROOT}/build/${ZUI_MRUBY_BUILD}/include"
+  )
+  target_link_libraries(zui-host PRIVATE "${zui_mruby_library}")
+  target_compile_definitions(zui-host PRIVATE
+    ZUI_EMBEDDED_RUNTIME=1
+    ZUI_MOBILE_APP_NAME="${zui_mobile_app_name_definition}"
+  )
+  set_target_properties(zui-host PROPERTIES
+    OUTPUT_NAME "${ZUI_MOBILE_APP_NAME}"
+    MACOSX_BUNDLE_GUI_IDENTIFIER "${ZUI_MOBILE_BUNDLE_ID}"
+    MACOSX_BUNDLE_BUNDLE_NAME "${ZUI_MOBILE_APP_NAME}"
+    MACOSX_BUNDLE_SHORT_VERSION_STRING "${ZUI_MOBILE_APP_VERSION}"
+    MACOSX_BUNDLE_BUNDLE_VERSION "${ZUI_MOBILE_BUILD_VERSION}"
+    XCODE_ATTRIBUTE_PRODUCT_NAME "${ZUI_MOBILE_APP_NAME}"
+  )
+
+  get_filename_component(ZUI_FRAMEWORK_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/.." ABSOLUTE)
+  file(GLOB zui_qml_entrypoints CONFIGURE_DEPENDS "${ZUI_FRAMEWORK_ROOT}/*.qml")
+  file(GLOB_RECURSE zui_qml_resources CONFIGURE_DEPENDS
+    "${ZUI_FRAMEWORK_ROOT}/Components/*.qml"
+    "${ZUI_FRAMEWORK_ROOT}/Controls/*.qml"
+    "${ZUI_FRAMEWORK_ROOT}/Controls/qmldir"
+    "${ZUI_FRAMEWORK_ROOT}/Theme/*.qml"
+    "${ZUI_FRAMEWORK_ROOT}/Theme/qmldir"
+    "${ZUI_FRAMEWORK_ROOT}/Fonts/*.otf"
+  )
+  list(APPEND zui_qml_resources ${zui_qml_entrypoints})
+  qt_add_resources(zui-host zui_mobile_runtime
+    PREFIX "/zui"
+    BASE "${ZUI_FRAMEWORK_ROOT}"
+    FILES ${zui_qml_resources}
+  )
+
+  file(GLOB_RECURSE zui_mobile_app_resources CONFIGURE_DEPENDS
+    "${ZUI_MOBILE_APP_DIR}/*"
+  )
+  qt_add_resources(zui-host zui_mobile_application
+    PREFIX "/app"
+    BASE "${ZUI_MOBILE_APP_DIR}"
+    FILES ${zui_mobile_app_resources}
+  )
+endif()
+
 install(TARGETS zui-host
   BUNDLE DESTINATION .
   RUNTIME DESTINATION bin
 )
 
-if(APPLE OR WIN32)
+if((APPLE OR WIN32) AND NOT IOS)
   set(ZUI_QML_SCAN_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/.." CACHE PATH "QML tree scanned for deployment")
   set(zui_deploy_tool_options "")
   if(APPLE)
@@ -55,4 +128,8 @@ if(APPLE OR WIN32)
     DEPLOY_TOOL_OPTIONS ${zui_deploy_tool_options}
   )
   install(SCRIPT ${zui_deploy_script})
+endif()
+
+if(IOS)
+  qt_import_qml_plugins(zui-host)
 endif()

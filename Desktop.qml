@@ -27,7 +27,7 @@ QQC.ApplicationWindow {
   minimumHeight: Number(option("min_height", 220))
   maximumWidth: Number(option("max_width", 16777215))
   maximumHeight: Number(option("max_height", 16777215))
-  visibility: option("fullscreen", false) === true
+  visibility: zuiMobile || option("fullscreen", false) === true
     ? Window.FullScreen
     : (option("maximized", false) === true ? Window.Maximized : Window.Windowed)
   color: option("color", Color.background)
@@ -45,7 +45,7 @@ QQC.ApplicationWindow {
   ControlNode {
     id: renderer
     anchors.fill: parent
-    anchors.margins: Number(window.option("padding", 20))
+    anchors.margins: zuiMobile ? 0 : Number(window.option("padding", 20))
     visible: Fonts.ready && window.activeSurface !== "" && service.rootId(window.activeSurface) !== ""
     bridge: service
     surfaceName: window.activeSurface
