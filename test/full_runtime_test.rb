@@ -80,6 +80,34 @@ class FullRuntimeTest < Minitest::Test
     end
   end
 
+  def test_resigns_a_stripped_macos_ruby_executable
+    Dir.mktmpdir do |directory|
+      ruby = File.join(directory, "source", "bin", "ruby")
+      destination = File.join(directory, "runtime")
+      FileUtils.mkdir_p(File.dirname(ruby))
+      File.binwrite(ruby, "\xCF\xFA\xED\xFE".b + "ruby-fixture")
+      FileUtils.chmod(0o755, ruby)
+      runtime = Zui::FullRuntime.new(
+        platform: Zui::Platform.new(os: :macos, arch: :arm64), ruby:, environment: { "PATH" => "" }
+      )
+      commands = []
+      runtime.define_singleton_method(:find_command) { |names| File.join("/usr/bin", names.first) }
+      runtime.define_singleton_method(:system) do |*arguments, **options|
+        commands << [arguments, options]
+        true
+      end
+
+      executable = runtime.send(:install_executable, destination)
+
+      assert_equal "bin/ruby", executable
+      assert_equal ["/usr/bin/strip", "-x", File.join(destination, "bin", "ruby")], commands[0][0]
+      assert_equal [
+        "/usr/bin/codesign", "--force", "--sign", "-", "--timestamp=none",
+        File.join(destination, "bin", "ruby")
+      ], commands[1][0]
+    end
+  end
+
   private
 
   def fake_spec(root, name, version, default: false)

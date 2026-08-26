@@ -62,6 +62,7 @@ module Zui
       FileUtils.cp(@ruby, target)
       FileUtils.chmod(0o755, target) unless platform.windows?
       strip_binary(target)
+      sign_binary(target)
       File.join("bin", name).tr(File::SEPARATOR, "/")
     end
 
@@ -226,6 +227,17 @@ module Zui
 
       arguments = platform.macos? ? [strip, "-x", path] : [strip, "--strip-unneeded", path]
       system(*arguments, out: File::NULL, err: File::NULL)
+    end
+
+    def sign_binary(path)
+      return unless platform.macos?
+
+      codesign = find_command(%w[codesign])
+      raise ArgumentError, "codesign is required to build a macOS full runtime" unless codesign
+
+      signed = system(codesign, "--force", "--sign", "-", "--timestamp=none", path,
+                      out: File::NULL, err: File::NULL)
+      raise ArgumentError, "failed to sign the bundled Ruby executable" unless signed
     end
 
     def find_command(names)
