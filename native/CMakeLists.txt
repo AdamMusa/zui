@@ -25,6 +25,7 @@ set(ZUI_IOS_LAUNCH_SCREEN "${CMAKE_CURRENT_SOURCE_DIR}/LaunchScreen.storyboard" 
 set(ZUI_IOS_INFO_PLIST "" CACHE FILEPATH "Custom iOS Info.plist template")
 set(ZUI_IOS_ENTITLEMENTS "" CACHE FILEPATH "Custom iOS code-signing entitlements")
 set(ZUI_ANDROID_PACKAGE_SOURCE_DIR "" CACHE PATH "Android package template overlay")
+set(ZUI_ANDROID_PROJECT_DIR "" CACHE PATH "Project-owned Android native integration")
 set(ZUI_ANDROID_MIN_SDK "23" CACHE STRING "Android minimum SDK version")
 set(ZUI_ANDROID_TARGET_SDK "35" CACHE STRING "Android target SDK version")
 
@@ -157,6 +158,10 @@ if(ZUI_EMBEDDED_RUNTIME)
       XCODE_ATTRIBUTE_ASSETCATALOG_COMPILER_APPICON_NAME "AppIcon"
     )
   endif()
+endif()
+
+if(ANDROID AND EXISTS "${ZUI_ANDROID_PROJECT_DIR}/Zui.cmake")
+  include("${ZUI_ANDROID_PROJECT_DIR}/Zui.cmake")
 endif()
 
 if(ANDROID)

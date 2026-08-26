@@ -1,0 +1,17 @@
+// This script is applied after the active Qt Android build.gradle.
+// Add external-service buildscript entries, plugins, repositories, and dependencies here.
+//
+// Example:
+// dependencies {
+//     implementation 'provider.group:provider-sdk:1.0.0'
+// }
+//
+// Provider-specific Android levels can be overridden after Qt's defaults:
+// android {
+//     compileSdkVersion 35
+//     defaultConfig {
+//         minSdkVersion 23
+//         targetSdkVersion 35
+//         maxSdkVersion 35
+//     }
+// }

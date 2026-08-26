@@ -30,6 +30,11 @@ class AndroidMobileTest < Minitest::Test
       java = File.join(project, "android", "src", "dev", "zui", "MobileBridge.java")
       FileUtils.mkdir_p(File.dirname(java))
       File.write(java, "package dev.zui; class MobileBridge {}\n")
+      File.write(File.join(project, "android", "zui.gradle"), <<~GRADLE)
+        dependencies {
+            implementation 'provider.example:mobile-sdk:1.0.0'
+        }
+      GRADLE
       builder = create_builder(project, dependencies, output: File.join(directory, "build"))
 
       builder.send(:validate!)
@@ -48,6 +53,10 @@ class AndroidMobileTest < Minitest::Test
       assert File.file?(File.join(stage, "android", "res", "drawable", "zui_icon.png"))
       assert File.file?(File.join(stage, "android", "res", "drawable", "zui_splash.png"))
       assert_includes styles, "@drawable/zui_launch_background"
+      gradle = File.read(File.join(stage, "android", "build.gradle"))
+      assert_includes gradle, "apply plugin: qtGradlePluginType"
+      assert_includes gradle, "apply from: 'zui.gradle'"
+      assert_includes File.read(File.join(stage, "android", "zui.gradle")), "mobile-sdk"
       assert File.file?(File.join(stage, "android", "src", "dev", "zui", "MobileBridge.java"))
       assert_equal File.binread(File.join(project, "assets", "ruby.png")),
                    File.binread(File.join(stage, "assets", "ruby.png"))
@@ -90,6 +99,29 @@ class AndroidMobileTest < Minitest::Test
       error = assert_raises(ArgumentError) { builder.send(:validate!) }
 
       assert_includes error.message, "at least 23"
+    end
+  end
+
+  def test_android_configuration_exposes_the_project_native_hook
+    Dir.mktmpdir do |directory|
+      project = File.join(directory, "project")
+      dependencies = create_dependencies(directory)
+      create_project(project)
+      calls = []
+      command = Object.new
+      command.define_singleton_method(:run) do |arguments, **options|
+        calls << [arguments, options]
+        Zui::CommandResult.new(stdout: "", stderr: "", status: SuccessfulStatus.new(0))
+      end
+      builder = create_builder(
+        project, dependencies, command:, output: File.join(directory, "build")
+      )
+      config = Zui::Dist.load(project:, platform: Zui::Mobile::AndroidBuilder::ANDROID_PLATFORM)
+
+      builder.send(:configure_native, config, "dev.zui.touch_test", File.join(directory, "stage"), "runtime")
+
+      arguments = calls.fetch(0).fetch(0)
+      assert_includes arguments, "-DZUI_ANDROID_PROJECT_DIR=#{File.join(project, 'android')}"
     end
   end
 
@@ -140,6 +172,7 @@ class AndroidMobileTest < Minitest::Test
     mruby_json = File.join(directory, "mruby-json")
     files = [
       File.join(qt_android, "bin", "qt-cmake"), File.join(qt_host, "bin", "androiddeployqt"),
+      File.join(qt_android, "src", "android", "templates", "build.gradle"),
       File.join(android_sdk, "platform-tools", "adb"),
       File.join(android_ndk, "build", "cmake", "android.toolchain.cmake"),
       File.join(mruby, "minirake"), File.join(mruby_json, "mrbgem.rake")
@@ -148,6 +181,10 @@ class AndroidMobileTest < Minitest::Test
       FileUtils.mkdir_p(File.dirname(path))
       File.write(path, "")
     end
+    File.write(
+      File.join(qt_android, "src", "android", "templates", "build.gradle"),
+      "apply plugin: qtGradlePluginType\n"
+    )
     { qt_android:, qt_host:, android_sdk:, android_ndk:, mruby:, mruby_json: }
   end
 

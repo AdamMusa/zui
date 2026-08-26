@@ -225,9 +225,20 @@ module Zui
         return unless File.directory?(source)
 
         package = File.join(stage, "android")
+        create_android_gradle_extension(package, source)
         entries = Dir.children(source).reject { |entry| entry == ".DS_Store" }
         FileUtils.cp_r(entries.map { |entry| File.join(source, entry) }, package) unless entries.empty?
         validate_android_manifest!(File.join(package, "AndroidManifest.xml"))
+      end
+
+      def create_android_gradle_extension(package, source)
+        extension = File.join(source, "zui.gradle")
+        return unless File.file?(extension)
+
+        template = File.join(@qt_android, "src", "android", "templates", "build.gradle")
+        validate_file!(template, "Qt Android Gradle template")
+        contents = File.read(template).rstrip
+        File.write(File.join(package, "build.gradle"), "#{contents}\n\napply from: 'zui.gradle'\n")
       end
 
       def validate_android_manifest!(manifest_path)
@@ -305,6 +316,7 @@ module Zui
           "-DZUI_MOBILE_APP_NAME=#{config.name}", "-DZUI_MOBILE_BUNDLE_ID=#{bundle_id}",
           "-DZUI_MOBILE_APP_VERSION=#{config.version}", "-DZUI_MOBILE_BUILD_VERSION=1",
           "-DZUI_ANDROID_PACKAGE_SOURCE_DIR=#{File.join(stage, 'android')}",
+          "-DZUI_ANDROID_PROJECT_DIR=#{File.join(@project, 'android')}",
           "-DZUI_ANDROID_MIN_SDK=#{@api}", "-DZUI_ANDROID_TARGET_SDK=#{@target_api}"
         ], label: "generating the Android build", timeout: 300)
         build
