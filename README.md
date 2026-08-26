@@ -48,6 +48,11 @@ a window.
   </tr>
 </table>
 
+## Beautiful user experiences
+
+Build polished, responsive desktop interfaces in Ruby—from focused utilities to immersive,
+data-rich dashboards.
+
 <p align="center">
   <img src="examples/futuristic_dashboard/preview.png" width="880" alt="Nebula Command, a futuristic pure-Ruby Zui desktop dashboard">
 </p>
