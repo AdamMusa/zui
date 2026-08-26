@@ -9,7 +9,9 @@ module Zui
     PLATFORM_ICON_EXTENSIONS = {
       linux: %w[.png .svg],
       macos: %w[.icns],
-      windows: %w[.ico]
+      windows: %w[.ico],
+      android: %w[.png],
+      ios: %w[.png]
     }.freeze
 
     class Config

@@ -111,6 +111,8 @@ class CLITest < Minitest::Test
       assert_includes config, 'linux: "assets/ruby.png"'
       assert_includes config, 'macos: "assets/ruby.icns"'
       assert_includes config, 'windows: "assets/ruby.ico"'
+      assert_includes config, 'android: "assets/ruby.png"'
+      assert_includes config, 'ios: "assets/ruby.png"'
       assert_includes config, 'categories "Utility", "Development"'
       assert_equal %w[ruby.icns ruby.ico ruby.png], Dir.children(assets).sort
       Zui::Generator::RELEASE_ICONS.each do |name|

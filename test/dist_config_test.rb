@@ -63,6 +63,19 @@ class DistConfigTest < Minitest::Test
     end
   end
 
+  def test_validates_mobile_png_icons
+    with_project do |project|
+      write_icon(project, "assets/icon.png", "\x89PNG\r\n\x1a\n".b)
+      write_config(project)
+
+      config = Zui::Dist.load(
+        project:, platform: Zui::Platform.new(os: :ios, arch: :arm64)
+      )
+      assert_equal File.realpath(File.join(project, "assets", "icon.png")),
+                   config.icon_path(project, Zui::Platform.new(os: :android, arch: :arm64))
+    end
+  end
+
   def test_config_file_must_return_the_dsl_result
     with_project do |project|
       File.write(File.join(project, Zui::Dist::CONFIG_FILE), "{ name: 'Demo' }\n")
@@ -101,7 +114,8 @@ class DistConfigTest < Minitest::Test
         description "A native signal dashboard."
         license "MIT"
         homepage "https://example.com/signal-board"
-        icon linux: #{linux_icon.dump}, macos: "assets/icon.icns", windows: "assets/icon.ico"
+        icon linux: #{linux_icon.dump}, macos: "assets/icon.icns", windows: "assets/icon.ico",
+             android: "assets/icon.png", ios: "assets/icon.png"
         categories "Utility", "Development"
       end
     RUBY
