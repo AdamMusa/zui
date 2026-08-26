@@ -4,9 +4,12 @@ require "fileutils"
 
 module Zui
   class Generator
+    DEFAULT_ASSETS = File.expand_path("generator_assets", __dir__)
+    RELEASE_ICONS = %w[ruby.png ruby.icns ruby.ico].freeze
+
     def initialize(path:, name: nil)
       @path = File.expand_path(path)
-      @name = name || File.basename(@path).split(/[-_]/).map(&:capitalize).join(" ")
+      @name = display_name(name || File.basename(@path))
     end
 
     def create
@@ -17,8 +20,9 @@ module Zui
       File.write(File.join(@path, "Gemfile"), gemfile)
       File.write(File.join(@path, "components", "welcome.rb"), welcome_component)
       File.write(File.join(@path, "config.rb"), distribution_config)
-      FileUtils.mkdir_p(File.join(@path, "assets"))
-      File.write(File.join(@path, "assets", "README.md"), icon_readme)
+      assets = File.join(@path, "assets")
+      FileUtils.mkdir_p(assets)
+      RELEASE_ICONS.each { |name| FileUtils.cp(File.join(DEFAULT_ASSETS, name), assets) }
       File.write(File.join(@path, "README.md"), readme)
       @path
     rescue StandardError
@@ -86,7 +90,7 @@ module Zui
         zui doctor --fix # once for each Zui version
         zui run main.rb
         zui bundle
-        zui bundle --dist # after adding the icons declared in config.rb
+        zui bundle --dist
         ```
       MARKDOWN
     end
@@ -97,27 +101,24 @@ module Zui
 
         Zui::Dist.configure do
           name #{@name.dump}
-          identifier #{"com.example.#{slug_name}".dump}
+          identifier #{"dev.zui.#{slug_name}".dump}
           version "0.1.0"
-          publisher "Your Name <you@example.com>"
+          publisher "Zui Project"
           description #{"A native #{@name} desktop application.".dump}
-          license "Proprietary"
-          icon linux: "assets/icon.png",
-               macos: "assets/icon.icns",
-               windows: "assets/icon.ico"
-          categories "Utility"
+          license "MIT"
+          homepage "https://github.com/AdamMusa/zui"
+
+          icon linux: "assets/ruby.png",
+               macos: "assets/ruby.icns",
+               windows: "assets/ruby.ico"
+
+          categories "Utility", "Development"
         end
       RUBY
     end
 
-    def icon_readme
-      <<~MARKDOWN
-        Add the release icons referenced by `config.rb` here:
-
-        - `icon.png` for Linux
-        - `icon.icns` for macOS
-        - `icon.ico` for Windows
-      MARKDOWN
+    def display_name(value)
+      value.to_s.split(/[-_\s]+/).map { |part| part[0].upcase + part[1..].to_s }.join(" ")
     end
 
     def constant_name

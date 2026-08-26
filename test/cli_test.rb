@@ -26,13 +26,16 @@ class CLITest < Minitest::Test
     Dir.mktmpdir do |directory|
       output = StringIO.new
       Dir.chdir(directory) do
-        assert_equal 0, Zui::CLI.run(["new", "Signal Board"], out: output, err: StringIO.new)
+        assert_equal 0, Zui::CLI.run(["new", "signal_board"], out: output, err: StringIO.new)
       end
       project = File.join(directory, "signal-board")
       main = File.read(File.join(project, "main.rb"))
       component = File.read(File.join(project, "components", "welcome.rb"))
+      config = File.read(File.join(project, "config.rb"))
+      assets = File.join(project, "assets")
       assert_includes main, 'require "zui"'
       assert_includes main, "module SignalBoard"
+      assert_includes main, 'title: "Signal Board"'
       assert_includes main, "Zui::Application.new(ui: WelcomeComponent)"
       assert_includes main, "SignalBoard.run"
       refute_match(/Omarchy|Quickshell/, main)
@@ -41,7 +44,23 @@ class CLITest < Minitest::Test
       gemfile = File.read(File.join(project, "Gemfile"))
       assert_includes gemfile, 'gem "zui"'
       assert_includes gemfile, "zui bundle --full"
-      assert_includes File.read(File.join(project, "config.rb")), "Zui::Dist.configure"
+      assert_includes config, "Zui::Dist.configure"
+      assert_includes config, 'name "Signal Board"'
+      assert_includes config, 'identifier "dev.zui.signal-board"'
+      assert_includes config, 'description "A native Signal Board desktop application."'
+      assert_includes config, 'publisher "Zui Project"'
+      assert_includes config, 'license "MIT"'
+      assert_includes config, 'homepage "https://github.com/AdamMusa/zui"'
+      assert_includes config, 'linux: "assets/ruby.png"'
+      assert_includes config, 'macos: "assets/ruby.icns"'
+      assert_includes config, 'windows: "assets/ruby.ico"'
+      assert_includes config, 'categories "Utility", "Development"'
+      assert_equal %w[ruby.icns ruby.ico ruby.png], Dir.children(assets).sort
+      Zui::Generator::RELEASE_ICONS.each do |name|
+        assert_equal File.binread(File.join(Zui::Generator::DEFAULT_ASSETS, name)),
+                     File.binread(File.join(assets, name))
+      end
+      refute File.exist?(File.join(assets, "ruby.jpg"))
     end
   end
 
