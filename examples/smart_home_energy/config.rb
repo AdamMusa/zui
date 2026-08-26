@@ -8,9 +8,9 @@ Zui::Dist.configure do
   license "MIT"
   homepage "https://github.com/AdamMusa/zui"
 
-  icon linux: "assets/ruby.jpg",
+  icon linux: "assets/ruby.png",
         macos: "assets/ruby.icns",
-        windows: "assets/ruby.jpg"
+        windows: "assets/ruby.ico"
 
   categories "Utility", "Development"
 end
