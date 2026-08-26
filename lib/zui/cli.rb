@@ -14,11 +14,12 @@ module Zui
       "doctor" => "Check or repair the local Zui installation",
       "run" => "Run a Ruby application with the native client",
       "bundle" => "Build a standalone app or release installer",
+      "mobile" => "Build, install, and launch a native mobile application",
       "version" => "Print the installed Zui version"
     }.freeze
 
     GENERAL_HELP = <<~HELP.freeze
-      Zui #{VERSION} — native desktop applications in Ruby
+      Zui #{VERSION} — native applications in Ruby
 
       Usage:
         zui COMMAND [arguments] [options]
@@ -29,6 +30,7 @@ module Zui
         doctor         #{COMMANDS.fetch("doctor")}
         run FILE       #{COMMANDS.fetch("run")}
         bundle [DIR]   #{COMMANDS.fetch("bundle")}
+        mobile ios     #{COMMANDS.fetch("mobile")}
         version        #{COMMANDS.fetch("version")}
 
       Global options:
@@ -113,6 +115,30 @@ module Zui
           zui bundle --name "Smart Home" --output dist/SmartHome.app
           zui bundle --dist --full .
       HELP
+      "mobile" => <<~HELP,
+        Build, install, and launch a native Zui application in the iOS Simulator.
+
+        Usage:
+          zui mobile ios [DIRECTORY] [options]
+
+        Options:
+              --qt-ios PATH        Qt iOS SDK root (or ZUI_QT_IOS)
+              --qt-host PATH       Matching host Qt SDK root (or ZUI_QT_HOST)
+              --mruby PATH         mruby source root (or ZUI_MRUBY_ROOT)
+              --mruby-json PATH    mruby-json source root (or ZUI_MRUBY_JSON)
+              --simulator ID       Use a specific compatible simulator
+              --architecture ARCH  Simulator Ruby architecture: x86_64 or arm64
+              --deployment VERSION Minimum iOS version (default: 16.0)
+          -o, --output PATH        Build workspace (default: dist/ios-simulator)
+              --build-only        Build without installing or launching
+
+        The mobile runtime embeds mruby and the native Qt renderer; it does not use
+        a web view or require a separate Ruby process on the device.
+
+        Example:
+          zui mobile ios my_mobile_app --qt-ios ~/Qt/6.8.3/ios \\
+            --qt-host ~/Qt/6.8.3/macos --mruby ~/src/mruby --mruby-json ~/src/mruby-json
+      HELP
       "version" => <<~HELP
         Print the installed Zui version.
 
@@ -144,6 +170,7 @@ module Zui
       when "configure" then configure(arguments)
       when "run" then run_file(arguments)
       when "bundle" then bundle_project(arguments)
+      when "mobile" then mobile_project(arguments)
       when "doctor" then doctor(arguments)
       when "version", "--version", "-v" then print_version(arguments)
       else unknown_command(command)
@@ -215,6 +242,35 @@ module Zui
       path = distribution.bundle(source, name: options[:name], destination: options[:destination])
       @out.puts("Bundled #{Platform.current.os} application in #{path}")
       report_tree_shaking(distribution.tree_shake_report)
+      0
+    end
+
+    def mobile_project(arguments)
+      target = arguments.shift || raise(UsageError, "mobile requires a target; currently: ios")
+      raise UsageError, "unsupported mobile target #{target.inspect}; currently: ios" unless target == "ios"
+
+      options = { install: true }
+      parser = OptionParser.new do |option|
+        option.on("--qt-ios PATH") { |value| options[:qt_ios] = value }
+        option.on("--qt-host PATH") { |value| options[:qt_host] = value }
+        option.on("--mruby PATH") { |value| options[:mruby_root] = value }
+        option.on("--mruby-json PATH") { |value| options[:mruby_json] = value }
+        option.on("--simulator ID") { |value| options[:simulator] = value }
+        option.on("--architecture ARCH") { |value| options[:architecture] = value }
+        option.on("--deployment VERSION") { |value| options[:deployment_target] = value }
+        option.on("-o PATH", "--output PATH") { |value| options[:output] = value }
+        option.on("--build-only") { options[:install] = false }
+      end
+      parser.parse!(arguments)
+      source = File.expand_path(arguments.shift || Dir.pwd)
+      raise UsageError, "mobile ios accepts only one directory" unless arguments.empty?
+
+      install = options.delete(:install)
+      result = Mobile::IOSBuilder.new(project: source, out: @out, **options).build(install:)
+      @out.puts("Built iOS application #{result.app}")
+      if install
+        @out.puts("Launched #{result.bundle_id} on simulator #{result.simulator}#{result.pid ? " (PID #{result.pid})" : ''}")
+      end
       0
     end
 

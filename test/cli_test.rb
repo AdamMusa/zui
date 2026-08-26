@@ -147,6 +147,36 @@ class CLITest < Minitest::Test
     assert_equal File.join(__dir__, "fixtures", "smoke_app.rb"), requested
   end
 
+  def test_mobile_ios_delegates_to_the_simulator_builder
+    request = nil
+    install_request = nil
+    builder = Object.new
+    output = StringIO.new
+
+    status = Zui::Mobile::IOSBuilder.stub(:new, lambda { |**arguments|
+      request = arguments
+      builder.define_singleton_method(:build) do |install:|
+        install_request = install
+        Zui::Mobile::Result.new(
+          app: "/tmp/Touch.app", bundle_id: "dev.zui.touch", simulator: "SIMULATOR", pid: nil
+        )
+      end
+      builder
+    }) do
+      Zui::CLI.run([
+        "mobile", "ios", "--build-only", "--qt-ios", "/qt/ios", "--qt-host", "/qt/macos",
+        "--mruby", "/src/mruby", "--mruby-json", "/src/mruby-json", "examples/mobile_counter"
+      ], out: output, err: StringIO.new)
+    end
+
+    assert_equal 0, status
+    assert_equal File.expand_path("examples/mobile_counter"), request.fetch(:project)
+    assert_equal "/qt/ios", request.fetch(:qt_ios)
+    assert_equal false, install_request
+    assert_includes output.string, "/tmp/Touch.app"
+    refute_includes output.string, "Launched"
+  end
+
   def test_bundle_can_explicitly_disable_tree_shaking
     options = nil
     distribution = Object.new

@@ -5,8 +5,8 @@ require_relative "lib/zui"
 Gem::Specification.new do |spec|
   spec.name = "zui"
   spec.version = Zui::VERSION
-  spec.summary = "Build beautiful native desktop applications in pure Ruby"
-  spec.description = "First-class UI, state, events, animation, media, GPU effects, and 3D for Ruby desktop applications."
+  spec.summary = "Build beautiful native applications in pure Ruby"
+  spec.description = "First-class UI, state, events, animation, media, GPU effects, and 3D for Ruby desktop and iOS applications."
   spec.authors = ["Adam Moussa Ali"]
   spec.license = "MIT"
   spec.homepage = "https://github.com/AdamMusa/zui"
@@ -16,7 +16,7 @@ Gem::Specification.new do |spec|
   spec.required_ruby_version = ">= 3.1"
   spec.files = Dir[
     "bin/*", "lib/**/*.rb", "lib/zui/generator_assets/**/*", "*.qml", "Components/**/*", "Controls/**/*",
-    "Theme/**/*", "Fonts/**/*",
+    "Theme/**/*", "Fonts/**/*", "native/*", "runtime/mruby/ios_simulator_build_config.rb*",
     "README.md", "LICENSE", "THIRD_PARTY_NOTICES.md"
   ].reject do |path|
     path.match?(%r{\Alib/zui/(?:client_(?:builder|packager)|lite_runtime_packager)\.rb\z})

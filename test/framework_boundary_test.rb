@@ -117,14 +117,17 @@ class FrameworkBoundaryTest < Minitest::Test
     end
   end
 
-  def test_gem_and_runtime_packages_exclude_examples
+  def test_gem_excludes_examples_and_release_only_builders
     specification = Gem::Specification.load(File.join(ROOT, "zui.gemspec"))
 
     refute_nil specification
     assert_empty specification.files.grep(%r{\Aexamples(?:/|\z)})
     assert_empty specification.files.grep(/(?:\A|\/)examples(?:\/|\z)/)
-    assert_empty specification.files.grep(%r{\A(?:native|vendor)/})
+    assert_empty specification.files.grep(%r{\Avendor/})
     assert_empty specification.files.grep(%r{\Alib/zui/client_(?:builder|packager)\.rb\z})
+    assert_includes specification.files, "native/CMakeLists.txt"
+    assert_includes specification.files, "native/ZuiEmbeddedRuntime.cpp"
+    assert_includes specification.files, "runtime/mruby/ios_simulator_build_config.rb"
   end
 
   def test_core_has_no_omarchy_or_quickshell_dependency

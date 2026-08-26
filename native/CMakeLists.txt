@@ -32,8 +32,8 @@ if(ZUI_EMBEDDED_RUNTIME)
   if(NOT IS_DIRECTORY "${ZUI_MRUBY_ROOT}/include")
     message(FATAL_ERROR "ZUI_MRUBY_ROOT must point to a built mruby source tree")
   endif()
-  if(NOT IS_DIRECTORY "${ZUI_MOBILE_APP_DIR}" OR NOT EXISTS "${ZUI_MOBILE_APP_DIR}/app.rb")
-    message(FATAL_ERROR "ZUI_MOBILE_APP_DIR must contain generated app.rb")
+  if(NOT IS_DIRECTORY "${ZUI_MOBILE_APP_DIR}" OR NOT EXISTS "${ZUI_MOBILE_APP_DIR}/app.mrb")
+    message(FATAL_ERROR "ZUI_MOBILE_APP_DIR must contain precompiled app.mrb")
   endif()
   set(zui_mruby_library "${ZUI_MRUBY_ROOT}/build/${ZUI_MRUBY_BUILD}/lib/libmruby.a")
   if(NOT EXISTS "${zui_mruby_library}")
@@ -79,6 +79,11 @@ if(ZUI_EMBEDDED_RUNTIME)
     MACOSX_BUNDLE_BUNDLE_VERSION "${ZUI_MOBILE_BUILD_VERSION}"
     XCODE_ATTRIBUTE_PRODUCT_NAME "${ZUI_MOBILE_APP_NAME}"
   )
+  if(IOS)
+    set_target_properties(zui-host PROPERTIES
+      QT_IOS_LAUNCH_SCREEN "${CMAKE_CURRENT_SOURCE_DIR}/LaunchScreen.storyboard"
+    )
+  endif()
 
   get_filename_component(ZUI_FRAMEWORK_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/.." ABSOLUTE)
   file(GLOB zui_qml_entrypoints CONFIGURE_DEPENDS "${ZUI_FRAMEWORK_ROOT}/*.qml")
@@ -105,6 +110,16 @@ if(ZUI_EMBEDDED_RUNTIME)
     BASE "${ZUI_MOBILE_APP_DIR}"
     FILES ${zui_mobile_app_resources}
   )
+
+  if(IOS AND IS_DIRECTORY "${ZUI_MOBILE_APP_DIR}/Assets.xcassets")
+    set_source_files_properties("${ZUI_MOBILE_APP_DIR}/Assets.xcassets" PROPERTIES
+      MACOSX_PACKAGE_LOCATION "Resources"
+    )
+    target_sources(zui-host PRIVATE "${ZUI_MOBILE_APP_DIR}/Assets.xcassets")
+    set_target_properties(zui-host PROPERTIES
+      XCODE_ATTRIBUTE_ASSETCATALOG_COMPILER_APPICON_NAME "AppIcon"
+    )
+  endif()
 endif()
 
 install(TARGETS zui-host

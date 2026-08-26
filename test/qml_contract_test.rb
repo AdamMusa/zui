@@ -98,7 +98,8 @@ class QmlContractTest < Minitest::Test
     assert_includes native, "m_process.write(data.toUtf8())"
     assert_includes native, "m_crashed = true"
     assert_includes host, "QFontDatabase::addApplicationFont"
-    assert_includes host, 'QFont::insertSubstitution(QStringLiteral("RobotoMono"), textFamily)'
+    assert_includes host, 'QFont::insertSubstitution(QStringLiteral("RobotoMono"), result.textFamily)'
+    assert_includes host, 'QStringLiteral("zuiBundledFontsReady")'
     refute_includes qml, "Quickshell"
     refute_includes qml, "Process {"
   end
@@ -110,13 +111,14 @@ class QmlContractTest < Minitest::Test
     desktop = source("Desktop.qml")
 
     assert_includes host, "ZUI_EMBEDDED_RUNTIME"
-    assert_includes host, 'QStringLiteral(":/app/app.rb")'
-    assert_includes runtime, "mrb_load_nstring_cxt"
+    assert_includes host, 'QStringLiteral(":/app/app.mrb")'
+    assert_includes runtime, "mrb_load_irep_buf"
     assert_includes runtime, 'mrb_define_module(m_state, "ZuiNative")'
     assert_includes runtime, 'callZui("embedded_receive", &data)'
     assert_includes cmake, 'PREFIX "/zui"'
     assert_includes cmake, 'PREFIX "/app"'
     assert_includes cmake, "qt_import_qml_plugins(zui-host)"
+    assert_includes cmake, "QT_IOS_LAUNCH_SCREEN"
     assert_includes desktop, 'visibility: zuiMobile || option("fullscreen", false) === true'
   end
 
@@ -151,6 +153,7 @@ class QmlContractTest < Minitest::Test
       assert_operator File.size(File.join(ROOT, "Fonts", name)), :>, 10_000
     end
     assert_includes fonts, "readonly property bool ready:"
+    assert_includes fonts, "zuiBundledFontsReady"
     assert_includes style, "readonly property string family: Fonts.family"
     assert_includes renderer, "readonly property string iconFontFamily: Fonts.iconFamily"
     refute_match(/Sans ?Serif/, framework_qml)

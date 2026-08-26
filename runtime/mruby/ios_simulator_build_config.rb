@@ -15,8 +15,9 @@ MRuby::CrossBuild.new(build_name) do |configuration|
   configuration.linker.flags += ["-target", target, "-isysroot", sdk]
   configuration.bins = []
 
-  %w[stdlib stdlib-ext math metaprog].each do |gembox|
+  %w[stdlib stdlib-ext math].each do |gembox|
     configuration.gembox gembox
   end
+  configuration.gem core: "mruby-method"
   configuration.gem ENV.fetch("ZUI_MRUBY_JSON")
 end

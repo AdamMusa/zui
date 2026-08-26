@@ -26,6 +26,7 @@ require_relative "zui/runner"
 require_relative "zui/generator"
 require_relative "zui/distribution"
 require_relative "zui/dist_packager"
+require_relative "zui/mobile"
 
 module Zui
   VERSION = "0.0.10"

@@ -1,10 +1,12 @@
 #include "ZuiEmbeddedRuntime.h"
 
+#include <QDebug>
 #include <QFile>
+#include <QElapsedTimer>
 #include <QMetaObject>
 
 #include <mruby.h>
-#include <mruby/compile.h>
+#include <mruby/irep.h>
 #include <mruby/string.h>
 
 namespace {
@@ -42,6 +44,8 @@ void ZuiEmbeddedRuntime::start(const QString &, const QString &program,
   if (m_running || program.isEmpty())
     return;
 
+  QElapsedTimer timer;
+  timer.start();
   m_state = mrb_open();
   if (!m_state) {
     publishError(QStringLiteral("Unable to initialize the embedded mruby runtime"));
@@ -58,6 +62,8 @@ void ZuiEmbeddedRuntime::start(const QString &, const QString &program,
   emit runningChanged();
   if (!loadProgram(program))
     finish(1);
+  else
+    qInfo().noquote() << "Zui startup: embedded Ruby ready in" << timer.elapsed() << "ms";
 }
 
 void ZuiEmbeddedRuntime::write(const QString &data) {
@@ -93,10 +99,7 @@ bool ZuiEmbeddedRuntime::loadProgram(const QString &program) {
   }
 
   const QByteArray bytes = source.readAll();
-  mrbc_context *context = mrbc_context_new(m_state);
-  mrbc_filename(m_state, context, program.toUtf8().constData());
-  mrb_load_nstring_cxt(m_state, bytes.constData(), static_cast<mrb_int>(bytes.size()), context);
-  mrbc_context_free(m_state, context);
+  mrb_load_irep_buf(m_state, bytes.constData(), static_cast<size_t>(bytes.size()));
   if (!m_state->exc)
     return true;
 

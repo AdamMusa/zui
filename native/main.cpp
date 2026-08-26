@@ -11,6 +11,7 @@ using ZuiRuntimeTransport = ZuiProcess;
 #include <QCommandLineParser>
 #include <QDebug>
 #include <QDir>
+#include <QElapsedTimer>
 #include <QFileInfo>
 #include <QFont>
 #include <QFontDatabase>
@@ -20,14 +21,22 @@ using ZuiRuntimeTransport = ZuiProcess;
 #include <QQuickStyle>
 
 namespace {
-void installBundledFonts(const QString &qmlRoot) {
+struct BundledFonts {
+  QString textFamily;
+  QString iconFamily;
+  QString brandIconFamily;
+  bool ready = false;
+};
+
+BundledFonts installBundledFonts(const QString &qmlRoot) {
   const QDir fontsDirectory(QDir(qmlRoot).filePath(QStringLiteral("Fonts")));
   const QStringList fontFiles = {
       QStringLiteral("RobotoMono-Regular.otf"),
       QStringLiteral("RobotoMono-Bold.otf"),
       QStringLiteral("FontAwesome-Solid.otf"),
       QStringLiteral("FontAwesome-Brands.otf")};
-  QString textFamily;
+  BundledFonts result;
+  int loadedFonts = 0;
   for (const QString &fontFile : fontFiles) {
     const QString path = fontsDirectory.filePath(fontFile);
     const int fontId = QFontDatabase::addApplicationFont(path);
@@ -35,21 +44,34 @@ void installBundledFonts(const QString &qmlRoot) {
       qWarning().noquote() << "Zui could not register bundled font:" << path;
       continue;
     }
+    ++loadedFonts;
     const QStringList families = QFontDatabase::applicationFontFamilies(fontId);
-    if (textFamily.isEmpty() && fontFile.startsWith(QStringLiteral("RobotoMono"))
-        && !families.isEmpty())
-      textFamily = families.first();
+    if (families.isEmpty())
+      continue;
+    if (result.textFamily.isEmpty() && fontFile.startsWith(QStringLiteral("RobotoMono")))
+      result.textFamily = families.first();
+    else if (fontFile == QStringLiteral("FontAwesome-Solid.otf"))
+      result.iconFamily = families.first();
+    else if (fontFile == QStringLiteral("FontAwesome-Brands.otf"))
+      result.brandIconFamily = families.first();
   }
-  if (textFamily.isEmpty())
-    return;
+  result.ready = loadedFonts == fontFiles.size() && !result.textFamily.isEmpty()
+      && !result.iconFamily.isEmpty() && !result.brandIconFamily.isEmpty();
+  if (result.textFamily.isEmpty())
+    return result;
 
-  QFont::insertSubstitution(QStringLiteral("RobotoMono"), textFamily);
-  QFont::insertSubstitution(QStringLiteral("Roboto Mono"), textFamily);
-  QGuiApplication::setFont(QFont(textFamily));
+  QFont::insertSubstitution(QStringLiteral("RobotoMono"), result.textFamily);
+  QFont::insertSubstitution(QStringLiteral("Roboto Mono"), result.textFamily);
+  QGuiApplication::setFont(QFont(result.textFamily));
+  return result;
 }
 }
 
 int main(int argc, char *argv[]) {
+#if defined(ZUI_EMBEDDED_RUNTIME)
+  QElapsedTimer startupTimer;
+  startupTimer.start();
+#endif
   QGuiApplication application(argc, argv);
   QCoreApplication::setApplicationName(QStringLiteral("Zui"));
   QCoreApplication::setOrganizationName(QStringLiteral("Zui"));
@@ -59,7 +81,7 @@ int main(int argc, char *argv[]) {
   const QString qmlRoot = QStringLiteral(":/zui");
   const QString qmlImportRoot = QStringLiteral("qrc:/zui");
   const QString project = QStringLiteral("qrc:/app");
-  const QString program = QStringLiteral(":/app/app.rb");
+  const QString program = QStringLiteral(":/app/app.mrb");
   const QString runtimeExecutable;
   const QString rubyLoadPath;
   const QString applicationName = QStringLiteral(ZUI_MOBILE_APP_NAME);
@@ -91,7 +113,10 @@ int main(int argc, char *argv[]) {
   const QString applicationName = parser.value(QStringLiteral("name"));
 #endif
 
-  installBundledFonts(qmlRoot);
+  const BundledFonts bundledFonts = installBundledFonts(qmlRoot);
+#if defined(ZUI_EMBEDDED_RUNTIME)
+  qInfo().noquote() << "Zui startup: fonts registered in" << startupTimer.elapsed() << "ms";
+#endif
 
   ZuiRuntimeTransport process;
   ZuiClipboard clipboard;
@@ -104,6 +129,10 @@ int main(int argc, char *argv[]) {
   engine.rootContext()->setContextProperty(QStringLiteral("zuiRubyProgram"), program);
   engine.rootContext()->setContextProperty(QStringLiteral("zuiRubyLoadPath"), rubyLoadPath);
   engine.rootContext()->setContextProperty(QStringLiteral("zuiApplicationName"), applicationName);
+  engine.rootContext()->setContextProperty(QStringLiteral("zuiBundledFontsReady"), bundledFonts.ready);
+  engine.rootContext()->setContextProperty(QStringLiteral("zuiBundledTextFont"), bundledFonts.textFamily);
+  engine.rootContext()->setContextProperty(QStringLiteral("zuiBundledIconFont"), bundledFonts.iconFamily);
+  engine.rootContext()->setContextProperty(QStringLiteral("zuiBundledBrandIconFont"), bundledFonts.brandIconFamily);
   engine.rootContext()->setContextProperty(QStringLiteral("zuiMobile"),
 #if defined(ZUI_EMBEDDED_RUNTIME)
                                             true
@@ -119,6 +148,9 @@ int main(int argc, char *argv[]) {
   engine.load(QUrl(QStringLiteral("qrc:/zui/Desktop.qml")));
 #else
   engine.load(QUrl::fromLocalFile(QDir(qmlRoot).filePath(QStringLiteral("Desktop.qml"))));
+#endif
+#if defined(ZUI_EMBEDDED_RUNTIME)
+  qInfo().noquote() << "Zui startup: interface loaded in" << startupTimer.elapsed() << "ms";
 #endif
   return application.exec();
 }

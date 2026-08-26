@@ -4,7 +4,7 @@ require "rbconfig"
 
 module Zui
   Platform = Struct.new(:os, :arch, keyword_init: true) do
-    SUPPORTED_OSES = %i[linux macos windows android ios].freeze
+    SUPPORTED_OSES = %i[linux macos windows ios].freeze
 
     def self.current
       detect(RbConfig::CONFIG.fetch("host_os"), RbConfig::CONFIG.fetch("host_cpu"))
@@ -41,7 +41,7 @@ module Zui
       return self if supported?
 
       raise ArgumentError,
-            "Zui applications support Linux, macOS, Windows, Android, and iOS; detected #{os}/#{arch}"
+            "Zui applications support Linux, macOS, Windows, and iOS; detected #{os}/#{arch}"
     end
   end
 end
