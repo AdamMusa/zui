@@ -123,6 +123,37 @@ class MobileTest < Minitest::Test
     end
   end
 
+  def test_ios_full_runtime_stages_cruby_json_and_configures_native_embedding
+    Dir.mktmpdir do |directory|
+      project = File.join(directory, "project")
+      dependencies = create_dependencies(directory)
+      cruby = create_cruby_dependencies(directory)
+      create_project(project)
+      command = XcodeConfigureCommand.new
+      output = File.join(directory, "build")
+      builder = Zui::Mobile::IOSBuilder.new(
+        project:, output:, framework_root: ROOT, command:, runtime_mode: :full,
+        qt_ios: dependencies.fetch(:qt_ios), qt_host: dependencies.fetch(:qt_host),
+        cruby_source_root: cruby.fetch(:source), cruby_build_root: cruby.fetch(:build),
+        host_platform: Zui::Platform.new(os: :macos, arch: :arm64)
+      )
+
+      builder.send(:validate!)
+      config = Zui::Dist.load(project:, platform: Zui::Mobile::IOSBuilder::IOS_PLATFORM)
+      stage = builder.send(:prepare_stage, config)
+      builder.send(:copy_cruby_support, stage)
+      builder.send(:configure_xcode, config, stage, "unused", sdk: "/Simulator.sdk")
+
+      assert_equal "json common", File.read(File.join(stage, "cruby", "json", "common.rb"))
+      assert_equal "json state", File.read(File.join(stage, "cruby", "json", "ext", "generator", "state.rb"))
+      arguments = command.calls.fetch(0).fetch(0)
+      assert_includes arguments, "-DZUI_EMBEDDED_CRUBY=ON"
+      assert_includes arguments, "-DZUI_CRUBY_SOURCE_ROOT=#{cruby.fetch(:source)}"
+      assert_includes arguments, "-DZUI_CRUBY_BUILD_ROOT=#{cruby.fetch(:build)}"
+      refute arguments.any? { |argument| argument.start_with?("-DZUI_MRUBY_ROOT=") }
+    end
+  end
+
   def test_clean_mruby_build_passes_the_configuration_through_the_environment
     Dir.mktmpdir do |directory|
       dependencies = create_dependencies(directory)
@@ -241,5 +272,26 @@ class MobileTest < Minitest::Test
         categories "Utility"
       end
     RUBY
+  end
+
+  def create_cruby_dependencies(directory)
+    source = File.join(directory, "cruby-source")
+    build = File.join(directory, "cruby-build")
+    files = {
+      File.join(source, "include", "ruby.h") => "ruby",
+      File.join(build, "libruby.4.0-static.a") => "runtime",
+      File.join(build, "ext", "json", "generator", "generator.a") => "generator",
+      File.join(build, "ext", "json", "parser", "parser.a") => "parser",
+      File.join(build, "enc", "libenc.a") => "encodings",
+      File.join(build, ".ext", "common", "json", "version.rb") => "json version",
+      File.join(build, ".ext", "common", "json", "common.rb") => "json common",
+      File.join(build, ".ext", "common", "json", "ext.rb") => "json ext",
+      File.join(build, ".ext", "common", "json", "ext", "generator", "state.rb") => "json state"
+    }
+    files.each do |path, content|
+      FileUtils.mkdir_p(File.dirname(path))
+      File.write(path, content)
+    end
+    { source:, build: }
   end
 end

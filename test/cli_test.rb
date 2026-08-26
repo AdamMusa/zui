@@ -172,9 +172,35 @@ class CLITest < Minitest::Test
     assert_equal 0, status
     assert_equal File.expand_path("examples/mobile_counter"), request.fetch(:project)
     assert_equal "/qt/ios", request.fetch(:qt_ios)
+    assert_equal :lite, request.fetch(:runtime_mode)
     assert_equal false, install_request
     assert_includes output.string, "/tmp/Touch.app"
     refute_includes output.string, "Launched"
+  end
+
+  def test_mobile_ios_full_selects_cruby_paths
+    request = nil
+    builder = Object.new
+    builder.define_singleton_method(:build) do |install:|
+      raise "unexpected install" if install
+      Zui::Mobile::Result.new(app: "/tmp/Touch.app", bundle_id: "dev.zui.touch")
+    end
+
+    status = Zui::Mobile::IOSBuilder.stub(:new, lambda { |**arguments|
+      request = arguments
+      builder
+    }) do
+      Zui::CLI.run([
+        "mobile", "ios", "--full", "--build-only", "--qt-ios", "/qt/ios",
+        "--qt-host", "/qt/macos", "--cruby-source", "/src/ruby",
+        "--cruby-build", "/build/ruby", "examples/mobile_counter"
+      ], out: StringIO.new, err: StringIO.new)
+    end
+
+    assert_equal 0, status
+    assert_equal :full, request.fetch(:runtime_mode)
+    assert_equal "/src/ruby", request.fetch(:cruby_source_root)
+    assert_equal "/build/ruby", request.fetch(:cruby_build_root)
   end
 
   def test_mobile_ios_reports_a_physical_device_launch

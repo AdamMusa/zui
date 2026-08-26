@@ -147,6 +147,10 @@ module Zui
               --qt-host PATH       Matching host Qt SDK root (or ZUI_QT_HOST)
               --mruby PATH         mruby source root (or ZUI_MRUBY_ROOT)
               --mruby-json PATH    mruby-json source root (or ZUI_MRUBY_JSON)
+              --cruby-source PATH  CRuby source root (or ZUI_CRUBY_SOURCE_ROOT)
+              --cruby-build PATH   Static CRuby iOS build (or ZUI_CRUBY_BUILD_ROOT)
+              --lite               Embed mruby (default)
+              --full               Embed the experimental CRuby runtime
               --simulator ID       Use a specific compatible simulator
               --device ID          Build, sign, install, and launch on a physical iPhone
               --team ID            Apple development team (or ZUI_APPLE_TEAM)
@@ -163,8 +167,12 @@ module Zui
               --api LEVEL          Minimum Android API (default: 28)
               --target-api LEVEL   Target Android API (default: 35)
 
-        The mobile runtime embeds mruby and the native Qt renderer; it does not use
-        a web view or require a separate Ruby process on the device.
+        The selected Ruby runtime and native Qt renderer run inside the app process;
+        mobile builds do not use a web view or require a separate Ruby process.
+
+        On iOS, --full selects the experimental in-process CRuby engine. It requires
+        a matching static iOS CRuby build and currently bundles the framework source
+        plus JSON support, not arbitrary desktop gems or dynamic extensions.
 
         iOS example:
           zui mobile ios my_mobile_app --qt-ios ~/Qt/6.8.3/ios \\
@@ -181,6 +189,8 @@ module Zui
           zui build android [DIRECTORY] [options]
 
         Options:
+              --lite               Embed mruby (iOS default)
+              --full               Embed the experimental CRuby runtime on iOS
               --architecture ARCH  iOS Simulator architecture: x86_64 or arm64
               --deployment VERSION Minimum iOS version (default: 16.0)
               --abi ABI            Android ABI (default: arm64-v8a)
@@ -199,6 +209,8 @@ module Zui
 
         Options:
               --device[=ID]        Install on a physical device; auto-select when ID is omitted
+              --lite               Embed mruby (iOS default)
+              --full               Embed the experimental CRuby runtime on iOS
               --simulator ID       Use a specific iOS Simulator
               --architecture ARCH  iOS Simulator architecture: x86_64 or arm64
               --deployment VERSION Minimum iOS version (default: 16.0)
@@ -359,12 +371,16 @@ module Zui
     end
 
     def mobile_ios_project(arguments)
-      options = { install: true }
+      options = { install: true, runtime_mode: :lite }
       parser = OptionParser.new do |option|
         option.on("--qt-ios PATH") { |value| options[:qt_ios] = value }
         option.on("--qt-host PATH") { |value| options[:qt_host] = value }
         option.on("--mruby PATH") { |value| options[:mruby_root] = value }
         option.on("--mruby-json PATH") { |value| options[:mruby_json] = value }
+        option.on("--cruby-source PATH") { |value| options[:cruby_source_root] = value }
+        option.on("--cruby-build PATH") { |value| options[:cruby_build_root] = value }
+        option.on("--lite") { options[:lite] = true }
+        option.on("--full") { options[:full] = true }
         option.on("--simulator ID") { |value| options[:simulator] = value }
         option.on("--device ID") { |value| options[:device] = value }
         option.on("--team ID") { |value| options[:team] = value }
@@ -374,6 +390,7 @@ module Zui
         option.on("--build-only") { options[:install] = false }
       end
       parser.parse!(arguments)
+      select_ios_runtime!(options, command: "mobile ios")
       source = File.expand_path(arguments.shift || Dir.pwd)
       raise UsageError, "mobile ios accepts only one directory" unless arguments.empty?
 
@@ -430,6 +447,8 @@ module Zui
       options = {}
       OptionParser.new do |option|
         if target == "ios"
+          option.on("--lite") { options[:lite] = true }
+          option.on("--full") { options[:full] = true }
           option.on("--architecture ARCH") { |value| options[:architecture] = value }
           option.on("--deployment VERSION") { |value| options[:deployment_target] = value }
         else
@@ -438,6 +457,7 @@ module Zui
           option.on("--target-api LEVEL", Integer) { |value| options[:target_api] = value }
         end
       end.parse!(arguments)
+      select_ios_runtime!(options, command: "build ios") if target == "ios"
       options
     end
 
@@ -451,18 +471,30 @@ module Zui
         option.on("--simulator ID") { |value| options[:simulator] = value }
         option.on("--architecture ARCH") { |value| options[:architecture] = value }
         option.on("--deployment VERSION") { |value| options[:deployment_target] = value }
+        option.on("--lite") { options[:lite] = true }
+        option.on("--full") { options[:full] = true }
         option.on("--abi ABI") { |value| options[:abi] = value }
         option.on("--api LEVEL", Integer) { |value| options[:api] = value }
         option.on("--target-api LEVEL", Integer) { |value| options[:target_api] = value }
       end.parse!(arguments)
+      select_ios_runtime!(options, command: "install") if options[:lite] || options[:full]
       options
+    end
+
+    def select_ios_runtime!(options, command:)
+      if options[:lite] && options[:full]
+        raise UsageError, "#{command} accepts only one of --lite or --full"
+      end
+
+      options[:runtime_mode] = options.delete(:full) ? :full : :lite
+      options.delete(:lite)
     end
 
     def validate_mobile_install_options!(target, options)
       unsupported = if target == "ios"
                       %i[abi api target_api]
                     else
-                      %i[simulator architecture deployment_target]
+                      %i[simulator architecture deployment_target runtime_mode]
                     end
       supplied = unsupported.select { |key| options.key?(key) }
       return if supplied.empty?

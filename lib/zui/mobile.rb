@@ -11,9 +11,11 @@ module Zui
     class IOSBuilder
       DEFAULT_DEPLOYMENT_TARGET = "16.0"
       DEFAULT_ARCHITECTURE = "x86_64"
+      RUNTIME_MODES = %i[lite full].freeze
       IOS_PLATFORM = Platform.new(os: :ios, arch: :arm64).freeze
 
       def initialize(project:, qt_ios: nil, qt_host: nil, mruby_root: nil, mruby_json: nil,
+                     cruby_source_root: nil, cruby_build_root: nil, runtime_mode: :lite,
                      output: nil, simulator: nil, device: nil, team: nil,
                      architecture: DEFAULT_ARCHITECTURE,
                      deployment_target: DEFAULT_DEPLOYMENT_TARGET, framework_root: FRAMEWORK_ROOT,
@@ -23,6 +25,9 @@ module Zui
         @qt_host = expand_dependency(qt_host || environment["ZUI_QT_HOST"])
         @mruby_root = expand_dependency(mruby_root || environment["ZUI_MRUBY_ROOT"])
         @mruby_json = expand_dependency(mruby_json || environment["ZUI_MRUBY_JSON"])
+        @cruby_source_root = expand_dependency(cruby_source_root || environment["ZUI_CRUBY_SOURCE_ROOT"])
+        @cruby_build_root = expand_dependency(cruby_build_root || environment["ZUI_CRUBY_BUILD_ROOT"])
+        @runtime_mode = runtime_mode.to_sym
         @requested_simulator = simulator
         @device = (device == true || device == :auto) ? "auto" : device&.to_s
         @team = team || environment["ZUI_APPLE_TEAM"]
@@ -46,8 +51,12 @@ module Zui
                              label: "locating the #{sdk_label} SDK")
         runtime_target = physical_device? ? "device" : "simulator"
         build_name = "zui-ios-#{runtime_target}-#{@architecture}-bytecode"
-        build_mruby(sdk, build_name, platform: runtime_target)
-        compile_application(stage)
+        if full_runtime?
+          copy_cruby_support(stage)
+        else
+          build_mruby(sdk, build_name, platform: runtime_target)
+          compile_application(stage)
+        end
         xcode_project = configure_xcode(config, stage, build_name, sdk:)
         destination = physical_device? ? select_physical_device(xcode_project) : select_simulator(xcode_project)
         build_xcode(xcode_project, destination)
@@ -73,6 +82,10 @@ module Zui
         @device && !@device.empty?
       end
 
+      def full_runtime?
+        @runtime_mode == :full
+      end
+
       def validate!
         unless @host_platform.macos?
           raise ArgumentError, "iOS applications must be built on macOS with Xcode"
@@ -81,11 +94,18 @@ module Zui
         raise ArgumentError, "mobile project is missing main.rb" unless File.file?(File.join(@project, "main.rb"))
         validate_directory!(@qt_ios, "Qt iOS SDK", "--qt-ios or ZUI_QT_IOS")
         validate_directory!(@qt_host, "Qt host SDK", "--qt-host or ZUI_QT_HOST")
-        validate_directory!(@mruby_root, "mruby source", "--mruby or ZUI_MRUBY_ROOT")
-        validate_directory!(@mruby_json, "mruby-json source", "--mruby-json or ZUI_MRUBY_JSON")
         validate_file!(File.join(@qt_ios, "bin", "qt-cmake"), "Qt iOS qt-cmake")
-        validate_file!(File.join(@mruby_root, "minirake"), "mruby minirake")
-        validate_file!(File.join(@mruby_json, "mrbgem.rake"), "mruby-json gem")
+        unless RUNTIME_MODES.include?(@runtime_mode)
+          raise ArgumentError, "unsupported iOS Ruby runtime: #{@runtime_mode}"
+        end
+        if full_runtime?
+          validate_cruby!
+        else
+          validate_directory!(@mruby_root, "mruby source", "--mruby or ZUI_MRUBY_ROOT")
+          validate_directory!(@mruby_json, "mruby-json source", "--mruby-json or ZUI_MRUBY_JSON")
+          validate_file!(File.join(@mruby_root, "minirake"), "mruby minirake")
+          validate_file!(File.join(@mruby_json, "mrbgem.rake"), "mruby-json gem")
+        end
         if physical_device? && @requested_simulator
           raise ArgumentError, "choose either --device or --simulator, not both"
         end
@@ -107,7 +127,36 @@ module Zui
       end
 
       def validate_file!(path, name)
-        raise ArgumentError, "#{name} not found: #{path}" unless File.file?(path)
+        raise ArgumentError, "#{name} not found: #{path}" unless path && File.file?(path)
+      end
+
+      def validate_cruby!
+        validate_directory!(@cruby_source_root, "CRuby source", "--cruby-source or ZUI_CRUBY_SOURCE_ROOT")
+        validate_directory!(@cruby_build_root, "CRuby iOS build", "--cruby-build or ZUI_CRUBY_BUILD_ROOT")
+        validate_file!(File.join(@cruby_source_root, "include", "ruby.h"), "CRuby embedding header")
+        validate_file!(cruby_library, "CRuby static library")
+        validate_file!(File.join(@cruby_build_root, "ext", "json", "generator", "generator.a"),
+                       "CRuby static JSON generator")
+        validate_file!(File.join(@cruby_build_root, "ext", "json", "parser", "parser.a"),
+                       "CRuby static JSON parser")
+        validate_file!(File.join(@cruby_build_root, "enc", "libenc.a"), "CRuby static encodings")
+        cruby_json_sources.each_value { |path| validate_file!(path, "CRuby JSON support") }
+      end
+
+      def cruby_library
+        return unless @cruby_build_root
+
+        Dir[File.join(@cruby_build_root, "libruby.*-static.a")].sort.first
+      end
+
+      def cruby_json_sources
+        common = File.join(@cruby_build_root.to_s, ".ext", "common", "json")
+        {
+          "version.rb" => File.join(common, "version.rb"),
+          "common.rb" => File.join(common, "common.rb"),
+          "ext.rb" => File.join(common, "ext.rb"),
+          File.join("ext", "generator", "state.rb") => File.join(common, "ext", "generator", "state.rb")
+        }
       end
 
       def prepare_stage(config)
@@ -129,6 +178,16 @@ module Zui
         FileUtils.mkdir_p(destination)
         entries = Dir.children(source)
         FileUtils.cp_r(entries.map { |entry| File.join(source, entry) }, destination) unless entries.empty?
+      end
+
+      def copy_cruby_support(stage)
+        destination = File.join(stage, "cruby", "json")
+        cruby_json_sources.each do |relative, source|
+          target = File.join(destination, relative)
+          FileUtils.mkdir_p(File.dirname(target))
+          FileUtils.cp(source, target)
+        end
+        @out.puts("Bundling the embedded CRuby runtime...")
       end
 
       def create_icon_catalog(stage, icon)
@@ -237,11 +296,18 @@ module Zui
           "-B", build, "-G", "Xcode", "-DQT_HOST_PATH=#{@qt_host}",
           "-DCMAKE_OSX_SYSROOT=#{sdk}", "-DCMAKE_OSX_ARCHITECTURES=#{@architecture}",
           "-DCMAKE_OSX_DEPLOYMENT_TARGET=#{@deployment_target}", "-DZUI_EMBEDDED_RUNTIME=ON",
-          "-DZUI_MRUBY_ROOT=#{@mruby_root}", "-DZUI_MRUBY_BUILD=#{build_name}",
           "-DZUI_MOBILE_APP_DIR=#{stage}", "-DZUI_MOBILE_APP_NAME=#{config.name}",
           "-DZUI_MOBILE_BUNDLE_ID=#{config.identifier}", "-DZUI_MOBILE_APP_VERSION=#{config.version}",
           "-DZUI_MOBILE_BUILD_VERSION=1"
         ]
+        if full_runtime?
+          arguments.concat([
+            "-DZUI_EMBEDDED_CRUBY=ON", "-DZUI_CRUBY_SOURCE_ROOT=#{@cruby_source_root}",
+            "-DZUI_CRUBY_BUILD_ROOT=#{@cruby_build_root}", "-DZUI_CRUBY_LIBRARY=#{cruby_library}"
+          ])
+        else
+          arguments.concat(["-DZUI_MRUBY_ROOT=#{@mruby_root}", "-DZUI_MRUBY_BUILD=#{build_name}"])
+        end
         custom_launch_screen = File.join(stage, "LaunchScreen.storyboard")
         project_launch_screen = File.join(@project, "ios", "LaunchScreen.storyboard")
         launch_screen = if File.file?(project_launch_screen)
