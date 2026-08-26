@@ -65,12 +65,32 @@ if(ZUI_EMBEDDED_RUNTIME AND ZUI_EMBEDDED_CRUBY)
   set(zui_cruby_json_generator "${ZUI_CRUBY_BUILD_ROOT}/ext/json/generator/generator.a")
   set(zui_cruby_json_parser "${ZUI_CRUBY_BUILD_ROOT}/ext/json/parser/parser.a")
   set(zui_cruby_encodings "${ZUI_CRUBY_BUILD_ROOT}/enc/libenc.a")
+  set(zui_cruby_standard_extensions
+    "${ZUI_CRUBY_BUILD_ROOT}/ext/continuation/continuation.a"
+    "${ZUI_CRUBY_BUILD_ROOT}/ext/coverage/coverage.a"
+    "${ZUI_CRUBY_BUILD_ROOT}/ext/date/date_core.a"
+    "${ZUI_CRUBY_BUILD_ROOT}/ext/digest/digest.a"
+    "${ZUI_CRUBY_BUILD_ROOT}/ext/etc/etc.a"
+    "${ZUI_CRUBY_BUILD_ROOT}/ext/fcntl/fcntl.a"
+    "${ZUI_CRUBY_BUILD_ROOT}/ext/io/nonblock/nonblock.a"
+    "${ZUI_CRUBY_BUILD_ROOT}/ext/io/wait/wait.a"
+    "${ZUI_CRUBY_BUILD_ROOT}/ext/monitor/monitor.a"
+    "${ZUI_CRUBY_BUILD_ROOT}/ext/objspace/objspace.a"
+    "${ZUI_CRUBY_BUILD_ROOT}/ext/rbconfig/sizeof/sizeof.a"
+    "${ZUI_CRUBY_BUILD_ROOT}/ext/stringio/stringio.a"
+    "${ZUI_CRUBY_BUILD_ROOT}/ext/strscan/strscan.a"
+  )
   if(NOT EXISTS "${zui_cruby_json_generator}" OR NOT EXISTS "${zui_cruby_json_parser}")
     message(FATAL_ERROR "ZUI_CRUBY_BUILD_ROOT must contain statically built JSON extensions")
   endif()
   if(NOT EXISTS "${zui_cruby_encodings}")
     message(FATAL_ERROR "ZUI_CRUBY_BUILD_ROOT must contain statically built encodings")
   endif()
+  foreach(extension_library IN LISTS zui_cruby_standard_extensions)
+    if(NOT EXISTS "${extension_library}")
+      message(FATAL_ERROR "Embedded CRuby standard extension not found: ${extension_library}")
+    endif()
+  endforeach()
   if(NOT IS_DIRECTORY "${ZUI_MOBILE_APP_DIR}" OR NOT EXISTS "${ZUI_MOBILE_APP_DIR}/app.rb")
     message(FATAL_ERROR "ZUI_MOBILE_APP_DIR must contain app.rb")
   endif()
@@ -81,6 +101,9 @@ if(ZUI_EMBEDDED_RUNTIME AND ZUI_EMBEDDED_CRUBY)
   endforeach()
   if(NOT EXISTS "${ZUI_MOBILE_APP_DIR}/cruby/json/ext/generator/state.rb")
     message(FATAL_ERROR "ZUI_MOBILE_APP_DIR must contain cruby/json/ext/generator/state.rb")
+  endif()
+  if(NOT EXISTS "${ZUI_MOBILE_APP_DIR}/cruby/gems.json")
+    message(FATAL_ERROR "ZUI_MOBILE_APP_DIR must contain the locked CRuby gem manifest")
   endif()
   file(GLOB zui_cruby_arch_include "${ZUI_CRUBY_BUILD_ROOT}/.ext/include/*")
   list(APPEND zui_host_sources ZuiCRubyRuntime.cpp ZuiCRubyRuntime.h)
@@ -128,6 +151,7 @@ if(ZUI_EMBEDDED_RUNTIME)
       "${zui_cruby_json_generator}"
       "${zui_cruby_json_parser}"
       "${zui_cruby_encodings}"
+      ${zui_cruby_standard_extensions}
     )
     target_compile_definitions(zui-host PRIVATE ZUI_EMBEDDED_CRUBY=1)
     if(APPLE)

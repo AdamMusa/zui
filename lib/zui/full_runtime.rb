@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-require "bundler"
 require "fileutils"
 require "json"
 require "rbconfig"
@@ -18,7 +17,7 @@ module Zui
       @ruby = File.expand_path(ruby)
       @environment = environment.to_h
       @rbconfig = rbconfig.to_h
-      @spec_loader = spec_loader || method(:project_specs)
+      @spec_loader = spec_loader || LockedGems.new(environment: @environment).method(:specs)
     end
 
     def install(project:, destination:)
@@ -179,27 +178,6 @@ module Zui
       target = File.join(gem_home, "extensions", relative)
       FileUtils.mkdir_p(File.dirname(target))
       FileUtils.cp_r(source, target)
-    end
-
-    def project_specs(project)
-      gemfile = File.join(project, "Gemfile")
-      lockfile = File.join(project, "Gemfile.lock")
-      raise ArgumentError, "Gemfile not found; add project gems before using --full" unless File.file?(gemfile)
-      unless File.file?(lockfile)
-        raise ArgumentError, "Gemfile.lock not found; run `bundle install` before using --full"
-      end
-
-      previous = @environment["BUNDLE_GEMFILE"]
-      ENV["BUNDLE_GEMFILE"] = gemfile
-      Bundler.reset!
-      definition = Bundler::Definition.build(gemfile, lockfile, nil)
-      definition.validate_runtime!
-      definition.specs.to_a
-    rescue Bundler::BundlerError => error
-      raise ArgumentError, "project gems are not ready: #{error.message}"
-    ensure
-      previous.nil? ? ENV.delete("BUNDLE_GEMFILE") : ENV["BUNDLE_GEMFILE"] = previous
-      Bundler.reset!
     end
 
     def runtime_relative_path(path)

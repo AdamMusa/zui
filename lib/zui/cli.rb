@@ -150,7 +150,7 @@ module Zui
               --cruby-source PATH  CRuby source root (or ZUI_CRUBY_SOURCE_ROOT)
               --cruby-build PATH   Static CRuby iOS build (or ZUI_CRUBY_BUILD_ROOT)
               --lite               Embed mruby (default)
-              --full               Embed the experimental CRuby runtime
+              --full               Embed CRuby, its standard library, and locked project gems
               --simulator ID       Use a specific compatible simulator
               --device ID          Build, sign, install, and launch on a physical iPhone
               --team ID            Apple development team (or ZUI_APPLE_TEAM)
@@ -171,8 +171,9 @@ module Zui
         mobile builds do not use a web view or require a separate Ruby process.
 
         On iOS, --full selects the experimental in-process CRuby engine. It requires
-        a matching static iOS CRuby build and currently bundles the framework source
-        plus JSON support, not arbitrary desktop gems or dynamic extensions.
+        a matching static iOS CRuby build and bundles the target standard library plus
+        the exact pure-Ruby gems selected by Gemfile.lock. Gems with native extensions
+        require an iOS static integration; dynamic extensions are rejected at build time.
 
         iOS example:
           zui mobile ios my_mobile_app --qt-ios ~/Qt/6.8.3/ios \\

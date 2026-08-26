@@ -28,6 +28,7 @@ signals:
   void exited(int exitCode);
 
 private:
+  bool prepareGemLoadPaths();
   bool loadCRubySupport();
   bool loadSource(const QString &program);
   bool loadProgram(const QString &program);

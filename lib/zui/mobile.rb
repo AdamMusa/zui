@@ -1,8 +1,10 @@
 # frozen_string_literal: true
 
 require "fileutils"
+require "digest"
 require "json"
 require "rbconfig"
+require "set"
 
 module Zui
   module Mobile
@@ -12,6 +14,7 @@ module Zui
       DEFAULT_DEPLOYMENT_TARGET = "16.0"
       DEFAULT_ARCHITECTURE = "x86_64"
       RUNTIME_MODES = %i[lite full].freeze
+      BUILTIN_CRUBY_GEMS = %w[bundler json zui].freeze
       IOS_PLATFORM = Platform.new(os: :ios, arch: :arm64).freeze
 
       def initialize(project:, qt_ios: nil, qt_host: nil, mruby_root: nil, mruby_json: nil,
@@ -19,7 +22,8 @@ module Zui
                      output: nil, simulator: nil, device: nil, team: nil,
                      architecture: DEFAULT_ARCHITECTURE,
                      deployment_target: DEFAULT_DEPLOYMENT_TARGET, framework_root: FRAMEWORK_ROOT,
-                     environment: ENV, host_platform: Platform.current, command: Command, out: $stdout)
+                     environment: ENV, host_platform: Platform.current, command: Command,
+                     gem_spec_loader: nil, out: $stdout)
         @project = File.expand_path(project)
         @qt_ios = expand_dependency(qt_ios || environment["ZUI_QT_IOS"])
         @qt_host = expand_dependency(qt_host || environment["ZUI_QT_HOST"])
@@ -38,6 +42,7 @@ module Zui
         @framework_root = File.expand_path(framework_root)
         @host_platform = host_platform
         @command = command
+        @gem_spec_loader = gem_spec_loader || LockedGems.new(environment:).method(:specs)
         @out = out
       end
 
@@ -140,6 +145,13 @@ module Zui
         validate_file!(File.join(@cruby_build_root, "ext", "json", "parser", "parser.a"),
                        "CRuby static JSON parser")
         validate_file!(File.join(@cruby_build_root, "enc", "libenc.a"), "CRuby static encodings")
+        cruby_standard_extension_libraries.each do |path|
+          validate_file!(path, "CRuby static standard extension")
+        end
+        validate_directory!(File.join(@cruby_source_root, "lib"), "CRuby standard library", "CRuby source lib")
+        validate_directory!(File.join(@cruby_build_root, ".ext", "common"),
+                            "generated CRuby standard library", "CRuby build .ext/common")
+        validate_file!(File.join(@cruby_build_root, "rbconfig.rb"), "target CRuby rbconfig")
         cruby_json_sources.each_value { |path| validate_file!(path, "CRuby JSON support") }
       end
 
@@ -159,11 +171,20 @@ module Zui
         }
       end
 
+      def cruby_standard_extension_libraries
+        %w[
+          continuation/continuation.a coverage/coverage.a date/date_core.a digest/digest.a
+          etc/etc.a fcntl/fcntl.a io/nonblock/nonblock.a io/wait/wait.a monitor/monitor.a
+          objspace/objspace.a rbconfig/sizeof/sizeof.a stringio/stringio.a strscan/strscan.a
+        ].map { |relative| File.join(@cruby_build_root.to_s, "ext", relative) }
+      end
+
       def prepare_stage(config)
         stage = File.join(@output, "stage")
         FileUtils.rm_rf(stage)
         FileUtils.mkdir_p(stage)
-        File.binwrite(File.join(stage, "app.rb"), LiteSource.new(project: @project).call)
+        source = LiteSource.new(project: @project, allow_external_requires: full_runtime?).call
+        File.binwrite(File.join(stage, "app.rb"), source)
         copy_assets(stage)
         create_icon_catalog(stage, config.icon_path(@project, IOS_PLATFORM))
         create_splash_screen(stage, config.splash_path(@project, IOS_PLATFORM))
@@ -187,7 +208,107 @@ module Zui
           FileUtils.mkdir_p(File.dirname(target))
           FileUtils.cp(source, target)
         end
-        @out.puts("Bundling the embedded CRuby runtime...")
+        copy_cruby_standard_library(stage)
+        gems = copy_project_gems(stage)
+        @out.puts("Bundling the embedded CRuby runtime with #{gems.size} locked project gems...")
+      end
+
+      def copy_cruby_standard_library(stage)
+        destination = File.join(stage, "cruby", "stdlib")
+        copy_directory_contents(File.join(@cruby_source_root, "lib"), File.join(destination, "source"))
+        generated = File.join(destination, "generated")
+        copy_directory_contents(File.join(@cruby_build_root, ".ext", "common"), generated)
+        FileUtils.cp(File.join(@cruby_build_root, "rbconfig.rb"), File.join(generated, "rbconfig.rb"))
+      end
+
+      def copy_directory_contents(source, destination)
+        FileUtils.mkdir_p(destination)
+        entries = Dir.children(source)
+        FileUtils.cp_r(entries.map { |entry| File.join(source, entry) }, destination) unless entries.empty?
+      end
+
+      def copy_project_gems(stage)
+        specs = @gem_spec_loader.call(@project).reject do |spec|
+          BUILTIN_CRUBY_GEMS.include?(spec.name)
+        end
+        names = Set.new
+        destination = File.join(stage, "cruby", "gems")
+        specifications = File.join(stage, "cruby", "specifications")
+        FileUtils.mkdir_p([destination, specifications])
+        manifest_gems = specs.sort_by(&:full_name).map do |spec|
+          validate_mobile_gem!(spec, names)
+          target = File.join(destination, spec.full_name)
+          FileUtils.cp_r(spec.full_gem_path, target)
+          File.write(File.join(specifications, "#{spec.full_name}.gemspec"), spec.to_ruby)
+          require_paths = mobile_gem_require_paths(spec)
+          {
+            "name" => spec.name,
+            "version" => spec.version.to_s,
+            "full_name" => spec.full_name,
+            "require_paths" => require_paths,
+            "load_paths" => require_paths.map { |path| File.join("gems", spec.full_name, path) }
+          }
+        end
+        manifest = {
+          "format" => 1,
+          "standard_library_paths" => %w[stdlib/generated stdlib/source],
+          "gems" => manifest_gems
+        }
+        manifest["digest"] = mobile_gem_digest(File.join(stage, "cruby"), manifest)
+        File.write(File.join(stage, "cruby", "gems.json"), "#{JSON.pretty_generate(manifest)}\n")
+        specs
+      end
+
+      def validate_mobile_gem!(spec, names)
+        unless names.add?(spec.name)
+          raise ArgumentError, "duplicate bundled iOS gem: #{spec.name}"
+        end
+        unless spec.full_name.match?(/\A[A-Za-z0-9_.-]+\z/)
+          raise ArgumentError, "unsafe bundled iOS gem name: #{spec.full_name.inspect}"
+        end
+        unless File.directory?(spec.full_gem_path)
+          raise ArgumentError, "project gem is not installed: #{spec.full_name}; run `bundle install`"
+        end
+        platform = spec.platform.to_s
+        unless platform == "ruby"
+          raise ArgumentError,
+                "iOS --full cannot bundle platform gem #{spec.full_name} (#{platform}); " \
+                "use a pure-Ruby release or provide an iOS static extension"
+        end
+        extensions = Array(spec.extensions).reject(&:empty?)
+        native_files = Dir[File.join(spec.full_gem_path, "**", "*.{bundle,so,dylib}")]
+        return if extensions.empty? && native_files.empty?
+
+        details = extensions.empty? ? native_files.map { |path| File.basename(path) } : extensions
+        raise ArgumentError,
+              "iOS --full cannot dynamically load native gem #{spec.full_name} " \
+              "(#{details.join(', ')}); provide an iOS static extension integration"
+      end
+
+      def mobile_gem_require_paths(spec)
+        paths = Array(spec.require_paths)
+        paths = ["lib"] if paths.empty?
+        paths.map do |path|
+          relative = path.to_s
+          expanded = File.expand_path(relative, spec.full_gem_path)
+          root = File.expand_path(spec.full_gem_path)
+          unless expanded == root || expanded.start_with?("#{root}#{File::SEPARATOR}")
+            raise ArgumentError, "gem #{spec.full_name} has an unsafe require path: #{relative.inspect}"
+          end
+          relative
+        end
+      end
+
+      def mobile_gem_digest(root, manifest)
+        digest = Digest::SHA256.new
+        digest << JSON.generate(manifest)
+        Dir.glob(File.join(root, "**", "*"), File::FNM_DOTMATCH).sort.each do |path|
+          next unless File.file?(path)
+
+          digest << path.delete_prefix("#{root}#{File::SEPARATOR}") << "\0"
+          digest << Digest::SHA256.file(path).digest
+        end
+        digest.hexdigest
       end
 
       def create_icon_catalog(stage, icon)

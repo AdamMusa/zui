@@ -71,12 +71,59 @@ class FullRuntimeTest < Minitest::Test
       project = File.join(directory, "project")
       FileUtils.mkdir_p(project)
       File.write(File.join(project, "Gemfile"), "source 'https://rubygems.org'\n")
-      runtime = Zui::FullRuntime.new
+      locked_gems = Zui::LockedGems.new
 
-      error = assert_raises(ArgumentError) { runtime.send(:project_specs, project) }
+      error = assert_raises(ArgumentError) { locked_gems.specs(project) }
 
       assert_includes error.message, "Gemfile.lock"
       assert_includes error.message, "bundle install"
+    end
+  end
+
+  def test_locked_gems_snapshot_local_path_specs_before_bundler_resets
+    Dir.mktmpdir do |directory|
+      project = File.join(directory, "project")
+      gem_root = File.join(project, "vendor", "paint")
+      FileUtils.mkdir_p(File.join(gem_root, "lib"))
+      File.write(File.join(gem_root, "paint.gemspec"), <<~RUBY)
+        Gem::Specification.new do |spec|
+          spec.name = "paint"
+          spec.version = "1.2.3"
+          spec.summary = "Paint fixture"
+          spec.authors = ["Zui"]
+          spec.files = ["lib/paint.rb"]
+        end
+      RUBY
+      File.write(File.join(gem_root, "lib", "paint.rb"), "module Paint; end\n")
+      File.write(File.join(project, "Gemfile"), <<~RUBY)
+        source "https://rubygems.org"
+        gem "paint", path: "vendor/paint"
+      RUBY
+      File.write(File.join(project, "Gemfile.lock"), <<~LOCK)
+        PATH
+          remote: vendor/paint
+          specs:
+            paint (1.2.3)
+
+        GEM
+          remote: https://rubygems.org/
+          specs:
+
+        PLATFORMS
+          ruby
+
+        DEPENDENCIES
+          paint!
+      LOCK
+
+      specs = nil
+      capture_io { specs = Zui::LockedGems.new.specs(project) }
+      spec = specs.find { |candidate| candidate.name == "paint" }
+
+      assert_equal "paint-1.2.3", spec.full_name
+      assert_equal gem_root, spec.full_gem_path
+      assert_equal ["lib"], spec.require_paths
+      assert_includes spec.to_ruby, 'name = "paint"'
     end
   end
 

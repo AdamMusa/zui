@@ -9,6 +9,14 @@ require_relative "../lib/zui"
 class MobileTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
 
+  MobileGemSpec = Struct.new(
+    :name, :version, :full_gem_path, :require_paths, :platform, :extensions,
+    keyword_init: true
+  ) do
+    def full_name = "#{name}-#{version}"
+    def to_ruby = "Gem::Specification.new { |spec| spec.name = #{name.dump}; spec.version = #{version.dump} }\n"
+  end
+
   SuccessfulStatus = Struct.new(:exitstatus) do
     def success? = true
   end
@@ -129,12 +137,23 @@ class MobileTest < Minitest::Test
       dependencies = create_dependencies(directory)
       cruby = create_cruby_dependencies(directory)
       create_project(project)
+      paint = create_mobile_gem(directory, "paint", "1.2.3")
+      File.write(File.join(project, "main.rb"), <<~RUBY)
+        require "zui"
+        require "paint"
+        Zui.app do
+          app :main do
+            text Paint.label
+          end
+        end
+      RUBY
       command = XcodeConfigureCommand.new
       output = File.join(directory, "build")
       builder = Zui::Mobile::IOSBuilder.new(
         project:, output:, framework_root: ROOT, command:, runtime_mode: :full,
         qt_ios: dependencies.fetch(:qt_ios), qt_host: dependencies.fetch(:qt_host),
         cruby_source_root: cruby.fetch(:source), cruby_build_root: cruby.fetch(:build),
+        gem_spec_loader: ->(_project) { [paint] },
         host_platform: Zui::Platform.new(os: :macos, arch: :arm64)
       )
 
@@ -146,11 +165,40 @@ class MobileTest < Minitest::Test
 
       assert_equal "json common", File.read(File.join(stage, "cruby", "json", "common.rb"))
       assert_equal "json state", File.read(File.join(stage, "cruby", "json", "ext", "generator", "state.rb"))
+      assert_equal "uri support", File.read(File.join(stage, "cruby", "stdlib", "source", "uri.rb"))
+      assert_equal "target rbconfig", File.read(File.join(stage, "cruby", "stdlib", "generated", "rbconfig.rb"))
+      assert_equal "module Paint; def self.label = 'Paint ready'; end\n",
+                   File.read(File.join(stage, "cruby", "gems", "paint-1.2.3", "lib", "paint.rb"))
+      assert File.file?(File.join(stage, "cruby", "specifications", "paint-1.2.3.gemspec"))
+      assert_includes File.read(File.join(stage, "app.rb")), 'require "paint"'
+      gem_manifest = JSON.parse(File.read(File.join(stage, "cruby", "gems.json")))
+      assert_match(/\A[0-9a-f]{64}\z/, gem_manifest.fetch("digest"))
+      assert_equal %w[stdlib/generated stdlib/source], gem_manifest.fetch("standard_library_paths")
+      assert_equal ["gems/paint-1.2.3/lib"], gem_manifest.dig("gems", 0, "load_paths")
       arguments = command.calls.fetch(0).fetch(0)
       assert_includes arguments, "-DZUI_EMBEDDED_CRUBY=ON"
       assert_includes arguments, "-DZUI_CRUBY_SOURCE_ROOT=#{cruby.fetch(:source)}"
       assert_includes arguments, "-DZUI_CRUBY_BUILD_ROOT=#{cruby.fetch(:build)}"
       refute arguments.any? { |argument| argument.start_with?("-DZUI_MRUBY_ROOT=") }
+    end
+  end
+
+  def test_ios_full_runtime_rejects_dynamic_native_gems
+    Dir.mktmpdir do |directory|
+      project = File.join(directory, "project")
+      create_project(project)
+      native = create_mobile_gem(directory, "native-paint", "2.0.0", extensions: ["ext/paint/extconf.rb"])
+      builder = Zui::Mobile::IOSBuilder.new(
+        project:, runtime_mode: :full, gem_spec_loader: ->(_project) { [native] },
+        host_platform: Zui::Platform.new(os: :macos, arch: :arm64)
+      )
+      stage = File.join(directory, "stage")
+      FileUtils.mkdir_p(stage)
+
+      error = assert_raises(ArgumentError) { builder.send(:copy_project_gems, stage) }
+
+      assert_includes error.message, "cannot dynamically load native gem native-paint-2.0.0"
+      assert_includes error.message, "iOS static extension"
     end
   end
 
@@ -279,7 +327,9 @@ class MobileTest < Minitest::Test
     build = File.join(directory, "cruby-build")
     files = {
       File.join(source, "include", "ruby.h") => "ruby",
+      File.join(source, "lib", "uri.rb") => "uri support",
       File.join(build, "libruby.4.0-static.a") => "runtime",
+      File.join(build, "rbconfig.rb") => "target rbconfig",
       File.join(build, "ext", "json", "generator", "generator.a") => "generator",
       File.join(build, "ext", "json", "parser", "parser.a") => "parser",
       File.join(build, "enc", "libenc.a") => "encodings",
@@ -288,10 +338,28 @@ class MobileTest < Minitest::Test
       File.join(build, ".ext", "common", "json", "ext.rb") => "json ext",
       File.join(build, ".ext", "common", "json", "ext", "generator", "state.rb") => "json state"
     }
+    %w[
+      continuation/continuation.a coverage/coverage.a date/date_core.a digest/digest.a
+      etc/etc.a fcntl/fcntl.a io/nonblock/nonblock.a io/wait/wait.a monitor/monitor.a
+      objspace/objspace.a rbconfig/sizeof/sizeof.a stringio/stringio.a strscan/strscan.a
+    ].each do |relative|
+      files[File.join(build, "ext", relative)] = "standard extension"
+    end
     files.each do |path, content|
       FileUtils.mkdir_p(File.dirname(path))
       File.write(path, content)
     end
     { source:, build: }
+  end
+
+  def create_mobile_gem(directory, name, version, extensions: [])
+    root = File.join(directory, "installed-gems", "#{name}-#{version}")
+    FileUtils.mkdir_p(File.join(root, "lib"))
+    File.write(File.join(root, "lib", "#{name.tr('-', '_')}.rb"),
+               "module Paint; def self.label = 'Paint ready'; end\n")
+    MobileGemSpec.new(
+      name:, version:, full_gem_path: root, require_paths: ["lib"],
+      platform: "ruby", extensions:
+    )
   end
 end
