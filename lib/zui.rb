@@ -28,7 +28,7 @@ require_relative "zui/distribution"
 require_relative "zui/dist_packager"
 
 module Zui
-  VERSION = "0.0.9"
+  VERSION = "0.0.10"
   FRAMEWORK_ROOT = File.expand_path("..", __dir__)
 
   def self.app(&definition)
