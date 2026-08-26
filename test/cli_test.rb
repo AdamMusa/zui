@@ -240,18 +240,25 @@ class CLITest < Minitest::Test
   def test_mobile_enable_and_fix_use_the_persistent_mobile_setup
     calls = []
     setup = Object.new
+    setup.define_singleton_method(:prepare_project!) do |project|
+      calls << [:prepare, project]
+      [File.join(project, "android"), File.join(project, "ios")]
+    end
     setup.define_singleton_method(:enable!) { calls << :enable }
     setup.define_singleton_method(:fix!) { calls << :fix; { "enabled" => true } }
     setup.define_singleton_method(:summary) { |_config = nil| ["Mobile support: enabled"] }
     output = StringIO.new
+    project = File.expand_path("examples/mobile_counter")
 
     Zui::Mobile::Setup.stub(:new, setup) do
-      assert_equal 0, Zui::CLI.run(["mobile", "--enable"], out: output, err: StringIO.new)
+      assert_equal 0, Zui::CLI.run(["mobile", "--enable", project], out: output, err: StringIO.new)
       assert_equal 0, Zui::CLI.run(["mobile", "--fix"], out: output, err: StringIO.new)
     end
 
-    assert_equal %i[enable fix], calls
+    assert_equal [[:prepare, project], :enable, :fix], calls
     assert_includes output.string, "Mobile development enabled"
+    assert_includes output.string, File.join(project, "android")
+    assert_includes output.string, File.join(project, "ios")
     assert_includes output.string, "Mobile development is ready"
   end
 

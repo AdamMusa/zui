@@ -15,7 +15,8 @@ Gem::Specification.new do |spec|
   spec.metadata["rubygems_mfa_required"] = "true"
   spec.required_ruby_version = ">= 3.1"
   spec.files = Dir[
-    "bin/*", "lib/**/*.rb", "lib/zui/generator_assets/**/*", "*.qml", "Components/**/*", "Controls/**/*",
+    "bin/*", "lib/**/*.rb", "lib/zui/generator_assets/**/*", "lib/zui/mobile/templates/**/*",
+    "*.qml", "Components/**/*", "Controls/**/*",
     "Theme/**/*", "Fonts/**/*", "native/*", "runtime/mruby/*.rb*",
     "README.md", "LICENSE", "THIRD_PARTY_NOTICES.md"
   ].reject do |path|

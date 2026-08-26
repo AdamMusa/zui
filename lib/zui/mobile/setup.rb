@@ -12,6 +12,7 @@ module Zui
       BUILD_TOOLS_VERSION = "35.0.1"
       MRUBY_REVISION = "831da26b9021de0369d17b71b5667e2941a1a32d"
       MRUBY_JSON_REVISION = "f99d9428025469f2400f93c53b185f65f963e507"
+      PROJECT_TEMPLATE_ROOT = File.expand_path("templates", __dir__)
 
       attr_reader :config_path
 
@@ -34,6 +35,21 @@ module Zui
         config = read_config.merge("enabled" => true, "version" => 1)
         write_config(config)
         config
+      end
+
+      def prepare_project!(project)
+        project = File.expand_path(project)
+        raise ArgumentError, "mobile project directory not found: #{project}" unless File.directory?(project)
+
+        %w[main.rb config.rb].each do |file|
+          path = File.join(project, file)
+          raise ArgumentError, "mobile project is missing #{file}: #{project}" unless File.file?(path)
+        end
+
+        %w[android ios].each do |platform|
+          copy_project_template(platform, File.join(project, platform))
+        end
+        %w[android ios].map { |platform| File.join(project, platform) }
       end
 
       def fix!
@@ -80,6 +96,24 @@ module Zui
       end
 
       private
+
+      def copy_project_template(platform, destination)
+        source = File.join(PROJECT_TEMPLATE_ROOT, platform)
+        raise ArgumentError, "Zui mobile #{platform} template is missing: #{source}" unless File.directory?(source)
+
+        Dir.glob(File.join(source, "**", "*"), File::FNM_DOTMATCH).sort.each do |template|
+          relative = template.delete_prefix("#{source}#{File::SEPARATOR}")
+          next if relative.empty? || %w[. ..].include?(relative)
+
+          target = File.join(destination, relative)
+          if File.directory?(template)
+            FileUtils.mkdir_p(target)
+          elsif !File.exist?(target)
+            FileUtils.mkdir_p(File.dirname(target))
+            FileUtils.cp(template, target)
+          end
+        end
+      end
 
       def read_config
         return {} unless File.file?(@config_path)

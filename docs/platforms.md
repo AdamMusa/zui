@@ -78,6 +78,22 @@ zui build ios
 zui build android
 ```
 
+The enable step creates project-owned, editable platform configuration without replacing files
+that already exist:
+
+```text
+android/AndroidManifest.xml
+ios/Info.plist.in
+ios/Zui.entitlements
+```
+
+The Android directory is used as Qt's `QT_ANDROID_PACKAGE_SOURCE_DIR` overlay, so it can also hold
+`res/`, `src/`, and Gradle customizations. Preserve the Qt insertion markers in the generated
+manifest. The iOS plist is installed as the Xcode bundle plist and the entitlements file is used
+during code signing; an optional `ios/LaunchScreen.storyboard` overrides the generated launch
+screen. Android dangerous permissions still require a runtime request, while iOS protected access
+requires a matching usage-description string in `Info.plist.in`.
+
 `zui mobile --fix` records detected dependency paths in the user's Zui mobile configuration and
 repairs missing Qt and mruby sources. The build commands create lean pinned mobile mruby runtimes,
 precompile the bundled Ruby source to bytecode, and write products below `dist/ios` and

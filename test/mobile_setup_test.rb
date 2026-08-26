@@ -19,6 +19,64 @@ class MobileSetupTest < Minitest::Test
     end
   end
 
+  def test_prepare_project_creates_editable_android_and_ios_configuration
+    Dir.mktmpdir do |directory|
+      project = File.join(directory, "project")
+      FileUtils.mkdir_p(project)
+      File.write(File.join(project, "main.rb"), "require \"zui\"\n")
+      File.write(File.join(project, "config.rb"), "Zui::Dist.configure {}\n")
+      setup = Zui::Mobile::Setup.new(
+        config_path: File.join(directory, "config.json"),
+        environment: { "ZUI_MOBILE_HOME" => directory }
+      )
+
+      directories = setup.prepare_project!(project)
+
+      assert_equal [File.join(project, "android"), File.join(project, "ios")], directories
+      manifest = File.read(File.join(project, "android", "AndroidManifest.xml"))
+      info_plist = File.read(File.join(project, "ios", "Info.plist.in"))
+      assert_includes manifest, "%%INSERT_PERMISSIONS"
+      assert_includes manifest, "QtActivity"
+      assert_includes info_plist, "NSCameraUsageDescription"
+      assert File.file?(File.join(project, "ios", "Zui.entitlements"))
+      assert File.file?(File.join(project, "android", "README.md"))
+      assert File.file?(File.join(project, "ios", "README.md"))
+    end
+  end
+
+  def test_prepare_project_fills_missing_files_without_overwriting_custom_configuration
+    Dir.mktmpdir do |directory|
+      File.write(File.join(directory, "main.rb"), "require \"zui\"\n")
+      File.write(File.join(directory, "config.rb"), "Zui::Dist.configure {}\n")
+      FileUtils.mkdir_p(File.join(directory, "android"))
+      manifest = File.join(directory, "android", "AndroidManifest.xml")
+      File.write(manifest, "custom manifest\n")
+      setup = Zui::Mobile::Setup.new(
+        config_path: File.join(directory, "mobile.json"),
+        environment: { "ZUI_MOBILE_HOME" => directory }
+      )
+
+      setup.prepare_project!(directory)
+
+      assert_equal "custom manifest\n", File.read(manifest)
+      assert File.file?(File.join(directory, "android", "README.md"))
+      assert File.file?(File.join(directory, "ios", "Info.plist.in"))
+    end
+  end
+
+  def test_prepare_project_requires_a_complete_zui_project
+    Dir.mktmpdir do |directory|
+      setup = Zui::Mobile::Setup.new(
+        config_path: File.join(directory, "mobile.json"),
+        environment: { "ZUI_MOBILE_HOME" => directory }
+      )
+
+      error = assert_raises(ArgumentError) { setup.prepare_project!(directory) }
+
+      assert_includes error.message, "main.rb"
+    end
+  end
+
   def test_fix_records_detected_ios_and_android_dependencies
     Dir.mktmpdir do |directory|
       paths = dependency_paths(directory)

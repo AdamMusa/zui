@@ -123,12 +123,14 @@ module Zui
         Enable or repair native mobile development.
 
         Usage:
-          zui mobile --enable
+          zui mobile --enable [DIRECTORY]
           zui mobile --fix
 
-        --enable turns on the mobile commands for this user. --fix installs or
-        repairs the required Qt and embedded Ruby dependencies, and records the
-        detected Apple and Android SDK paths.
+        --enable turns on the mobile commands for this user and creates editable
+        android/ and ios/ configuration in the project without overwriting existing
+        files. DIRECTORY defaults to the current project. --fix installs or repairs
+        the required Qt and embedded Ruby dependencies, and records the detected
+        Apple and Android SDK paths.
 
         Once configured:
           zui build ios
@@ -328,10 +330,15 @@ module Zui
         return 0
       end
       if arguments.first == "--enable"
-        raise UsageError, "mobile --enable accepts no other arguments" unless arguments == ["--enable"]
+        arguments.shift
+        source = File.expand_path(arguments.shift || Dir.pwd)
+        raise UsageError, "mobile --enable accepts only one project directory" unless arguments.empty?
 
+        directories = setup.prepare_project!(source)
         setup.enable!
         @out.puts("Mobile development enabled.")
+        @out.puts("Android configuration: #{directories.fetch(0)}")
+        @out.puts("iOS configuration: #{directories.fetch(1)}")
         @out.puts("Run `zui mobile --fix` to install or repair its dependencies.")
         return 0
       end

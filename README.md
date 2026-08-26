@@ -81,13 +81,32 @@ cache. It does not modify shell startup files or global Qt environment variables
 ### Run on iOS and Android
 
 Mobile builds use the same Ruby source and native renderer, with mruby embedded directly in the
-application process. Enable mobile development once, then let Zui detect, install, or repair the
-required SDK-side dependencies:
+application process. From the project root, enable mobile development once, then let Zui detect,
+install, or repair the required SDK-side dependencies:
 
 ```bash
 zui mobile --enable
 zui mobile --fix
 ```
+
+`zui mobile --enable` creates editable `android/` and `ios/` directories in the project. It is
+safe to run again: missing template files are restored, but existing project configuration is not
+overwritten. The generated files are connected directly to Qt's package and Xcode generation:
+
+```text
+android/
+├── AndroidManifest.xml  # permissions, features, activities, services
+└── README.md            # resources, Java/Kotlin, and Gradle extension points
+ios/
+├── Info.plist.in        # privacy usage descriptions and bundle configuration
+├── Zui.entitlements     # Apple capabilities used during code signing
+└── README.md            # launch screen and signing guidance
+```
+
+Keep Qt's `%%INSERT_...%%` markers in the Android manifest. For protected Android features, add the
+manifest permission and request it at runtime. For iOS, add a clear `NS...UsageDescription` entry
+before requesting protected access, and enable any entitlement in the Apple app identifier and
+provisioning profile as well as in `Zui.entitlements`.
 
 Build products use the project metadata and launcher icons in `config.rb` and are always placed in
 the project under `dist/ios` or `dist/android`:
@@ -274,7 +293,7 @@ an explicit error.
 | `zui bundle --name NAME --output PATH` | Override the generated product name and destination |
 | `zui bundle --no-tree-shake` | Retain the complete component and Qt feature catalog for metaprogrammed applications |
 | `zui bundle --dist [DIRECTORY]` | Build release installers from the required project-root `config.rb` |
-| `zui mobile --enable` | Enable native mobile development for the current user |
+| `zui mobile --enable [DIRECTORY]` | Enable mobile development and create the project's Android/iOS configuration |
 | `zui mobile --fix` | Detect, install, and repair mobile build dependencies |
 | `zui build ios|android [DIRECTORY]` | Build below `dist/ios` or `dist/android` using `config.rb` assets |
 | `zui install ios|android [DIRECTORY]` | Build, install, and launch on a simulator or emulator |
