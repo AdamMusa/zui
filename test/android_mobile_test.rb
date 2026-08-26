@@ -17,6 +17,19 @@ class AndroidMobileTest < Minitest::Test
       project = File.join(directory, "project")
       dependencies = create_dependencies(directory)
       create_project(project)
+      Zui::Mobile::Setup.new(
+        config_path: File.join(directory, "mobile.json"),
+        environment: { "ZUI_MOBILE_HOME" => directory }
+      ).prepare_project!(project)
+      manifest_path = File.join(project, "android", "AndroidManifest.xml")
+      manifest = File.read(manifest_path).sub(
+        "    <!-- %%INSERT_PERMISSIONS -->",
+        "    <uses-permission android:name=\"android.permission.CAMERA\" />\n    <!-- %%INSERT_PERMISSIONS -->"
+      )
+      File.write(manifest_path, manifest)
+      java = File.join(project, "android", "src", "dev", "zui", "MobileBridge.java")
+      FileUtils.mkdir_p(File.dirname(java))
+      File.write(java, "package dev.zui; class MobileBridge {}\n")
       builder = create_builder(project, dependencies, output: File.join(directory, "build"))
 
       builder.send(:validate!)
@@ -28,13 +41,33 @@ class AndroidMobileTest < Minitest::Test
       styles = File.read(File.join(stage, "android", "res", "values", "styles.xml"))
       assert_includes source, 'text "Touch ready"'
       assert_includes manifest, "org.qtproject.qt.android.bindings.QtActivity"
+      assert_includes manifest, "android.permission.CAMERA"
+      assert_includes manifest, "%%INSERT_PERMISSIONS"
       assert_includes manifest, "@drawable/zui_icon"
       assert_includes styles, "#07110d"
       assert File.file?(File.join(stage, "android", "res", "drawable", "zui_icon.png"))
       assert File.file?(File.join(stage, "android", "res", "drawable", "zui_splash.png"))
       assert_includes styles, "@drawable/zui_launch_background"
+      assert File.file?(File.join(stage, "android", "src", "dev", "zui", "MobileBridge.java"))
       assert_equal File.binread(File.join(project, "assets", "ruby.png")),
                    File.binread(File.join(stage, "assets", "ruby.png"))
+    end
+  end
+
+  def test_android_overlay_rejects_a_manifest_missing_qt_markers
+    Dir.mktmpdir do |directory|
+      project = File.join(directory, "project")
+      dependencies = create_dependencies(directory)
+      create_project(project)
+      FileUtils.mkdir_p(File.join(project, "android"))
+      File.write(File.join(project, "android", "AndroidManifest.xml"), "<manifest />\n")
+      builder = create_builder(project, dependencies, output: File.join(directory, "build"))
+      config = Zui::Dist.load(project:, platform: Zui::Mobile::AndroidBuilder::ANDROID_PLATFORM)
+
+      error = assert_raises(ArgumentError) { builder.send(:prepare_stage, config) }
+
+      assert_includes error.message, "Qt activity"
+      assert_includes error.message, "permission marker"
     end
   end
 

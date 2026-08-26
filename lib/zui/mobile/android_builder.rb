@@ -128,6 +128,7 @@ module Zui
           stage, config, config.icon_path(@project, ANDROID_PLATFORM),
           config.splash_path(@project, ANDROID_PLATFORM)
         )
+        apply_android_overlay(stage)
         stage
       end
 
@@ -217,6 +218,34 @@ module Zui
           </resources>
         XML
         File.write(File.join(values, "styles.xml"), styles)
+      end
+
+      def apply_android_overlay(stage)
+        source = File.join(@project, "android")
+        return unless File.directory?(source)
+
+        package = File.join(stage, "android")
+        entries = Dir.children(source).reject { |entry| entry == ".DS_Store" }
+        FileUtils.cp_r(entries.map { |entry| File.join(source, entry) }, package) unless entries.empty?
+        validate_android_manifest!(File.join(package, "AndroidManifest.xml"))
+      end
+
+      def validate_android_manifest!(manifest_path)
+        raise ArgumentError, "android/AndroidManifest.xml is missing" unless File.file?(manifest_path)
+
+        manifest = File.read(manifest_path)
+        requirements = {
+          "Qt activity" => "org.qtproject.qt.android.bindings.QtActivity",
+          "application library marker" => "%%INSERT_APP_LIB_NAME%%",
+          "permission marker" => "%%INSERT_PERMISSIONS",
+          "feature marker" => "%%INSERT_FEATURES"
+        }
+        missing = requirements.reject { |_label, marker| manifest.include?(marker) }.keys
+        return if missing.empty?
+
+        raise ArgumentError,
+              "android/AndroidManifest.xml must preserve Qt's #{missing.join(', ')}; " \
+              "rerun `zui mobile --enable` after moving the custom manifest aside"
       end
 
       def android_identifier(identifier)
