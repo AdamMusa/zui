@@ -21,6 +21,9 @@ set(ZUI_MOBILE_APP_NAME "Zui Mobile" CACHE STRING "Mobile application display na
 set(ZUI_MOBILE_BUNDLE_ID "dev.zui.mobile" CACHE STRING "Mobile application bundle identifier")
 set(ZUI_MOBILE_APP_VERSION "0.1.0" CACHE STRING "Mobile application release version")
 set(ZUI_MOBILE_BUILD_VERSION "1" CACHE STRING "Mobile application build version")
+set(ZUI_ANDROID_PACKAGE_SOURCE_DIR "" CACHE PATH "Android package template overlay")
+set(ZUI_ANDROID_MIN_SDK "23" CACHE STRING "Android minimum SDK version")
+set(ZUI_ANDROID_TARGET_SDK "35" CACHE STRING "Android target SDK version")
 
 set(zui_host_sources
   main.cpp
@@ -71,14 +74,27 @@ if(ZUI_EMBEDDED_RUNTIME)
     ZUI_EMBEDDED_RUNTIME=1
     ZUI_MOBILE_APP_NAME="${zui_mobile_app_name_definition}"
   )
-  set_target_properties(zui-host PROPERTIES
-    OUTPUT_NAME "${ZUI_MOBILE_APP_NAME}"
-    MACOSX_BUNDLE_GUI_IDENTIFIER "${ZUI_MOBILE_BUNDLE_ID}"
-    MACOSX_BUNDLE_BUNDLE_NAME "${ZUI_MOBILE_APP_NAME}"
-    MACOSX_BUNDLE_SHORT_VERSION_STRING "${ZUI_MOBILE_APP_VERSION}"
-    MACOSX_BUNDLE_BUNDLE_VERSION "${ZUI_MOBILE_BUILD_VERSION}"
-    XCODE_ATTRIBUTE_PRODUCT_NAME "${ZUI_MOBILE_APP_NAME}"
-  )
+  if(ANDROID)
+    set_target_properties(zui-host PROPERTIES
+      OUTPUT_NAME "zui_host"
+      QT_ANDROID_PACKAGE_NAME "${ZUI_MOBILE_BUNDLE_ID}"
+      QT_ANDROID_VERSION_NAME "${ZUI_MOBILE_APP_VERSION}"
+      QT_ANDROID_VERSION_CODE "${ZUI_MOBILE_BUILD_VERSION}"
+      QT_ANDROID_MIN_SDK_VERSION "${ZUI_ANDROID_MIN_SDK}"
+      QT_ANDROID_TARGET_SDK_VERSION "${ZUI_ANDROID_TARGET_SDK}"
+      QT_ANDROID_PACKAGE_SOURCE_DIR "${ZUI_ANDROID_PACKAGE_SOURCE_DIR}"
+    )
+    target_link_libraries(zui-host PRIVATE m)
+  else()
+    set_target_properties(zui-host PROPERTIES
+      OUTPUT_NAME "${ZUI_MOBILE_APP_NAME}"
+      MACOSX_BUNDLE_GUI_IDENTIFIER "${ZUI_MOBILE_BUNDLE_ID}"
+      MACOSX_BUNDLE_BUNDLE_NAME "${ZUI_MOBILE_APP_NAME}"
+      MACOSX_BUNDLE_SHORT_VERSION_STRING "${ZUI_MOBILE_APP_VERSION}"
+      MACOSX_BUNDLE_BUNDLE_VERSION "${ZUI_MOBILE_BUILD_VERSION}"
+      XCODE_ATTRIBUTE_PRODUCT_NAME "${ZUI_MOBILE_APP_NAME}"
+    )
+  endif()
   if(IOS)
     set_target_properties(zui-host PROPERTIES
       QT_IOS_LAUNCH_SCREEN "${CMAKE_CURRENT_SOURCE_DIR}/LaunchScreen.storyboard"
@@ -122,10 +138,14 @@ if(ZUI_EMBEDDED_RUNTIME)
   endif()
 endif()
 
-install(TARGETS zui-host
-  BUNDLE DESTINATION .
-  RUNTIME DESTINATION bin
-)
+if(ANDROID)
+  install(TARGETS zui-host LIBRARY DESTINATION lib)
+else()
+  install(TARGETS zui-host
+    BUNDLE DESTINATION .
+    RUNTIME DESTINATION bin
+  )
+endif()
 
 if((APPLE OR WIN32) AND NOT IOS)
   set(ZUI_QML_SCAN_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/.." CACHE PATH "QML tree scanned for deployment")
@@ -145,6 +165,6 @@ if((APPLE OR WIN32) AND NOT IOS)
   install(SCRIPT ${zui_deploy_script})
 endif()
 
-if(IOS)
+if(IOS OR ANDROID)
   qt_import_qml_plugins(zui-host)
 endif()

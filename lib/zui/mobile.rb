@@ -6,7 +6,7 @@ require "rbconfig"
 
 module Zui
   module Mobile
-    Result = Struct.new(:app, :bundle_id, :simulator, :device, :pid, keyword_init: true)
+    Result = Struct.new(:app, :apk, :bundle_id, :simulator, :device, :pid, keyword_init: true)
 
     class IOSBuilder
       DEFAULT_DEPLOYMENT_TARGET = "16.0"
@@ -306,3 +306,5 @@ module Zui
     end
   end
 end
+
+require_relative "mobile/android_builder"

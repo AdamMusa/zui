@@ -6,7 +6,12 @@ QQC.ApplicationWindow {
   id: window
 
   readonly property string activeSurface: applicationSurface()
-  readonly property var windowOptions: service.optionsFor(activeSurface)
+  readonly property var windowOptions: {
+    // Keep the window itself reactive when the embedded runtime publishes or
+    // patches application options after the native shell has been created.
+    service.revision
+    return service.optionsFor(activeSurface)
+  }
 
   function option(name, fallback) {
     var value = windowOptions ? windowOptions[name] : undefined

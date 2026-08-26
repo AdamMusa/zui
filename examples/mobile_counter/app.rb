@@ -9,7 +9,7 @@ module MobileCounter
         column spacing: 18 do
           badge "ZUI MOBILE", size: 30, background: "#173126", foreground: "#66ffb2"
           text "Touch Counter", size: 30, bold: true, color: "#f3fff7", wrap: false
-          text "A Ruby interface running inside a native iOS app.",
+          text "A Ruby interface running inside a native mobile app.",
                width: 320, color: "#91a89d", wrap: true
 
           card padding: 24, width: 330, color: "#0d1b18", border_color: "#24483b" do

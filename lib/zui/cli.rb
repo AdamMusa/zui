@@ -30,7 +30,7 @@ module Zui
         doctor         #{COMMANDS.fetch("doctor")}
         run FILE       #{COMMANDS.fetch("run")}
         bundle [DIR]   #{COMMANDS.fetch("bundle")}
-        mobile ios     #{COMMANDS.fetch("mobile")}
+        mobile TARGET  #{COMMANDS.fetch("mobile")}
         version        #{COMMANDS.fetch("version")}
 
       Global options:
@@ -116,10 +116,11 @@ module Zui
           zui bundle --dist --full .
       HELP
       "mobile" => <<~HELP,
-        Build, install, and launch a native Zui application on iOS.
+        Build, install, and launch a native Zui application on iOS or Android.
 
         Usage:
           zui mobile ios [DIRECTORY] [options]
+          zui mobile android [DIRECTORY] [options]
 
         Options:
               --qt-ios PATH        Qt iOS SDK root (or ZUI_QT_IOS)
@@ -134,12 +135,23 @@ module Zui
           -o, --output PATH        Build workspace (default: dist/ios-simulator or dist/ios-device)
               --build-only        Build without installing or launching
 
+        Android options:
+              --qt-android PATH    Qt Android SDK root (or ZUI_QT_ANDROID)
+              --android-sdk PATH   Android SDK root (or ANDROID_SDK_ROOT)
+              --android-ndk PATH   Android NDK root (or ANDROID_NDK_ROOT)
+              --abi ABI            Android ABI (default: arm64-v8a)
+              --api LEVEL          Minimum Android API (default: 28)
+              --target-api LEVEL   Target Android API (default: 35)
+
         The mobile runtime embeds mruby and the native Qt renderer; it does not use
         a web view or require a separate Ruby process on the device.
 
-        Example:
+        iOS example:
           zui mobile ios my_mobile_app --qt-ios ~/Qt/6.8.3/ios \\
             --qt-host ~/Qt/6.8.3/macos --mruby ~/src/mruby --mruby-json ~/src/mruby-json
+
+        Android example:
+          zui mobile android my_mobile_app --qt-android ~/Qt/6.8.3/android_arm64_v8a
       HELP
       "version" => <<~HELP
         Print the installed Zui version.
@@ -248,9 +260,14 @@ module Zui
     end
 
     def mobile_project(arguments)
-      target = arguments.shift || raise(UsageError, "mobile requires a target; currently: ios")
-      raise UsageError, "unsupported mobile target #{target.inspect}; currently: ios" unless target == "ios"
+      target = arguments.shift || raise(UsageError, "mobile requires a target: ios or android")
+      return mobile_ios_project(arguments) if target == "ios"
+      return mobile_android_project(arguments) if target == "android"
 
+      raise UsageError, "unsupported mobile target #{target.inspect}; choose ios or android"
+    end
+
+    def mobile_ios_project(arguments)
       options = { install: true }
       parser = OptionParser.new do |option|
         option.on("--qt-ios PATH") { |value| options[:qt_ios] = value }
@@ -275,6 +292,35 @@ module Zui
       if install
         target = result.device ? "physical device #{result.device}" : "simulator #{result.simulator}"
         @out.puts("Launched #{result.bundle_id} on #{target}#{result.pid ? " (PID #{result.pid})" : ''}")
+      end
+      0
+    end
+
+    def mobile_android_project(arguments)
+      options = { install: true }
+      parser = OptionParser.new do |option|
+        option.on("--qt-android PATH") { |value| options[:qt_android] = value }
+        option.on("--qt-host PATH") { |value| options[:qt_host] = value }
+        option.on("--android-sdk PATH") { |value| options[:android_sdk] = value }
+        option.on("--android-ndk PATH") { |value| options[:android_ndk] = value }
+        option.on("--mruby PATH") { |value| options[:mruby_root] = value }
+        option.on("--mruby-json PATH") { |value| options[:mruby_json] = value }
+        option.on("--device ID") { |value| options[:device] = value }
+        option.on("--abi ABI") { |value| options[:abi] = value }
+        option.on("--api LEVEL", Integer) { |value| options[:api] = value }
+        option.on("--target-api LEVEL", Integer) { |value| options[:target_api] = value }
+        option.on("-o PATH", "--output PATH") { |value| options[:output] = value }
+        option.on("--build-only") { options[:install] = false }
+      end
+      parser.parse!(arguments)
+      source = File.expand_path(arguments.shift || Dir.pwd)
+      raise UsageError, "mobile android accepts only one directory" unless arguments.empty?
+
+      install = options.delete(:install)
+      result = Mobile::AndroidBuilder.new(project: source, out: @out, **options).build(install:)
+      @out.puts("Built Android APK #{result.apk}")
+      if install
+        @out.puts("Launched #{result.bundle_id} on Android device #{result.device}#{result.pid ? " (PID #{result.pid})" : ''}")
       end
       0
     end

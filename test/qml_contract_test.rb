@@ -120,6 +120,7 @@ class QmlContractTest < Minitest::Test
     assert_includes cmake, "qt_import_qml_plugins(zui-host)"
     assert_includes cmake, "QT_IOS_LAUNCH_SCREEN"
     assert_includes desktop, 'visibility: zuiMobile || option("fullscreen", false) === true'
+    assert_includes desktop, "service.revision"
   end
 
   def test_service_applies_reactive_patch_batches_with_one_visual_revision

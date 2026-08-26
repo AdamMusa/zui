@@ -1,0 +1,412 @@
+# frozen_string_literal: true
+
+require "cgi"
+require "fileutils"
+require "rbconfig"
+
+module Zui
+  module Mobile
+    class AndroidBuilder
+      DEFAULT_ABI = "arm64-v8a"
+      DEFAULT_API = 28
+      DEFAULT_TARGET_API = 35
+      DEFAULT_NDK_VERSION = "27.0.12077973"
+      ANDROID_PLATFORM = Platform.new(os: :android, arch: :arm64).freeze
+
+      def initialize(project:, qt_android: nil, qt_host: nil, android_sdk: nil, android_ndk: nil,
+                     mruby_root: nil, mruby_json: nil, output: nil, device: nil,
+                     abi: DEFAULT_ABI, api: DEFAULT_API, target_api: DEFAULT_TARGET_API,
+                     framework_root: FRAMEWORK_ROOT, environment: ENV,
+                     host_platform: Platform.current, command: Command, out: $stdout)
+        @project = File.expand_path(project)
+        @qt_android = expand_dependency(qt_android || environment["ZUI_QT_ANDROID"])
+        @qt_host = expand_dependency(qt_host || environment["ZUI_QT_HOST"])
+        @android_sdk = expand_dependency(
+          android_sdk || environment["ANDROID_SDK_ROOT"] || environment["ANDROID_HOME"] || default_android_sdk
+        )
+        @android_ndk = expand_dependency(
+          android_ndk || environment["ANDROID_NDK_ROOT"] || environment["ANDROID_NDK_HOME"] || default_android_ndk
+        )
+        @mruby_root = expand_dependency(mruby_root || environment["ZUI_MRUBY_ROOT"])
+        @mruby_json = expand_dependency(mruby_json || environment["ZUI_MRUBY_JSON"])
+        @abi = abi.to_s
+        @api = Integer(api)
+        @target_api = Integer(target_api)
+        @output = File.expand_path(output || File.join(@project, "dist", "android-#{@abi}"))
+        @requested_device = device
+        @framework_root = File.expand_path(framework_root)
+        @host_platform = host_platform
+        @command = command
+        @out = out
+      end
+
+      def build(install: true)
+        validate!
+        config = Dist.load(project: @project, platform: ANDROID_PLATFORM)
+        bundle_id = android_identifier(config.identifier)
+        stage = prepare_stage(config)
+        build_name = "zui-android-#{@abi}-api#{@api}-bytecode"
+        build_mruby(build_name)
+        compile_application(stage)
+        build_directory = configure_native(config, bundle_id, stage, build_name)
+        unsigned_apk = build_apk(build_directory)
+        apk = sign_apk(unsigned_apk, config)
+        result = Result.new(apk:, bundle_id:)
+        return result unless install
+
+        device = select_device
+        install_and_launch(apk, bundle_id, device)
+      end
+
+      private
+
+      def expand_dependency(path)
+        path && !path.empty? ? File.expand_path(path) : nil
+      end
+
+      def default_android_sdk
+        path = File.join(Dir.home, "Library", "Android", "sdk")
+        File.directory?(path) ? path : nil
+      end
+
+      def default_android_ndk
+        return unless @android_sdk
+
+        preferred = File.join(@android_sdk, "ndk", DEFAULT_NDK_VERSION)
+        return preferred if File.directory?(preferred)
+
+        Dir[File.join(@android_sdk, "ndk", "*")].select { |path| File.directory?(path) }.sort.last
+      end
+
+      def validate!
+        unless @host_platform.macos? || @host_platform.linux? || @host_platform.windows?
+          raise ArgumentError, "Android applications must be built on macOS, Linux, or Windows"
+        end
+        raise ArgumentError, "mobile project directory not found: #{@project}" unless File.directory?(@project)
+        raise ArgumentError, "mobile project is missing main.rb" unless File.file?(File.join(@project, "main.rb"))
+        validate_directory!(@qt_android, "Qt Android SDK", "--qt-android or ZUI_QT_ANDROID")
+        validate_directory!(@qt_host, "Qt host SDK", "--qt-host or ZUI_QT_HOST")
+        validate_directory!(@android_sdk, "Android SDK", "--android-sdk or ANDROID_SDK_ROOT")
+        validate_directory!(@android_ndk, "Android NDK", "--android-ndk or ANDROID_NDK_ROOT")
+        validate_directory!(@mruby_root, "mruby source", "--mruby or ZUI_MRUBY_ROOT")
+        validate_directory!(@mruby_json, "mruby-json source", "--mruby-json or ZUI_MRUBY_JSON")
+        validate_file!(File.join(@qt_android, "bin", "qt-cmake"), "Qt Android qt-cmake")
+        validate_file!(File.join(@qt_host, "bin", "androiddeployqt"), "Qt host androiddeployqt")
+        validate_file!(File.join(@android_ndk, "build", "cmake", "android.toolchain.cmake"), "Android NDK toolchain")
+        validate_file!(File.join(@android_sdk, "platform-tools", adb_name), "Android Debug Bridge")
+        validate_file!(File.join(@mruby_root, "minirake"), "mruby minirake")
+        validate_file!(File.join(@mruby_json, "mrbgem.rake"), "mruby-json gem")
+        unless %w[arm64-v8a armeabi-v7a x86_64 x86].include?(@abi)
+          raise ArgumentError, "Android ABI must be arm64-v8a, armeabi-v7a, x86_64, or x86"
+        end
+        raise ArgumentError, "Android API must be at least 23" if @api < 23
+        raise ArgumentError, "Android target API must be at least the minimum API" if @target_api < @api
+      end
+
+      def validate_directory!(path, name, option)
+        return if path && File.directory?(path)
+
+        raise ArgumentError, "#{name} not found; set #{option}"
+      end
+
+      def validate_file!(path, name)
+        raise ArgumentError, "#{name} not found: #{path}" unless File.file?(path)
+      end
+
+      def prepare_stage(config)
+        stage = File.join(@output, "stage")
+        FileUtils.mkdir_p(stage)
+        File.binwrite(File.join(stage, "app.rb"), LiteSource.new(project: @project).call)
+        copy_assets(stage)
+        create_android_package(stage, config, config.icon_path(@project, ANDROID_PLATFORM))
+        stage
+      end
+
+      def copy_assets(stage)
+        source = File.join(@project, "assets")
+        return unless File.directory?(source)
+
+        destination = File.join(stage, "assets")
+        FileUtils.mkdir_p(destination)
+        entries = Dir.children(source)
+        FileUtils.cp_r(entries.map { |entry| File.join(source, entry) }, destination) unless entries.empty?
+      end
+
+      def create_android_package(stage, config, icon)
+        package = File.join(stage, "android")
+        drawable = File.join(package, "res", "drawable")
+        values = File.join(package, "res", "values")
+        FileUtils.mkdir_p(drawable)
+        FileUtils.mkdir_p(values)
+        FileUtils.cp(icon, File.join(drawable, "zui_icon.png"))
+        name = CGI.escapeHTML(config.name)
+        version = CGI.escapeHTML(config.version)
+        manifest = <<~XML
+          <?xml version="1.0"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+              android:installLocation="auto"
+              android:versionCode="1"
+              android:versionName="#{version}">
+              <!-- %%INSERT_PERMISSIONS -->
+              <!-- %%INSERT_FEATURES -->
+              <supports-screens android:anyDensity="true" android:largeScreens="true"
+                  android:normalScreens="true" android:smallScreens="true" />
+              <application android:name="org.qtproject.qt.android.bindings.QtApplication"
+                  android:allowBackup="true" android:fullBackupOnly="false"
+                  android:hardwareAccelerated="true" android:icon="@drawable/zui_icon"
+                  android:label="#{name}" android:theme="@style/ZuiTheme">
+                  <activity android:name="org.qtproject.qt.android.bindings.QtActivity"
+                      android:configChanges="orientation|uiMode|screenLayout|screenSize|smallestScreenSize|layoutDirection|locale|fontScale|keyboard|keyboardHidden|navigation|mcc|mnc|density"
+                      android:exported="true" android:launchMode="singleTop"
+                      android:screenOrientation="unspecified">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                      <meta-data android:name="android.app.lib_name"
+                          android:value="-- %%INSERT_APP_LIB_NAME%% --" />
+                      <meta-data android:name="android.app.arguments"
+                          android:value="-- %%INSERT_APP_ARGUMENTS%% --" />
+                  </activity>
+                  <provider android:name="androidx.core.content.FileProvider"
+                      android:authorities="${applicationId}.qtprovider"
+                      android:exported="false" android:grantUriPermissions="true">
+                      <meta-data android:name="android.support.FILE_PROVIDER_PATHS"
+                          android:resource="@xml/qtprovider_paths" />
+                  </provider>
+              </application>
+          </manifest>
+        XML
+        File.write(File.join(package, "AndroidManifest.xml"), manifest)
+        styles = <<~XML
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <style name="ZuiTheme" parent="android:style/Theme.Material.Light.NoActionBar">
+                  <item name="android:windowFullscreen">true</item>
+                  <item name="android:windowNoTitle">true</item>
+                  <item name="android:windowActionModeOverlay">true</item>
+                  <item name="android:windowBackground">#07110d</item>
+                  <item name="android:colorAccent">#66ffb2</item>
+                  <item name="android:statusBarColor">#07110d</item>
+                  <item name="android:navigationBarColor">#07110d</item>
+                  <item name="android:enforceNavigationBarContrast">false</item>
+                  <item name="android:windowLightStatusBar">false</item>
+                  <item name="android:windowLightNavigationBar">false</item>
+              </style>
+          </resources>
+        XML
+        File.write(File.join(values, "styles.xml"), styles)
+      end
+
+      def android_identifier(identifier)
+        identifier.to_s.split(".").map do |segment|
+          normalized = segment.gsub(/[^A-Za-z0-9_]/, "_")
+          normalized = "app_#{normalized}" unless normalized.match?(/\A[A-Za-z]/)
+          normalized
+        end.join(".")
+      end
+
+      def build_mruby(build_name)
+        library = File.join(@mruby_root, "build", build_name, "lib", "libmruby.a")
+        compiler = File.join(@mruby_root, "build", "host", "bin", "mrbc")
+        if File.file?(library) && File.executable?(compiler)
+          @out.puts("Mobile Ruby runtime: ready")
+          return
+        end
+
+        @out.puts("Building the embedded Ruby runtime for Android #{@abi}...")
+        configuration = File.join(@framework_root, "runtime", "mruby", "android_build_config.rb")
+        validate_file!(configuration, "Zui Android mruby build configuration")
+        run!([RbConfig.ruby, "minirake"], label: "building Android mruby", chdir: @mruby_root,
+             env: {
+               "MRUBY_CONFIG" => configuration,
+               "ZUI_ANDROID_NDK" => @android_ndk,
+               "ZUI_ANDROID_ABI" => @abi,
+               "ZUI_ANDROID_API" => @api.to_s,
+               "ZUI_MRUBY_BUILD" => build_name,
+               "ZUI_MRUBY_JSON" => @mruby_json
+             }, timeout: 900)
+        raise ArgumentError, "mruby build did not produce #{library}" unless File.file?(library)
+        raise ArgumentError, "mruby build did not produce #{compiler}" unless File.executable?(compiler)
+      end
+
+      def compile_application(stage)
+        source = File.join(stage, "app.rb")
+        bytecode = File.join(stage, "app.mrb")
+        compiler = File.join(@mruby_root, "build", "host", "bin", "mrbc")
+        @out.puts("Precompiling the mobile Ruby application...")
+        run!([compiler, "-o#{bytecode}", source],
+             label: "precompiling the Ruby application", timeout: 120)
+        raise ArgumentError, "mrbc did not produce #{bytecode}" unless File.file?(bytecode)
+      end
+
+      def configure_native(config, bundle_id, stage, build_name)
+        build = File.join(@output, "build")
+        FileUtils.mkdir_p(build)
+        @out.puts("Generating the native Android application...")
+        run!([
+          File.join(@qt_android, "bin", "qt-cmake"), "-S", File.join(@framework_root, "native"),
+          "-B", build, "-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release",
+          "-DCMAKE_MAKE_PROGRAM=#{ninja}", "-DQT_HOST_PATH=#{@qt_host}",
+          "-DANDROID_SDK_ROOT=#{@android_sdk}", "-DANDROID_NDK_ROOT=#{@android_ndk}",
+          "-DANDROID_ABI=#{@abi}", "-DANDROID_PLATFORM=android-#{@api}",
+          "-DZUI_EMBEDDED_RUNTIME=ON", "-DZUI_MRUBY_ROOT=#{@mruby_root}",
+          "-DZUI_MRUBY_BUILD=#{build_name}", "-DZUI_MOBILE_APP_DIR=#{stage}",
+          "-DZUI_MOBILE_APP_NAME=#{config.name}", "-DZUI_MOBILE_BUNDLE_ID=#{bundle_id}",
+          "-DZUI_MOBILE_APP_VERSION=#{config.version}", "-DZUI_MOBILE_BUILD_VERSION=1",
+          "-DZUI_ANDROID_PACKAGE_SOURCE_DIR=#{File.join(stage, 'android')}",
+          "-DZUI_ANDROID_MIN_SDK=#{@api}", "-DZUI_ANDROID_TARGET_SDK=#{@target_api}"
+        ], label: "generating the Android build", timeout: 300)
+        build
+      end
+
+      def build_apk(build)
+        @out.puts("Building the Android APK...")
+        run!([cmake, "--build", build, "--target", "apk", "--parallel"],
+             label: "building the Android APK", timeout: 1_800, max_output_bytes: 64_000_000)
+        apk = File.join(build, "android-build", "zui-host.apk")
+        raise ArgumentError, "Android build did not produce #{apk}" unless File.file?(apk)
+
+        apk
+      end
+
+      def sign_apk(unsigned_apk, config)
+        tools = android_build_tools
+        keystore = File.join(Dir.home, ".android", "debug.keystore")
+        validate_file!(keystore, "Android debug keystore")
+        name = config.name.downcase.gsub(/[^a-z0-9]+/, "-").gsub(/\A-|\z/, "")
+        aligned = File.join(@output, "#{name}-aligned.apk")
+        signed = File.join(@output, "#{name}-#{@abi}.apk")
+        run!([File.join(tools, "zipalign"), "-f", "4", unsigned_apk, aligned],
+             label: "aligning the Android APK", timeout: 120)
+        run!([
+          File.join(tools, "apksigner"), "sign", "--ks", keystore,
+          "--ks-key-alias", "androiddebugkey", "--ks-pass", "pass:android",
+          "--key-pass", "pass:android", "--out", signed, aligned
+        ], label: "signing the Android APK", timeout: 120)
+        FileUtils.rm_f(aligned)
+        run!([File.join(tools, "apksigner"), "verify", "--verbose", signed],
+             label: "verifying the Android APK", timeout: 120)
+        signed
+      end
+
+      def android_build_tools
+        versions = Dir[File.join(@android_sdk, "build-tools", "*")].select do |path|
+          File.executable?(File.join(path, "apksigner")) && File.executable?(File.join(path, "zipalign"))
+        end
+        path = versions.max_by do |entry|
+          File.basename(entry).split(".").map { |part| part[/\d+/, 0].to_i }
+        end
+        raise ArgumentError, "Android SDK build tools with apksigner and zipalign were not found" unless path
+
+        path
+      end
+
+      def ninja
+        candidates = Dir[File.join(@android_sdk, "cmake", "*", "bin", executable_name("ninja"))]
+        candidates.sort.last || executable_name("ninja")
+      end
+
+      def cmake
+        candidate = Dir[File.join(@android_sdk, "cmake", "*", "bin", executable_name("cmake"))].sort.last
+        candidate || executable_name("cmake")
+      end
+
+      def adb
+        File.join(@android_sdk, "platform-tools", adb_name)
+      end
+
+      def adb_name
+        executable_name("adb")
+      end
+
+      def executable_name(name)
+        @host_platform.windows? ? "#{name}.exe" : name
+      end
+
+      def select_device
+        output = command_output([adb, "devices"], label: "listing Android devices")
+        devices = output.lines.filter_map do |line|
+          serial, state = line.split
+          [serial, state] if serial && state && serial != "List"
+        end
+        if @requested_device
+          match = devices.find { |serial, _state| serial == @requested_device }
+          raise ArgumentError, "requested Android device is not connected: #{@requested_device}" unless match
+          raise ArgumentError, "Android device #{@requested_device} is #{match.last}; authorize USB debugging" unless match.last == "device"
+          verify_device_abi(@requested_device)
+          return @requested_device
+        end
+
+        available = devices.select { |_serial, state| state == "device" }
+        if available.empty?
+          blocked = devices.map { |serial, state| "#{serial} (#{state})" }.join(", ")
+          message = blocked.empty? ? "no Android device is connected" : "no authorized Android device is connected: #{blocked}"
+          raise ArgumentError, "#{message}; connect a phone with USB debugging enabled"
+        end
+        device = available.first.first
+        verify_device_abi(device)
+        device
+      end
+
+      def verify_device_abi(device)
+        abis = command_output([adb, "-s", device, "shell", "getprop", "ro.product.cpu.abilist"],
+                              label: "checking Android device architecture")
+        return if abis.split(",").include?(@abi)
+
+        raise ArgumentError, "Android device #{device} does not support #{@abi}; reported #{abis}"
+      end
+
+      def install_and_launch(apk, bundle_id, device)
+        @out.puts("Installing and launching on Android device #{device}...")
+        run!([adb, "-s", device, "install", "-r", apk],
+             label: "installing the Android application", timeout: 300)
+        run!([adb, "-s", device, "shell", "am", "force-stop", bundle_id],
+             label: "stopping the previous Android application", timeout: 60)
+        run!([
+          adb, "-s", device, "shell", "am", "start", "-W", "-n",
+          "#{bundle_id}/org.qtproject.qt.android.bindings.QtActivity"
+        ], label: "launching the Android application", timeout: 120)
+        pid = wait_for_pid(device, bundle_id)
+        unless pid
+          logs = command_output([adb, "-s", device, "logcat", "-d", "-t", "200"],
+                                label: "reading Android launch logs", timeout: 60)
+          raise ArgumentError, "Android application exited during launch:\n#{logs.byteslice(-8_000, 8_000)}"
+        end
+        Result.new(apk:, bundle_id:, device:, pid:)
+      end
+
+      def wait_for_pid(device, bundle_id)
+        20.times do
+          result = @command.run([adb, "-s", device, "shell", "pidof", bundle_id],
+                                timeout: 15, max_output_bytes: 1_000_000)
+          pid = result.stdout.strip.split.first
+          return pid.to_i if result.success? && pid && !pid.empty?
+
+          sleep(0.25)
+        end
+        nil
+      end
+
+      def command_output(arguments, label:, timeout: 60)
+        result = @command.run(arguments, timeout:, max_output_bytes: 16_000_000)
+        raise_command_error(label, result) unless result.success?
+
+        result.stdout.strip
+      end
+
+      def run!(arguments, label:, chdir: nil, env: {}, timeout:, max_output_bytes: 32_000_000)
+        result = @command.run(arguments, chdir:, env:, timeout:, max_output_bytes:)
+        raise_command_error(label, result) unless result.success?
+
+        result
+      end
+
+      def raise_command_error(label, result)
+        details = [result.stdout, result.stderr].join("\n").strip
+        details = details.byteslice(-8_000, 8_000) if details.bytesize > 8_000
+        raise ArgumentError, "#{label} failed#{details.empty? ? '' : ":\n#{details}"}"
+      end
+    end
+  end
+end

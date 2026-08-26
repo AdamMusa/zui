@@ -128,6 +128,7 @@ class FrameworkBoundaryTest < Minitest::Test
     assert_includes specification.files, "native/CMakeLists.txt"
     assert_includes specification.files, "native/ZuiEmbeddedRuntime.cpp"
     assert_includes specification.files, "runtime/mruby/ios_simulator_build_config.rb"
+    assert_includes specification.files, "runtime/mruby/android_build_config.rb"
   end
 
   def test_core_has_no_omarchy_or_quickshell_dependency

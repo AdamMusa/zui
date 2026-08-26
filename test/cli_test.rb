@@ -205,6 +205,38 @@ class CLITest < Minitest::Test
     assert_includes output.string, "physical device IPHONE (PID 42)"
   end
 
+  def test_mobile_android_delegates_to_the_android_builder
+    request = nil
+    install_request = nil
+    builder = Object.new
+    output = StringIO.new
+
+    status = Zui::Mobile::AndroidBuilder.stub(:new, lambda { |**arguments|
+      request = arguments
+      builder.define_singleton_method(:build) do |install:|
+        install_request = install
+        Zui::Mobile::Result.new(
+          apk: "/tmp/Touch.apk", bundle_id: "dev.zui.touch", device: "PHONE", pid: 84
+        )
+      end
+      builder
+    }) do
+      Zui::CLI.run([
+        "mobile", "android", "--device", "PHONE", "--qt-android", "/qt/android",
+        "--android-sdk", "/sdk", "--android-ndk", "/ndk", "examples/mobile_counter"
+      ], out: output, err: StringIO.new)
+    end
+
+    assert_equal 0, status
+    assert_equal "/qt/android", request.fetch(:qt_android)
+    assert_equal "/sdk", request.fetch(:android_sdk)
+    assert_equal "/ndk", request.fetch(:android_ndk)
+    assert_equal "PHONE", request.fetch(:device)
+    assert_equal true, install_request
+    assert_includes output.string, "Built Android APK /tmp/Touch.apk"
+    assert_includes output.string, "Android device PHONE (PID 84)"
+  end
+
   def test_bundle_can_explicitly_disable_tree_shaking
     options = nil
     distribution = Object.new

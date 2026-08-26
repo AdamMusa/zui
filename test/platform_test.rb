@@ -13,9 +13,10 @@ class PlatformTest < Minitest::Test
     assert_equal "windows-arm64", Zui::Platform.detect("mswin", "ARM64").id
     assert_equal "android-arm64", Zui::Platform.detect("linux-android", "aarch64").id
     assert_equal "ios-arm64", Zui::Platform.detect("iphoneos", "arm64").id
-    refute Zui::Platform.detect("linux-android", "aarch64").supported?
+    assert Zui::Platform.detect("linux-android", "aarch64").supported?
     assert Zui::Platform.detect("iphoneos", "arm64").supported?
     assert Zui::Platform.new(os: :ios, arch: :arm64).mobile?
+    assert Zui::Platform.new(os: :android, arch: :arm64).mobile?
     assert Zui::Platform.new(os: :linux, arch: :x86_64).desktop?
   end
 

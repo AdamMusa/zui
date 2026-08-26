@@ -16,7 +16,7 @@ Gem::Specification.new do |spec|
   spec.required_ruby_version = ">= 3.1"
   spec.files = Dir[
     "bin/*", "lib/**/*.rb", "lib/zui/generator_assets/**/*", "*.qml", "Components/**/*", "Controls/**/*",
-    "Theme/**/*", "Fonts/**/*", "native/*", "runtime/mruby/ios_simulator_build_config.rb*",
+    "Theme/**/*", "Fonts/**/*", "native/*", "runtime/mruby/*.rb*",
     "README.md", "LICENSE", "THIRD_PARTY_NOTICES.md"
   ].reject do |path|
     path.match?(%r{\Alib/zui/(?:client_(?:builder|packager)|lite_runtime_packager)\.rb\z})
