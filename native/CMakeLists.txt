@@ -30,7 +30,15 @@ set(zui_host_sources
   main.cpp
   ZuiClipboard.cpp
   ZuiClipboard.h
+  ZuiSafeArea.h
 )
+
+if(IOS)
+  enable_language(OBJCXX)
+  list(APPEND zui_host_sources ZuiSafeArea.mm)
+else()
+  list(APPEND zui_host_sources ZuiSafeArea.cpp)
+endif()
 
 if(ZUI_EMBEDDED_RUNTIME)
   if(NOT IS_DIRECTORY "${ZUI_MRUBY_ROOT}/include")

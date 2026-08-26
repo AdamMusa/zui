@@ -1,4 +1,5 @@
 #include "ZuiClipboard.h"
+#include "ZuiSafeArea.h"
 
 #if defined(ZUI_EMBEDDED_RUNTIME)
 #include "ZuiEmbeddedRuntime.h"
@@ -120,9 +121,11 @@ int main(int argc, char *argv[]) {
 
   ZuiRuntimeTransport process;
   ZuiClipboard clipboard;
+  ZuiSafeArea safeArea;
   QQmlApplicationEngine engine;
   engine.rootContext()->setContextProperty(QStringLiteral("zuiProcess"), &process);
   engine.rootContext()->setContextProperty(QStringLiteral("zuiClipboard"), &clipboard);
+  engine.rootContext()->setContextProperty(QStringLiteral("zuiSafeArea"), &safeArea);
   engine.rootContext()->setContextProperty(QStringLiteral("zuiProjectDir"), project);
   engine.rootContext()->setContextProperty(QStringLiteral("zuiComponentDir"), QDir(qmlRoot).filePath(QStringLiteral("Components/Builtins")));
   engine.rootContext()->setContextProperty(QStringLiteral("zuiRubyExecutable"), runtimeExecutable);

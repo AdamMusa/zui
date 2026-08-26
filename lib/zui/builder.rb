@@ -5,7 +5,7 @@ module Zui
     UNSET = Object.new.freeze
     CONTAINERS = %i[
       row column container grid row_layout column_layout grid_layout flow center card
-      stack scroll rectangle aspect_ratio constrained_box fitted_box wrap split_view stack_layout loader flickable focus_scope flipable border_image key_catcher
+      stack scroll rectangle responsive_view aspect_ratio constrained_box fitted_box wrap split_view stack_layout loader flickable focus_scope flipable border_image key_catcher
       page pane frame group_box tabs stack_view swipe_view drawer expansion_panel accordion tool_bar popup dialog
       shader_effect shader_effect_source multi_effect rectangular_shadow opacity_mask blur drop_shadow colorize glow
       drag_area drop_area pinch_area hover_area capture_session cursor_surface

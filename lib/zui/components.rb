@@ -23,6 +23,7 @@ module Zui
     stack: [%i[visible], %i[click], true],
     scroll: [%i[width height clip visible], %i[click], true],
     rectangle: [%i[width height color radius border_color border_width padding visible], %i[click], true],
+    responsive_view: [%i[card_width spacing padding max_columns scroll_index background visible], %i[click scroll], true],
     border_overlay: [%i[color width_spec gradient_colors gradient_angle radius visible], [], false],
     aspect_ratio: [%i[ratio width height clip visible], %i[click], true],
     constrained_box: [%i[width height min_width min_height max_width max_height clip visible], %i[click], true],

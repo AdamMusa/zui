@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls as QQC
+import QtQuick.Window
 import "Theme"
 
 QQC.ApplicationWindow {
@@ -26,10 +27,10 @@ QQC.ApplicationWindow {
 
   visible: option("visible", true) !== false
   title: String(option("title", zuiApplicationName))
-  width: Number(option("width", 760))
-  height: Number(option("height", 520))
-  minimumWidth: Number(option("min_width", 320))
-  minimumHeight: Number(option("min_height", 220))
+  width: zuiMobile ? Screen.width : Number(option("width", 760))
+  height: zuiMobile ? Screen.height : Number(option("height", 520))
+  minimumWidth: zuiMobile ? 0 : Number(option("min_width", 320))
+  minimumHeight: zuiMobile ? 0 : Number(option("min_height", 220))
   maximumWidth: Number(option("max_width", 16777215))
   maximumHeight: Number(option("max_height", 16777215))
   visibility: zuiMobile || option("fullscreen", false) === true

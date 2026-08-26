@@ -11,7 +11,7 @@ class FrameworkBoundaryTest < Minitest::Test
     "Controls/**/*.qml",
     "Theme/**/*.qml",
     "lib/**/*.rb",
-    "native/**/*.{cpp,h}",
+    "native/**/*.{cpp,h,mm}",
     "bin/*"
   ].freeze
   SHOWCASE_MARKERS = [
