@@ -48,6 +48,12 @@ a window.
   </tr>
 </table>
 
+<p align="center">
+  <img src="examples/futuristic_dashboard/preview.png" width="880" alt="Nebula Command, a futuristic pure-Ruby Zui desktop dashboard">
+</p>
+
+<p align="center"><sub>Nebula Command demonstrates Zui charts, gauges, particles, navigation, controls, and reactive telemetry.</sub></p>
+
 ## Quick start
 
 Install Ruby 3.1 or newer and the gem. Zui downloads its version-matched native client and small
