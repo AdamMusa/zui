@@ -14,8 +14,12 @@ find_package(Qt6 6.8 REQUIRED COMPONENTS
 )
 
 option(ZUI_EMBEDDED_RUNTIME "Embed mruby for mobile application targets" OFF)
+option(ZUI_EMBEDDED_CRUBY "Embed CRuby for mobile application targets" OFF)
 set(ZUI_MRUBY_ROOT "" CACHE PATH "mruby source/build root for an embedded target")
 set(ZUI_MRUBY_BUILD "zui-ios-simulator" CACHE STRING "mruby build name")
+set(ZUI_CRUBY_SOURCE_ROOT "" CACHE PATH "CRuby source root for an embedded target")
+set(ZUI_CRUBY_BUILD_ROOT "" CACHE PATH "CRuby build root for an embedded target")
+set(ZUI_CRUBY_LIBRARY "" CACHE FILEPATH "CRuby static library for an embedded target")
 set(ZUI_MOBILE_APP_DIR "" CACHE PATH "Generated mobile application resource directory")
 set(ZUI_MOBILE_APP_NAME "Zui Mobile" CACHE STRING "Mobile application display name")
 set(ZUI_MOBILE_BUNDLE_ID "dev.zui.mobile" CACHE STRING "Mobile application bundle identifier")
@@ -44,7 +48,43 @@ else()
   list(APPEND zui_host_sources ZuiSafeArea.cpp)
 endif()
 
-if(ZUI_EMBEDDED_RUNTIME)
+if(ZUI_EMBEDDED_CRUBY)
+  set(ZUI_EMBEDDED_RUNTIME ON)
+endif()
+
+if(ZUI_EMBEDDED_RUNTIME AND ZUI_EMBEDDED_CRUBY)
+  if(NOT IS_DIRECTORY "${ZUI_CRUBY_SOURCE_ROOT}/include")
+    message(FATAL_ERROR "ZUI_CRUBY_SOURCE_ROOT must point to a CRuby source tree")
+  endif()
+  if(NOT IS_DIRECTORY "${ZUI_CRUBY_BUILD_ROOT}/.ext/include")
+    message(FATAL_ERROR "ZUI_CRUBY_BUILD_ROOT must point to a configured CRuby build tree")
+  endif()
+  if(NOT EXISTS "${ZUI_CRUBY_LIBRARY}")
+    message(FATAL_ERROR "Embedded CRuby library not found: ${ZUI_CRUBY_LIBRARY}")
+  endif()
+  set(zui_cruby_json_generator "${ZUI_CRUBY_BUILD_ROOT}/ext/json/generator/generator.a")
+  set(zui_cruby_json_parser "${ZUI_CRUBY_BUILD_ROOT}/ext/json/parser/parser.a")
+  set(zui_cruby_encodings "${ZUI_CRUBY_BUILD_ROOT}/enc/libenc.a")
+  if(NOT EXISTS "${zui_cruby_json_generator}" OR NOT EXISTS "${zui_cruby_json_parser}")
+    message(FATAL_ERROR "ZUI_CRUBY_BUILD_ROOT must contain statically built JSON extensions")
+  endif()
+  if(NOT EXISTS "${zui_cruby_encodings}")
+    message(FATAL_ERROR "ZUI_CRUBY_BUILD_ROOT must contain statically built encodings")
+  endif()
+  if(NOT IS_DIRECTORY "${ZUI_MOBILE_APP_DIR}" OR NOT EXISTS "${ZUI_MOBILE_APP_DIR}/app.rb")
+    message(FATAL_ERROR "ZUI_MOBILE_APP_DIR must contain app.rb")
+  endif()
+  foreach(json_source version common ext)
+    if(NOT EXISTS "${ZUI_MOBILE_APP_DIR}/cruby/json/${json_source}.rb")
+      message(FATAL_ERROR "ZUI_MOBILE_APP_DIR must contain cruby/json/${json_source}.rb")
+    endif()
+  endforeach()
+  if(NOT EXISTS "${ZUI_MOBILE_APP_DIR}/cruby/json/ext/generator/state.rb")
+    message(FATAL_ERROR "ZUI_MOBILE_APP_DIR must contain cruby/json/ext/generator/state.rb")
+  endif()
+  file(GLOB zui_cruby_arch_include "${ZUI_CRUBY_BUILD_ROOT}/.ext/include/*")
+  list(APPEND zui_host_sources ZuiCRubyRuntime.cpp ZuiCRubyRuntime.h)
+elseif(ZUI_EMBEDDED_RUNTIME)
   if(NOT IS_DIRECTORY "${ZUI_MRUBY_ROOT}/include")
     message(FATAL_ERROR "ZUI_MRUBY_ROOT must point to a built mruby source tree")
   endif()
@@ -78,11 +118,29 @@ target_link_libraries(zui-host PRIVATE
 if(ZUI_EMBEDDED_RUNTIME)
   string(REPLACE "\\" "\\\\" zui_mobile_app_name_definition "${ZUI_MOBILE_APP_NAME}")
   string(REPLACE "\"" "\\\"" zui_mobile_app_name_definition "${zui_mobile_app_name_definition}")
-  target_include_directories(zui-host PRIVATE
-    "${ZUI_MRUBY_ROOT}/include"
-    "${ZUI_MRUBY_ROOT}/build/${ZUI_MRUBY_BUILD}/include"
-  )
-  target_link_libraries(zui-host PRIVATE "${zui_mruby_library}")
+  if(ZUI_EMBEDDED_CRUBY)
+    target_include_directories(zui-host PRIVATE
+      "${ZUI_CRUBY_SOURCE_ROOT}/include"
+      ${zui_cruby_arch_include}
+    )
+    target_link_libraries(zui-host PRIVATE
+      "${ZUI_CRUBY_LIBRARY}"
+      "${zui_cruby_json_generator}"
+      "${zui_cruby_json_parser}"
+      "${zui_cruby_encodings}"
+    )
+    target_compile_definitions(zui-host PRIVATE ZUI_EMBEDDED_CRUBY=1)
+    if(APPLE)
+      find_library(ZUI_CORE_FOUNDATION CoreFoundation REQUIRED)
+      target_link_libraries(zui-host PRIVATE "${ZUI_CORE_FOUNDATION}")
+    endif()
+  else()
+    target_include_directories(zui-host PRIVATE
+      "${ZUI_MRUBY_ROOT}/include"
+      "${ZUI_MRUBY_ROOT}/build/${ZUI_MRUBY_BUILD}/include"
+    )
+    target_link_libraries(zui-host PRIVATE "${zui_mruby_library}")
+  endif()
   target_compile_definitions(zui-host PRIVATE
     ZUI_EMBEDDED_RUNTIME=1
     ZUI_MOBILE_APP_NAME="${zui_mobile_app_name_definition}"

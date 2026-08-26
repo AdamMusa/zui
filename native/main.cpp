@@ -1,7 +1,10 @@
 #include "ZuiClipboard.h"
 #include "ZuiSafeArea.h"
 
-#if defined(ZUI_EMBEDDED_RUNTIME)
+#if defined(ZUI_EMBEDDED_CRUBY)
+#include "ZuiCRubyRuntime.h"
+using ZuiRuntimeTransport = ZuiCRubyRuntime;
+#elif defined(ZUI_EMBEDDED_RUNTIME)
 #include "ZuiEmbeddedRuntime.h"
 using ZuiRuntimeTransport = ZuiEmbeddedRuntime;
 #else
@@ -82,7 +85,11 @@ int main(int argc, char *argv[]) {
   const QString qmlRoot = QStringLiteral(":/zui");
   const QString qmlImportRoot = QStringLiteral("qrc:/zui");
   const QString project = QStringLiteral("qrc:/app");
+#if defined(ZUI_EMBEDDED_CRUBY)
+  const QString program = QStringLiteral(":/app/app.rb");
+#else
   const QString program = QStringLiteral(":/app/app.mrb");
+#endif
   const QString runtimeExecutable;
   const QString rubyLoadPath;
   const QString applicationName = QStringLiteral(ZUI_MOBILE_APP_NAME);
