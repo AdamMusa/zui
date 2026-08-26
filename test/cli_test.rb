@@ -241,8 +241,8 @@ class CLITest < Minitest::Test
   private
 
   def with_runtimes(client, lite_runtime, &block)
-    Zui::Client.stub(:new, client) do
-      Zui::LiteRuntime.stub(:new, lite_runtime, &block)
+    Zui::LiteRuntime.stub(:new, lite_runtime) do
+      Zui::Client.stub(:new, client, &block)
     end
   end
 end
