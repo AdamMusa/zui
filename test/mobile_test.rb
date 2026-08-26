@@ -35,6 +35,21 @@ class MobileTest < Minitest::Test
     end
   end
 
+  class XcodeConfigureCommand
+    attr_reader :calls
+
+    def initialize
+      @calls = []
+    end
+
+    def run(arguments, **options)
+      @calls << [arguments, options]
+      build = arguments.fetch(arguments.index("-B") + 1)
+      FileUtils.mkdir_p(File.join(build, "zui-host.xcodeproj"))
+      Zui::CommandResult.new(stdout: "", stderr: "", status: SuccessfulStatus.new(0))
+    end
+  end
+
   def test_ios_stage_contains_lite_application_assets_and_app_icon_catalog
     Dir.mktmpdir do |directory|
       project = File.join(directory, "project")
@@ -73,6 +88,38 @@ class MobileTest < Minitest::Test
     error = assert_raises(ArgumentError) { builder.send(:validate!) }
 
     assert_includes error.message, "must be built on macOS"
+  end
+
+  def test_ios_configuration_uses_project_plist_entitlements_and_launch_screen
+    Dir.mktmpdir do |directory|
+      project = File.join(directory, "project")
+      dependencies = create_dependencies(directory)
+      create_project(project)
+      Zui::Mobile::Setup.new(
+        config_path: File.join(directory, "mobile.json"),
+        environment: { "ZUI_MOBILE_HOME" => directory }
+      ).prepare_project!(project)
+      launch_screen = File.join(project, "ios", "LaunchScreen.storyboard")
+      File.write(launch_screen, "custom launch screen")
+      command = XcodeConfigureCommand.new
+      output = File.join(directory, "build")
+      builder = Zui::Mobile::IOSBuilder.new(
+        project:, output:, framework_root: ROOT, command:,
+        qt_ios: dependencies.fetch(:qt_ios), qt_host: dependencies.fetch(:qt_host),
+        mruby_root: dependencies.fetch(:mruby), mruby_json: dependencies.fetch(:mruby_json),
+        host_platform: Zui::Platform.new(os: :macos, arch: :arm64)
+      )
+      config = Zui::Dist.load(project:, platform: Zui::Mobile::IOSBuilder::IOS_PLATFORM)
+
+      builder.send(:configure_xcode, config, File.join(output, "stage"), "runtime", sdk: "/Simulator.sdk")
+
+      arguments = command.calls.fetch(0).fetch(0)
+      assert_includes arguments, "-DCMAKE_OSX_SYSROOT=/Simulator.sdk"
+      assert_includes arguments, "-DCMAKE_OSX_ARCHITECTURES=x86_64"
+      assert_includes arguments, "-DZUI_IOS_INFO_PLIST=#{File.join(project, 'ios', 'Info.plist.in')}"
+      assert_includes arguments, "-DZUI_IOS_ENTITLEMENTS=#{File.join(project, 'ios', 'Zui.entitlements')}"
+      assert_includes arguments, "-DZUI_IOS_LAUNCH_SCREEN=#{launch_screen}"
+    end
   end
 
   def test_clean_mruby_build_passes_the_configuration_through_the_environment

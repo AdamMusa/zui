@@ -48,7 +48,7 @@ module Zui
         build_name = "zui-ios-#{runtime_target}-#{@architecture}-bytecode"
         build_mruby(sdk, build_name, platform: runtime_target)
         compile_application(stage)
-        xcode_project = configure_xcode(config, stage, build_name)
+        xcode_project = configure_xcode(config, stage, build_name, sdk:)
         destination = physical_device? ? select_physical_device(xcode_project) : select_simulator(xcode_project)
         build_xcode(xcode_project, destination)
         products = physical_device? ? "Release-iphoneos" : "Release-iphonesimulator"
@@ -228,13 +228,14 @@ module Zui
         raise ArgumentError, "mrbc did not produce #{bytecode}" unless File.file?(bytecode)
       end
 
-      def configure_xcode(config, stage, build_name)
+      def configure_xcode(config, stage, build_name, sdk:)
         build = File.join(@output, "xcode")
         FileUtils.mkdir_p(build)
         @out.puts("Generating the native iOS application...")
         arguments = [
           File.join(@qt_ios, "bin", "qt-cmake"), "-S", File.join(@framework_root, "native"),
           "-B", build, "-G", "Xcode", "-DQT_HOST_PATH=#{@qt_host}",
+          "-DCMAKE_OSX_SYSROOT=#{sdk}", "-DCMAKE_OSX_ARCHITECTURES=#{@architecture}",
           "-DCMAKE_OSX_DEPLOYMENT_TARGET=#{@deployment_target}", "-DZUI_EMBEDDED_RUNTIME=ON",
           "-DZUI_MRUBY_ROOT=#{@mruby_root}", "-DZUI_MRUBY_BUILD=#{build_name}",
           "-DZUI_MOBILE_APP_DIR=#{stage}", "-DZUI_MOBILE_APP_NAME=#{config.name}",
@@ -242,8 +243,19 @@ module Zui
           "-DZUI_MOBILE_BUILD_VERSION=1"
         ]
         custom_launch_screen = File.join(stage, "LaunchScreen.storyboard")
-        launch_screen = File.file?(custom_launch_screen) ? custom_launch_screen : File.join(@framework_root, "native", "LaunchScreen.storyboard")
+        project_launch_screen = File.join(@project, "ios", "LaunchScreen.storyboard")
+        launch_screen = if File.file?(project_launch_screen)
+                          project_launch_screen
+                        elsif File.file?(custom_launch_screen)
+                          custom_launch_screen
+                        else
+                          File.join(@framework_root, "native", "LaunchScreen.storyboard")
+                        end
         arguments << "-DZUI_IOS_LAUNCH_SCREEN=#{launch_screen}"
+        info_plist = File.join(@project, "ios", "Info.plist.in")
+        entitlements = File.join(@project, "ios", "Zui.entitlements")
+        arguments << "-DZUI_IOS_INFO_PLIST=#{info_plist}" if File.file?(info_plist)
+        arguments << "-DZUI_IOS_ENTITLEMENTS=#{entitlements}" if File.file?(entitlements)
         run!(arguments, label: "generating the Xcode project", timeout: 240)
         project = File.join(build, "zui-host.xcodeproj")
         raise ArgumentError, "Qt did not generate #{project}" unless File.directory?(project)

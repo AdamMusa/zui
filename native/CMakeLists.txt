@@ -22,6 +22,8 @@ set(ZUI_MOBILE_BUNDLE_ID "dev.zui.mobile" CACHE STRING "Mobile application bundl
 set(ZUI_MOBILE_APP_VERSION "0.1.0" CACHE STRING "Mobile application release version")
 set(ZUI_MOBILE_BUILD_VERSION "1" CACHE STRING "Mobile application build version")
 set(ZUI_IOS_LAUNCH_SCREEN "${CMAKE_CURRENT_SOURCE_DIR}/LaunchScreen.storyboard" CACHE FILEPATH "iOS launch storyboard")
+set(ZUI_IOS_INFO_PLIST "" CACHE FILEPATH "Custom iOS Info.plist template")
+set(ZUI_IOS_ENTITLEMENTS "" CACHE FILEPATH "Custom iOS code-signing entitlements")
 set(ZUI_ANDROID_PACKAGE_SOURCE_DIR "" CACHE PATH "Android package template overlay")
 set(ZUI_ANDROID_MIN_SDK "23" CACHE STRING "Android minimum SDK version")
 set(ZUI_ANDROID_TARGET_SDK "35" CACHE STRING "Android target SDK version")
@@ -108,6 +110,16 @@ if(ZUI_EMBEDDED_RUNTIME)
     set_target_properties(zui-host PROPERTIES
       QT_IOS_LAUNCH_SCREEN "${ZUI_IOS_LAUNCH_SCREEN}"
     )
+    if(EXISTS "${ZUI_IOS_INFO_PLIST}")
+      set_target_properties(zui-host PROPERTIES
+        MACOSX_BUNDLE_INFO_PLIST "${ZUI_IOS_INFO_PLIST}"
+      )
+    endif()
+    if(EXISTS "${ZUI_IOS_ENTITLEMENTS}")
+      set_target_properties(zui-host PROPERTIES
+        XCODE_ATTRIBUTE_CODE_SIGN_ENTITLEMENTS "${ZUI_IOS_ENTITLEMENTS}"
+      )
+    endif()
   endif()
 
   get_filename_component(ZUI_FRAMEWORK_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/.." ABSOLUTE)
