@@ -35,16 +35,16 @@
   <circle cx="180" cy="120" r="260" fill="url(#glow)"/>
   <circle cx="1280" cy="390" r="300" fill="url(#glow)" opacity=".5"/>
 
-  <g transform="translate(78 74)">
+  <g transform="translate(78 110)">
     <rect width="70" height="70" rx="20" fill="#10241d" stroke="#84f7ad" stroke-opacity=".45"/>
     <path d="M20 20h30L25 50h28" fill="none" stroke="url(#accent)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
     <circle cx="55" cy="15" r="5" fill="#9cff57" filter="url(#softGlow)"/>
 
-    <text x="0" y="142" fill="#f3fff7" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="64" font-weight="800" letter-spacing="-2">Zui</text>
-    <text x="0" y="188" fill="url(#accent)" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="26" font-weight="650">Native desktop interfaces. Pure Ruby.</text>
-    <text x="0" y="232" fill="#a7bab1" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="18">Reactive state · 241 components · GPU, media and 3D</text>
+    <text x="82" y="61" fill="#f3fff7" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="64" font-weight="800" letter-spacing="-2">ui</text>
+    <text x="0" y="126" fill="url(#accent)" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="26" font-weight="650">Native desktop interfaces. Pure Ruby.</text>
+    <text x="0" y="170" fill="#a7bab1" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="18">Reactive state · 241 components · GPU, media and 3D</text>
 
-    <g transform="translate(0 270)" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="14" font-weight="650">
+    <g transform="translate(0 208)" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="14" font-weight="650">
       <rect width="122" height="38" rx="19" fill="#11251e" stroke="#75e999" stroke-opacity=".35"/>
       <circle cx="22" cy="19" r="5" fill="#9cff57"/>
       <text x="36" y="24" fill="#dfffe9">Linux</text>
