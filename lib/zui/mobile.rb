@@ -6,7 +6,7 @@ require "rbconfig"
 
 module Zui
   module Mobile
-    Result = Struct.new(:app, :bundle_id, :simulator, :pid, keyword_init: true)
+    Result = Struct.new(:app, :bundle_id, :simulator, :device, :pid, keyword_init: true)
 
     class IOSBuilder
       DEFAULT_DEPLOYMENT_TARGET = "16.0"
@@ -14,7 +14,8 @@ module Zui
       IOS_PLATFORM = Platform.new(os: :ios, arch: :arm64).freeze
 
       def initialize(project:, qt_ios: nil, qt_host: nil, mruby_root: nil, mruby_json: nil,
-                     output: nil, simulator: nil, architecture: DEFAULT_ARCHITECTURE,
+                     output: nil, simulator: nil, device: nil, team: nil,
+                     architecture: DEFAULT_ARCHITECTURE,
                      deployment_target: DEFAULT_DEPLOYMENT_TARGET, framework_root: FRAMEWORK_ROOT,
                      environment: ENV, host_platform: Platform.current, command: Command, out: $stdout)
         @project = File.expand_path(project)
@@ -22,9 +23,12 @@ module Zui
         @qt_host = expand_dependency(qt_host || environment["ZUI_QT_HOST"])
         @mruby_root = expand_dependency(mruby_root || environment["ZUI_MRUBY_ROOT"])
         @mruby_json = expand_dependency(mruby_json || environment["ZUI_MRUBY_JSON"])
-        @output = File.expand_path(output || File.join(@project, "dist", "ios-simulator"))
         @requested_simulator = simulator
-        @architecture = architecture.to_s
+        @device = device
+        @team = team || environment["ZUI_APPLE_TEAM"]
+        default_output = File.join(@project, "dist", physical_device? ? "ios-device" : "ios-simulator")
+        @output = File.expand_path(output || default_output)
+        @architecture = physical_device? ? "arm64" : architecture.to_s
         @deployment_target = deployment_target.to_s
         @framework_root = File.expand_path(framework_root)
         @host_platform = host_platform
@@ -36,26 +40,37 @@ module Zui
         validate!
         config = Dist.load(project: @project, platform: IOS_PLATFORM)
         stage = prepare_stage(config)
-        sdk = command_output(["xcrun", "--sdk", "iphonesimulator", "--show-sdk-path"],
-                             label: "locating the iOS Simulator SDK")
-        build_name = "zui-ios-simulator-#{@architecture}-bytecode"
-        build_mruby(sdk, build_name)
+        sdk_name = physical_device? ? "iphoneos" : "iphonesimulator"
+        sdk_label = physical_device? ? "iPhone" : "iOS Simulator"
+        sdk = command_output(["xcrun", "--sdk", sdk_name, "--show-sdk-path"],
+                             label: "locating the #{sdk_label} SDK")
+        runtime_target = physical_device? ? "device" : "simulator"
+        build_name = "zui-ios-#{runtime_target}-#{@architecture}-bytecode"
+        build_mruby(sdk, build_name, platform: runtime_target)
         compile_application(stage)
         xcode_project = configure_xcode(config, stage, build_name)
-        simulator = select_simulator(xcode_project)
-        build_xcode(xcode_project, simulator)
-        app = File.join(@output, "xcode", "Release-iphonesimulator", "#{config.name}.app")
+        destination = physical_device? ? @device : select_simulator(xcode_project)
+        build_xcode(xcode_project, destination)
+        products = physical_device? ? "Release-iphoneos" : "Release-iphonesimulator"
+        app = File.join(@output, "xcode", products, "#{config.name}.app")
         raise ArgumentError, "iOS build did not produce #{app}" unless File.directory?(app)
 
-        return Result.new(app:, bundle_id: config.identifier, simulator:) unless install
+        result = Result.new(app:, bundle_id: config.identifier,
+                            simulator: physical_device? ? nil : destination,
+                            device: physical_device? ? destination : nil)
+        return result unless install
 
-        install_and_launch(app, config.identifier, simulator)
+        install_and_launch(app, config.identifier, destination)
       end
 
       private
 
       def expand_dependency(path)
         path && !path.empty? ? File.expand_path(path) : nil
+      end
+
+      def physical_device?
+        @device && !@device.empty?
       end
 
       def validate!
@@ -71,6 +86,12 @@ module Zui
         validate_file!(File.join(@qt_ios, "bin", "qt-cmake"), "Qt iOS qt-cmake")
         validate_file!(File.join(@mruby_root, "minirake"), "mruby minirake")
         validate_file!(File.join(@mruby_json, "mrbgem.rake"), "mruby-json gem")
+        if physical_device? && @requested_simulator
+          raise ArgumentError, "choose either --device or --simulator, not both"
+        end
+        if physical_device? && (!@team || @team.empty?)
+          raise ArgumentError, "physical iPhone builds require --team or ZUI_APPLE_TEAM"
+        end
         unless %w[x86_64 arm64].include?(@architecture)
           raise ArgumentError, "iOS Simulator architecture must be x86_64 or arm64"
         end
@@ -121,7 +142,7 @@ module Zui
         File.write(File.join(directory, "Contents.json"), "#{JSON.pretty_generate(manifest)}\n")
       end
 
-      def build_mruby(sdk, build_name)
+      def build_mruby(sdk, build_name, platform: "simulator")
         library = File.join(@mruby_root, "build", build_name, "lib", "libmruby.a")
         compiler = File.join(@mruby_root, "build", "host", "bin", "mrbc")
         if File.file?(library) && File.executable?(compiler)
@@ -129,12 +150,15 @@ module Zui
           return
         end
 
-        @out.puts("Building the embedded Ruby runtime for the iOS Simulator...")
+        @out.puts("Building the embedded Ruby runtime for #{platform == 'device' ? 'iPhone' : 'the iOS Simulator'}...")
         configuration = File.join(@framework_root, "runtime", "mruby", "ios_simulator_build_config.rb")
         validate_file!(configuration, "Zui iOS mruby build configuration")
         run!([RbConfig.ruby, "minirake"], label: "building mruby", chdir: @mruby_root,
              env: {
                "MRUBY_CONFIG" => configuration,
+               "ZUI_IOS_SDK" => sdk,
+               "ZUI_IOS_ARCH" => @architecture,
+               "ZUI_IOS_PLATFORM" => platform,
                "ZUI_IOS_SIMULATOR_SDK" => sdk,
                "ZUI_IOS_SIMULATOR_ARCH" => @architecture,
                "ZUI_IOS_DEPLOYMENT_TARGET" => @deployment_target,
@@ -218,22 +242,46 @@ module Zui
              label: "waiting for the iOS Simulator", timeout: 180)
       end
 
-      def build_xcode(xcode_project, simulator)
-        @out.puts("Building for the iOS Simulator...")
-        run!([
+      def build_xcode(xcode_project, destination)
+        @out.puts("Building for the #{physical_device? ? 'physical iPhone' : 'iOS Simulator'}...")
+        arguments = [
           "xcodebuild", "-project", xcode_project, "-scheme", "zui-host", "-configuration", "Release",
-          "-sdk", "iphonesimulator", "-destination", "platform=iOS Simulator,id=#{simulator}",
-          "CODE_SIGNING_ALLOWED=NO", "build"
-        ], label: "building the iOS application", timeout: 1_800, max_output_bytes: 64_000_000)
+          "-sdk", physical_device? ? "iphoneos" : "iphonesimulator",
+          "-destination", "platform=iOS#{physical_device? ? '' : ' Simulator'},id=#{destination}"
+        ]
+        if physical_device?
+          arguments.concat([
+            "-allowProvisioningUpdates", "-allowProvisioningDeviceRegistration",
+            "DEVELOPMENT_TEAM=#{@team}", "CODE_SIGN_STYLE=Automatic"
+          ])
+        else
+          arguments << "CODE_SIGNING_ALLOWED=NO"
+        end
+        arguments << "build"
+        run!(arguments, label: "building the iOS application", timeout: 1_800,
+             max_output_bytes: 64_000_000)
       end
 
-      def install_and_launch(app, bundle_id, simulator)
+      def install_and_launch(app, bundle_id, destination)
+        if physical_device?
+          @out.puts("Installing and launching on the physical iPhone...")
+          run!(["xcrun", "devicectl", "device", "install", "app", "--device", destination, app],
+               label: "installing the iPhone application", timeout: 240)
+          output = command_output([
+            "xcrun", "devicectl", "device", "process", "launch", "--device", destination,
+            "--terminate-existing", bundle_id
+          ], label: "launching the iPhone application", timeout: 120)
+          pid = output[/process identifier (\d+)/i, 1]&.to_i
+          return Result.new(app:, bundle_id:, device: destination, pid:)
+        end
+
         @out.puts("Installing and launching on the iOS Simulator...")
-        run!(["xcrun", "simctl", "install", simulator, app], label: "installing the iOS application", timeout: 180)
-        output = command_output(["xcrun", "simctl", "launch", simulator, bundle_id],
+        run!(["xcrun", "simctl", "install", destination, app],
+             label: "installing the iOS application", timeout: 180)
+        output = command_output(["xcrun", "simctl", "launch", destination, bundle_id],
                                 label: "launching the iOS application", timeout: 120)
         pid = output[/:\s*(\d+)/, 1]&.to_i
-        Result.new(app:, bundle_id:, simulator:, pid:)
+        Result.new(app:, bundle_id:, simulator: destination, pid:)
       end
 
       def command_output(arguments, label:, timeout: 60)

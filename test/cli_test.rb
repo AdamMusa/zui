@@ -177,6 +177,34 @@ class CLITest < Minitest::Test
     refute_includes output.string, "Launched"
   end
 
+  def test_mobile_ios_reports_a_physical_device_launch
+    request = nil
+    install_request = nil
+    builder = Object.new
+    output = StringIO.new
+
+    status = Zui::Mobile::IOSBuilder.stub(:new, lambda { |**arguments|
+      request = arguments
+      builder.define_singleton_method(:build) do |install:|
+        install_request = install
+        Zui::Mobile::Result.new(
+          app: "/tmp/Touch.app", bundle_id: "dev.zui.touch", device: "IPHONE", pid: 42
+        )
+      end
+      builder
+    }) do
+      Zui::CLI.run([
+        "mobile", "ios", "--device", "IPHONE", "--team", "TEAM", "examples/mobile_counter"
+      ], out: output, err: StringIO.new)
+    end
+
+    assert_equal 0, status
+    assert_equal "IPHONE", request.fetch(:device)
+    assert_equal "TEAM", request.fetch(:team)
+    assert_equal true, install_request
+    assert_includes output.string, "physical device IPHONE (PID 42)"
+  end
+
   def test_bundle_can_explicitly_disable_tree_shaking
     options = nil
     distribution = Object.new

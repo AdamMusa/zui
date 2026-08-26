@@ -116,7 +116,7 @@ module Zui
           zui bundle --dist --full .
       HELP
       "mobile" => <<~HELP,
-        Build, install, and launch a native Zui application in the iOS Simulator.
+        Build, install, and launch a native Zui application on iOS.
 
         Usage:
           zui mobile ios [DIRECTORY] [options]
@@ -127,9 +127,11 @@ module Zui
               --mruby PATH         mruby source root (or ZUI_MRUBY_ROOT)
               --mruby-json PATH    mruby-json source root (or ZUI_MRUBY_JSON)
               --simulator ID       Use a specific compatible simulator
+              --device ID          Build, sign, install, and launch on a physical iPhone
+              --team ID            Apple development team (or ZUI_APPLE_TEAM)
               --architecture ARCH  Simulator Ruby architecture: x86_64 or arm64
               --deployment VERSION Minimum iOS version (default: 16.0)
-          -o, --output PATH        Build workspace (default: dist/ios-simulator)
+          -o, --output PATH        Build workspace (default: dist/ios-simulator or dist/ios-device)
               --build-only        Build without installing or launching
 
         The mobile runtime embeds mruby and the native Qt renderer; it does not use
@@ -256,6 +258,8 @@ module Zui
         option.on("--mruby PATH") { |value| options[:mruby_root] = value }
         option.on("--mruby-json PATH") { |value| options[:mruby_json] = value }
         option.on("--simulator ID") { |value| options[:simulator] = value }
+        option.on("--device ID") { |value| options[:device] = value }
+        option.on("--team ID") { |value| options[:team] = value }
         option.on("--architecture ARCH") { |value| options[:architecture] = value }
         option.on("--deployment VERSION") { |value| options[:deployment_target] = value }
         option.on("-o PATH", "--output PATH") { |value| options[:output] = value }
@@ -269,7 +273,8 @@ module Zui
       result = Mobile::IOSBuilder.new(project: source, out: @out, **options).build(install:)
       @out.puts("Built iOS application #{result.app}")
       if install
-        @out.puts("Launched #{result.bundle_id} on simulator #{result.simulator}#{result.pid ? " (PID #{result.pid})" : ''}")
+        target = result.device ? "physical device #{result.device}" : "simulator #{result.simulator}"
+        @out.puts("Launched #{result.bundle_id} on #{target}#{result.pid ? " (PID #{result.pid})" : ''}")
       end
       0
     end

@@ -95,6 +95,44 @@ class MobileTest < Minitest::Test
     end
   end
 
+  def test_physical_iphone_runtime_uses_arm64_device_target
+    Dir.mktmpdir do |directory|
+      dependencies = create_dependencies(directory)
+      build_name = "zui-ios-device-arm64-bytecode"
+      command = RuntimeBuildCommand.new(dependencies.fetch(:mruby), build_name)
+      builder = Zui::Mobile::IOSBuilder.new(
+        project: directory, framework_root: ROOT, command:,
+        qt_ios: dependencies.fetch(:qt_ios), qt_host: dependencies.fetch(:qt_host),
+        mruby_root: dependencies.fetch(:mruby), mruby_json: dependencies.fetch(:mruby_json),
+        device: "DEVICE", team: "TEAM", host_platform: Zui::Platform.new(os: :macos, arch: :arm64)
+      )
+
+      builder.send(:build_mruby, "/iPhone.sdk", build_name, platform: "device")
+
+      _arguments, options = command.calls.fetch(0)
+      assert_equal "arm64", options.dig(:env, "ZUI_IOS_ARCH")
+      assert_equal "device", options.dig(:env, "ZUI_IOS_PLATFORM")
+      assert_equal "/iPhone.sdk", options.dig(:env, "ZUI_IOS_SDK")
+    end
+  end
+
+  def test_physical_iphone_requires_an_apple_team
+    Dir.mktmpdir do |directory|
+      dependencies = create_dependencies(directory)
+      create_project(directory)
+      builder = Zui::Mobile::IOSBuilder.new(
+        project: directory, framework_root: ROOT, device: "DEVICE",
+        qt_ios: dependencies.fetch(:qt_ios), qt_host: dependencies.fetch(:qt_host),
+        mruby_root: dependencies.fetch(:mruby), mruby_json: dependencies.fetch(:mruby_json),
+        environment: {}, host_platform: Zui::Platform.new(os: :macos, arch: :arm64)
+      )
+
+      error = assert_raises(ArgumentError) { builder.send(:validate!) }
+
+      assert_includes error.message, "--team"
+    end
+  end
+
   private
 
   def create_dependencies(directory)

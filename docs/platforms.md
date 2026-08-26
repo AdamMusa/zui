@@ -46,15 +46,15 @@ Native CI builds, packages, installs, and launches clients on these target famil
 - macOS Intel;
 - Windows x86-64.
 
-iOS Simulator builds are currently a developer preview. They are built locally on macOS with
+iOS Simulator and physical-device builds are currently a developer preview. They are built locally on macOS with
 Xcode, Qt 6.8 for iOS plus its matching host SDK, mruby 4.0, and mruby-json. The resulting `.app`
-does not require Ruby or Qt to be installed inside the simulator.
+does not require Ruby or Qt to be installed on the target.
 
 An unavailable architecture fails explicitly during configuration. Zui does not silently compile a
 host from source or fall back to a system Qt installation. Additional architectures become supported
 when a native release runner and client artifact are added.
 
-## iOS Simulator
+## iOS
 
 The mobile host keeps the Qt event loop and Zui renderer native while replacing the desktop child
 process with an in-process mruby bridge:
@@ -84,11 +84,13 @@ simulator, builds, installs, and launches the application. The mruby VM and Qt r
 native process; mobile does not invoke the desktop `zui run` child-process launcher.
 Use `--simulator ID` for an explicit device and `--build-only` to skip installation. The dependency
 paths also accept `ZUI_QT_IOS`, `ZUI_QT_HOST`, `ZUI_MRUBY_ROOT`, and `ZUI_MRUBY_JSON`.
+For a paired physical iPhone with Developer Mode enabled, use `--device DEVICE_UDID` with
+`--team APPLE_TEAM_ID` (or set `ZUI_APPLE_TEAM`). Zui cross-compiles an ARM64 mruby runtime,
+requests automatic Xcode development signing, installs through CoreDevice, and launches the app.
 
 The current mobile path is lite-only: application code must be mruby compatible and cannot require
-arbitrary CRuby gems. Physical-device signing and App Store submission remain application-owner
-steps. Android is recognized in project metadata, but an Android native build target is not yet
-released.
+arbitrary CRuby gems. App Store distribution remains an application-owner step. Android is
+recognized in project metadata, but an Android native build target is not yet released.
 
 ## Application bundles
 

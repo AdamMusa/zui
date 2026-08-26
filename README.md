@@ -78,7 +78,7 @@ system-wide Qt installation.
 version, verifies their SHA-256 checksums and manifests, and activates them atomically in the user
 cache. It does not modify shell startup files or global Qt environment variables.
 
-### Run on an iPhone Simulator
+### Run on iPhone
 
 Mobile builds use the same Ruby source and native renderer, with mruby embedded directly in the
 iOS application. On a Mac with Xcode, a Qt 6.8 iOS SDK and matching host Qt SDK, mruby, and
@@ -98,6 +98,17 @@ child process is started. The
 paths can instead be set once through `ZUI_QT_IOS`, `ZUI_QT_HOST`, `ZUI_MRUBY_ROOT`, and
 `ZUI_MRUBY_JSON`. Use `--simulator ID` to select a device or `--build-only` to stop after building.
 The app name, bundle identifier, version, and 1024×1024 PNG icon come from `config.rb`.
+
+To sign, install, and launch on a paired physical iPhone with Developer Mode enabled, pass its
+Xcode device UDID and your Apple development team:
+
+```bash
+zui mobile ios path/to/application --device DEVICE_UDID --team APPLE_TEAM_ID \
+  --qt-ios ~/Qt/6.8.3/ios --qt-host ~/Qt/6.8.3/macos \
+  --mruby ~/src/mruby --mruby-json ~/src/mruby-json
+```
+
+`ZUI_APPLE_TEAM` can be used instead of `--team`.
 
 ## Your first application
 
