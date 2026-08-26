@@ -48,12 +48,6 @@ a window.
   </tr>
 </table>
 
-<p align="center">
-  <img src="examples/nova_pour/preview.png" width="880" alt="Nova Pour, a complete pure-Ruby Zui desktop application">
-</p>
-
-<p align="center"><sub>Nova Pour is one of the complete applications included in the showcase catalog.</sub></p>
-
 ## Quick start
 
 Install Ruby 3.1 or newer and the gem. Zui downloads its version-matched native client and small
