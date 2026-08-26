@@ -24,6 +24,7 @@ set(ZUI_MOBILE_BUILD_VERSION "1" CACHE STRING "Mobile application build version"
 set(ZUI_IOS_LAUNCH_SCREEN "${CMAKE_CURRENT_SOURCE_DIR}/LaunchScreen.storyboard" CACHE FILEPATH "iOS launch storyboard")
 set(ZUI_IOS_INFO_PLIST "" CACHE FILEPATH "Custom iOS Info.plist template")
 set(ZUI_IOS_ENTITLEMENTS "" CACHE FILEPATH "Custom iOS code-signing entitlements")
+set(ZUI_IOS_PROJECT_DIR "" CACHE PATH "Project-owned iOS resources and native integration")
 set(ZUI_ANDROID_PACKAGE_SOURCE_DIR "" CACHE PATH "Android package template overlay")
 set(ZUI_ANDROID_PROJECT_DIR "" CACHE PATH "Project-owned Android native integration")
 set(ZUI_ANDROID_MIN_SDK "23" CACHE STRING "Android minimum SDK version")
@@ -37,7 +38,7 @@ set(zui_host_sources
 )
 
 if(IOS)
-  enable_language(OBJCXX)
+  enable_language(OBJC OBJCXX)
   list(APPEND zui_host_sources ZuiSafeArea.mm)
 else()
   list(APPEND zui_host_sources ZuiSafeArea.cpp)
@@ -157,6 +158,66 @@ if(ZUI_EMBEDDED_RUNTIME)
     set_target_properties(zui-host PROPERTIES
       XCODE_ATTRIBUTE_ASSETCATALOG_COMPILER_APPICON_NAME "AppIcon"
     )
+  endif()
+
+  if(IOS AND IS_DIRECTORY "${ZUI_IOS_PROJECT_DIR}")
+    set(zui_ios_control_file_pattern
+      "/(Info\\.plist\\.in|Zui\\.entitlements|LaunchScreen\\.storyboard|Zui\\.cmake|Zui\\.xcconfig|README\\.md|\\.DS_Store)$"
+    )
+    file(GLOB zui_ios_root_resources CONFIGURE_DEPENDS LIST_DIRECTORIES false
+      "${ZUI_IOS_PROJECT_DIR}/*"
+    )
+    list(FILTER zui_ios_root_resources EXCLUDE REGEX "${zui_ios_control_file_pattern}")
+    foreach(resource IN LISTS zui_ios_root_resources)
+      set_source_files_properties("${resource}" PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
+    endforeach()
+
+    file(GLOB_RECURSE zui_ios_nested_resources CONFIGURE_DEPENDS LIST_DIRECTORIES false
+      "${ZUI_IOS_PROJECT_DIR}/Resources/*"
+    )
+    list(FILTER zui_ios_nested_resources EXCLUDE REGEX "/(README\\.md|\\.DS_Store)$")
+    foreach(resource IN LISTS zui_ios_nested_resources)
+      file(RELATIVE_PATH relative_resource "${ZUI_IOS_PROJECT_DIR}/Resources" "${resource}")
+      get_filename_component(relative_directory "${relative_resource}" DIRECTORY)
+      if(relative_directory STREQUAL "")
+        set(resource_destination "Resources")
+      else()
+        set(resource_destination "Resources/${relative_directory}")
+      endif()
+      set_source_files_properties("${resource}" PROPERTIES
+        MACOSX_PACKAGE_LOCATION "${resource_destination}"
+      )
+    endforeach()
+    if(zui_ios_root_resources OR zui_ios_nested_resources)
+      target_sources(zui-host PRIVATE ${zui_ios_root_resources} ${zui_ios_nested_resources})
+    endif()
+
+    file(GLOB_RECURSE zui_ios_native_sources CONFIGURE_DEPENDS
+      "${ZUI_IOS_PROJECT_DIR}/Sources/*.c"
+      "${ZUI_IOS_PROJECT_DIR}/Sources/*.cc"
+      "${ZUI_IOS_PROJECT_DIR}/Sources/*.cpp"
+      "${ZUI_IOS_PROJECT_DIR}/Sources/*.h"
+      "${ZUI_IOS_PROJECT_DIR}/Sources/*.m"
+      "${ZUI_IOS_PROJECT_DIR}/Sources/*.mm"
+      "${ZUI_IOS_PROJECT_DIR}/Sources/*.swift"
+    )
+    if(zui_ios_native_sources)
+      set(zui_ios_swift_sources ${zui_ios_native_sources})
+      list(FILTER zui_ios_swift_sources INCLUDE REGEX "\\.swift$")
+      if(zui_ios_swift_sources)
+        enable_language(Swift)
+      endif()
+      target_sources(zui-host PRIVATE ${zui_ios_native_sources})
+    endif()
+
+    if(EXISTS "${ZUI_IOS_PROJECT_DIR}/Zui.xcconfig")
+      set_target_properties(zui-host PROPERTIES
+        XCODE_XCCONFIG "${ZUI_IOS_PROJECT_DIR}/Zui.xcconfig"
+      )
+    endif()
+    if(EXISTS "${ZUI_IOS_PROJECT_DIR}/Zui.cmake")
+      include("${ZUI_IOS_PROJECT_DIR}/Zui.cmake")
+    endif()
   endif()
 endif()
 

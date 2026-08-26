@@ -118,6 +118,7 @@ class MobileTest < Minitest::Test
       assert_includes arguments, "-DCMAKE_OSX_ARCHITECTURES=x86_64"
       assert_includes arguments, "-DZUI_IOS_INFO_PLIST=#{File.join(project, 'ios', 'Info.plist.in')}"
       assert_includes arguments, "-DZUI_IOS_ENTITLEMENTS=#{File.join(project, 'ios', 'Zui.entitlements')}"
+      assert_includes arguments, "-DZUI_IOS_PROJECT_DIR=#{File.join(project, 'ios')}"
       assert_includes arguments, "-DZUI_IOS_LAUNCH_SCREEN=#{launch_screen}"
     end
   end

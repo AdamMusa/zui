@@ -96,10 +96,16 @@ overwritten. The generated files are connected directly to Qt's package and Xcod
 ```text
 android/
 ├── AndroidManifest.xml  # permissions, features, activities, services
+├── zui.gradle           # dependencies, plugins, repositories, Android SDK levels
+├── Zui.cmake            # native Android libraries and compile settings
 └── README.md            # resources, Java/Kotlin, and Gradle extension points
 ios/
 ├── Info.plist.in        # privacy usage descriptions and bundle configuration
 ├── Zui.entitlements     # Apple capabilities used during code signing
+├── Zui.cmake            # external native SDK and framework linking
+├── Zui.xcconfig         # provider-specific Xcode build settings
+├── Resources/           # arbitrary files copied into the application bundle
+├── Sources/             # native provider bridge code compiled with the app
 └── README.md            # launch screen and signing guidance
 ```
 
@@ -107,6 +113,16 @@ Keep Qt's `%%INSERT_...%%` markers in the Android manifest. For protected Androi
 manifest permission and request it at runtime. For iOS, add a clear `NS...UsageDescription` entry
 before requesting protected access, and enable any entitlement in the Apple app identifier and
 provisioning profile as well as in `Zui.entitlements`.
+
+The platform directories are general Qt-native integration surfaces rather than a list of
+supported vendors. Android passes the complete directory to Qt and evaluates `zui.gradle` after
+the active Qt SDK's Gradle file. Use it for provider dependencies, plugins, repositories, and
+service-required compile/minimum/target/maximum API levels; use `Zui.cmake` for native libraries.
+iOS bundles otherwise-unrecognized root files and everything below `Resources`, compiles native
+files below `Sources`, and evaluates `Zui.cmake` and `Zui.xcconfig` for SDK-specific linking and
+build settings. This covers provider configuration plists/json, URL schemes, permissions,
+entitlements, resources, native bridges, frameworks, and platform build constraints without
+requiring Zui to know the provider.
 
 Build products use the project metadata and launcher icons in `config.rb` and are always placed in
 the project under `dist/ios` or `dist/android`:

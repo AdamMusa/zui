@@ -83,8 +83,12 @@ that already exist:
 
 ```text
 android/AndroidManifest.xml
+android/zui.gradle
+android/Zui.cmake
 ios/Info.plist.in
 ios/Zui.entitlements
+ios/Zui.cmake
+ios/Zui.xcconfig
 ```
 
 The Android directory is used as Qt's `QT_ANDROID_PACKAGE_SOURCE_DIR` overlay, so it can also hold
@@ -93,6 +97,19 @@ manifest. The iOS plist is installed as the Xcode bundle plist and the entitleme
 during code signing; an optional `ios/LaunchScreen.storyboard` overrides the generated launch
 screen. Android dangerous permissions still require a runtime request, while iOS protected access
 requires a matching usage-description string in `Info.plist.in`.
+
+These are vendor-neutral Qt extension points. Put Android module-root configuration in `android/`,
+provider plugins/dependencies/repositories and required API-level overrides in `android/zui.gradle`,
+and native link rules in `android/Zui.cmake`. Standard `res/`, `assets/`, `libs/`, and `src/`
+subdirectories are passed through unchanged. A manifest permission may declare its own
+`android:maxSdkVersion`; application-wide compile, minimum, target, or maximum SDK settings belong
+in the `android { ... }` block in `zui.gradle`.
+
+On iOS, otherwise-unrecognized files at the `ios/` root are bundled directly, so provider files
+such as configuration plists have a defined destination. `ios/Resources/` preserves nested bundle
+resources, `ios/Sources/` compiles native bridge code, `ios/Zui.cmake` links or embeds SDKs and
+frameworks, and `ios/Zui.xcconfig` supplies Xcode build settings. URL schemes and usage descriptions
+belong in `Info.plist.in`, while Apple capabilities belong in `Zui.entitlements`.
 
 `zui mobile --fix` records detected dependency paths in the user's Zui mobile configuration and
 repairs missing Qt and mruby sources. The build commands create lean pinned mobile mruby runtimes,

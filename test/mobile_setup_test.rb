@@ -39,6 +39,13 @@ class MobileSetupTest < Minitest::Test
       assert_includes manifest, "QtActivity"
       assert_includes info_plist, "NSCameraUsageDescription"
       assert File.file?(File.join(project, "ios", "Zui.entitlements"))
+      assert File.file?(File.join(project, "ios", "Zui.cmake"))
+      assert File.file?(File.join(project, "ios", "Zui.xcconfig"))
+      assert File.file?(File.join(project, "ios", "Resources", "README.md"))
+      assert File.file?(File.join(project, "ios", "Sources", "README.md"))
+      assert File.file?(File.join(project, "ios", "Frameworks", "README.md"))
+      assert File.file?(File.join(project, "android", "zui.gradle"))
+      assert File.file?(File.join(project, "android", "Zui.cmake"))
       assert File.file?(File.join(project, "android", "README.md"))
       assert File.file?(File.join(project, "ios", "README.md"))
     end

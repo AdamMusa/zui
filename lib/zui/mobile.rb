@@ -254,8 +254,10 @@ module Zui
         arguments << "-DZUI_IOS_LAUNCH_SCREEN=#{launch_screen}"
         info_plist = File.join(@project, "ios", "Info.plist.in")
         entitlements = File.join(@project, "ios", "Zui.entitlements")
+        ios_project = File.join(@project, "ios")
         arguments << "-DZUI_IOS_INFO_PLIST=#{info_plist}" if File.file?(info_plist)
         arguments << "-DZUI_IOS_ENTITLEMENTS=#{entitlements}" if File.file?(entitlements)
+        arguments << "-DZUI_IOS_PROJECT_DIR=#{ios_project}" if File.directory?(ios_project)
         run!(arguments, label: "generating the Xcode project", timeout: 240)
         project = File.join(build, "zui-host.xcodeproj")
         raise ArgumentError, "Qt did not generate #{project}" unless File.directory?(project)
