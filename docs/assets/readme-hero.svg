@@ -40,7 +40,7 @@
     <path d="M20 20h30L25 50h28" fill="none" stroke="url(#accent)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
     <circle cx="55" cy="15" r="5" fill="#9cff57" filter="url(#softGlow)"/>
 
-    <text x="54" y="61" fill="#f3fff7" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="64" font-weight="800" letter-spacing="-2">ui</text>
+    <text x="62" y="61" fill="#f3fff7" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="64" font-weight="800" letter-spacing="-2">ui</text>
     <text x="0" y="126" fill="url(#accent)" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="26" font-weight="650">Native desktop interfaces. Pure Ruby.</text>
     <text x="0" y="170" fill="#a7bab1" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="18">Reactive state · 241 components · GPU, media and 3D</text>
 
