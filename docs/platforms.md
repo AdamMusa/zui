@@ -1,8 +1,8 @@
 # Platform support
 
 Zui applications use the same Ruby API, protocol, renderer, catalog, and source on Linux, macOS,
-Windows, and iOS. A small versioned client supplies the native Qt/QML engine on desktop. An iOS
-build embeds that renderer and mruby inside the application bundle instead of starting a child
+Windows, iOS, and Android. A small versioned client supplies the native Qt/QML engine on desktop.
+Mobile builds embed that renderer and mruby inside the application instead of starting a child
 process.
 
 ## Setup
@@ -46,51 +46,54 @@ Native CI builds, packages, installs, and launches clients on these target famil
 - macOS Intel;
 - Windows x86-64.
 
-iOS Simulator and physical-device builds are currently a developer preview. They are built locally on macOS with
-Xcode, Qt 6.8 for iOS plus its matching host SDK, mruby 4.0, and mruby-json. The resulting `.app`
-does not require Ruby or Qt to be installed on the target.
+iOS and Android builds are currently a developer preview. iOS is built on macOS with Xcode and
+Qt 6.8 for iOS. Android uses the Android SDK, NDK, and Qt 6.8 Android SDK on macOS, Linux, or
+Windows. Both use mruby 4.0 and mruby-json. The resulting `.app` or APK does not require Ruby or
+Qt to be installed on the target.
 
 An unavailable architecture fails explicitly during configuration. Zui does not silently compile a
 host from source or fall back to a system Qt installation. Additional architectures become supported
 when a native release runner and client artifact are added.
 
-## iOS
+## Mobile
 
 The mobile host keeps the Qt event loop and Zui renderer native while replacing the desktop child
 process with an in-process mruby bridge:
 
 ```text
-Application.app/
-├── native Qt/Zui executable
+Application.app or application.apk
+├── native Qt/Zui executable and libraries
 ├── embedded Zui QML and fonts
-├── embedded application Ruby and assets
+├── embedded application Ruby bytecode and assets
 ├── embedded mruby runtime
-└── compiled iOS app icon catalog
+└── platform launcher icon and optional splash artwork
 ```
 
-From a project containing `main.rb`, `config.rb`, and an iOS PNG icon:
+From a project containing `main.rb`, `config.rb`, and mobile PNG icons:
 
 ```bash
-zui mobile ios . \
-  --qt-ios /path/to/Qt/6.8.3/ios \
-  --qt-host /path/to/Qt/6.8.3/macos \
-  --mruby /path/to/mruby \
-  --mruby-json /path/to/mruby-json
+zui mobile --enable
+zui mobile --fix
+zui build ios
+zui build android
 ```
 
-The command builds a lean pinned mobile mruby configuration when necessary, precompiles the bundled
-Ruby source to bytecode, generates a Release Xcode project, selects a compatible installed
-simulator, builds, installs, and launches the application. The mruby VM and Qt renderer share one
-native process; mobile does not invoke the desktop `zui run` child-process launcher.
-Use `--simulator ID` for an explicit device and `--build-only` to skip installation. The dependency
-paths also accept `ZUI_QT_IOS`, `ZUI_QT_HOST`, `ZUI_MRUBY_ROOT`, and `ZUI_MRUBY_JSON`.
-For a paired physical iPhone with Developer Mode enabled, use `--device DEVICE_UDID` with
-`--team APPLE_TEAM_ID` (or set `ZUI_APPLE_TEAM`). Zui cross-compiles an ARM64 mruby runtime,
-requests automatic Xcode development signing, installs through CoreDevice, and launches the app.
+`zui mobile --fix` records detected dependency paths in the user's Zui mobile configuration and
+repairs missing Qt and mruby sources. The build commands create lean pinned mobile mruby runtimes,
+precompile the bundled Ruby source to bytecode, and write products below `dist/ios` and
+`dist/android`. The mruby VM and Qt renderer share one native process; mobile does not invoke the
+desktop `zui run` child-process launcher.
+
+Install and launch on a simulator or emulator with `zui install ios` or `zui install android`.
+For a paired physical phone, use `zui install ios --device` or `zui install android --device`.
+An explicit CoreDevice UDID or adb serial can be supplied as `--device=ID`. Physical iPhone builds
+request automatic Xcode development signing and require an Apple team saved by setting
+`ZUI_APPLE_TEAM` when running `zui mobile --fix`. Physical Android devices require USB debugging
+and host authorization. Advanced `zui mobile ios` and `zui mobile android` commands accept SDK
+paths and lower-level target options directly.
 
 The current mobile path is lite-only: application code must be mruby compatible and cannot require
-arbitrary CRuby gems. App Store distribution remains an application-owner step. Android is
-recognized in project metadata, but an Android native build target is not yet released.
+arbitrary CRuby gems. App Store and Play Store distribution remain application-owner steps.
 
 ## Application bundles
 

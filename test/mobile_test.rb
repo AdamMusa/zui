@@ -2,6 +2,7 @@
 
 require "json"
 require "minitest/autorun"
+require "stringio"
 require "tmpdir"
 require_relative "../lib/zui"
 
@@ -59,6 +60,8 @@ class MobileTest < Minitest::Test
                    File.binread(File.join(stage, "assets", "ruby.png"))
       assert_equal "AppIcon.png", manifest.dig("images", 0, "filename")
       assert File.file?(File.join(stage, "Assets.xcassets", "AppIcon.appiconset", "AppIcon.png"))
+      assert File.file?(File.join(stage, "Assets.xcassets", "ZuiSplash.imageset", "ZuiSplash.png"))
+      assert_includes File.read(File.join(stage, "LaunchScreen.storyboard")), "ZuiSplash"
     end
   end
 
@@ -133,6 +136,24 @@ class MobileTest < Minitest::Test
     end
   end
 
+  def test_physical_iphone_can_be_auto_selected_from_xcode_destinations
+    command = Object.new
+    command.define_singleton_method(:run) do |_arguments, **_options|
+      output = <<~OUTPUT
+        Available destinations:
+          { platform:iOS, arch:arm64, id:PHONE-UDID, name:Liveview }
+          { platform:iOS, id:dvtdevice-DVTiPhonePlaceholder-iphoneos:placeholder, name:Any iOS Device }
+      OUTPUT
+      Zui::CommandResult.new(stdout: output, stderr: "", status: SuccessfulStatus.new(0))
+    end
+    builder = Zui::Mobile::IOSBuilder.new(
+      project: ".", device: "auto", team: "TEAM", command:,
+      host_platform: Zui::Platform.new(os: :macos, arch: :arm64), out: StringIO.new
+    )
+
+    assert_equal "PHONE-UDID", builder.send(:select_physical_device, "/tmp/Zui.xcodeproj")
+  end
+
   private
 
   def create_dependencies(directory)
@@ -168,6 +189,7 @@ class MobileTest < Minitest::Test
         description "A mobile test application."
         license "MIT"
         icon ios: "assets/ruby.png"
+        splash ios: "assets/ruby.png"
         categories "Utility"
       end
     RUBY

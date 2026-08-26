@@ -1,11 +1,16 @@
 # frozen_string_literal: true
 
 require "minitest/autorun"
+require "stringio"
 require "tmpdir"
 require_relative "../lib/zui"
 
 class AndroidMobileTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
+
+  SuccessfulStatus = Struct.new(:exitstatus) do
+    def success? = true
+  end
 
   def test_android_stage_contains_bytecode_source_assets_icon_and_manifest
     Dir.mktmpdir do |directory|
@@ -26,6 +31,8 @@ class AndroidMobileTest < Minitest::Test
       assert_includes manifest, "@drawable/zui_icon"
       assert_includes styles, "#07110d"
       assert File.file?(File.join(stage, "android", "res", "drawable", "zui_icon.png"))
+      assert File.file?(File.join(stage, "android", "res", "drawable", "zui_splash.png"))
+      assert_includes styles, "@drawable/zui_launch_background"
       assert_equal File.binread(File.join(project, "assets", "ruby.png")),
                    File.binread(File.join(stage, "assets", "ruby.png"))
     end
@@ -50,6 +57,32 @@ class AndroidMobileTest < Minitest::Test
       error = assert_raises(ArgumentError) { builder.send(:validate!) }
 
       assert_includes error.message, "at least 23"
+    end
+  end
+
+  def test_android_install_target_distinguishes_emulators_from_physical_devices
+    Dir.mktmpdir do |directory|
+      dependencies = create_dependencies(directory)
+      adb = File.join(dependencies.fetch(:android_sdk), "platform-tools", "adb")
+      command = Object.new
+      command.define_singleton_method(:run) do |arguments, **_options|
+        output = if arguments == [adb, "devices"]
+                   "List of devices attached\nemulator-5554\tdevice\nPHONE123\tdevice\n"
+                 elsif arguments.last == "ro.kernel.qemu"
+                   arguments[2] == "emulator-5554" ? "1\n" : "0\n"
+                 elsif arguments.last == "ro.product.cpu.abilist"
+                   "arm64-v8a,armeabi-v7a\n"
+                 else
+                   ""
+                 end
+        Zui::CommandResult.new(stdout: output, stderr: "", status: SuccessfulStatus.new(0))
+      end
+
+      physical = create_builder(directory, dependencies, command:, device_kind: :physical, out: StringIO.new)
+      emulator = create_builder(directory, dependencies, command:, device_kind: :emulator, out: StringIO.new)
+
+      assert_equal "PHONE123", physical.send(:select_device)
+      assert_equal "emulator-5554", emulator.send(:select_device)
     end
   end
 
@@ -106,6 +139,7 @@ class AndroidMobileTest < Minitest::Test
         description "A mobile test application."
         license "MIT"
         icon android: "assets/ruby.png"
+        splash android: "assets/ruby.png"
         categories "Utility"
       end
     RUBY

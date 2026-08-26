@@ -24,7 +24,7 @@ module Zui
         @mruby_root = expand_dependency(mruby_root || environment["ZUI_MRUBY_ROOT"])
         @mruby_json = expand_dependency(mruby_json || environment["ZUI_MRUBY_JSON"])
         @requested_simulator = simulator
-        @device = device
+        @device = (device == true || device == :auto) ? "auto" : device&.to_s
         @team = team || environment["ZUI_APPLE_TEAM"]
         default_output = File.join(@project, "dist", physical_device? ? "ios-device" : "ios-simulator")
         @output = File.expand_path(output || default_output)
@@ -49,7 +49,7 @@ module Zui
         build_mruby(sdk, build_name, platform: runtime_target)
         compile_application(stage)
         xcode_project = configure_xcode(config, stage, build_name)
-        destination = physical_device? ? @device : select_simulator(xcode_project)
+        destination = physical_device? ? select_physical_device(xcode_project) : select_simulator(xcode_project)
         build_xcode(xcode_project, destination)
         products = physical_device? ? "Release-iphoneos" : "Release-iphonesimulator"
         app = File.join(@output, "xcode", products, "#{config.name}.app")
@@ -112,10 +112,12 @@ module Zui
 
       def prepare_stage(config)
         stage = File.join(@output, "stage")
+        FileUtils.rm_rf(stage)
         FileUtils.mkdir_p(stage)
         File.binwrite(File.join(stage, "app.rb"), LiteSource.new(project: @project).call)
         copy_assets(stage)
         create_icon_catalog(stage, config.icon_path(@project, IOS_PLATFORM))
+        create_splash_screen(stage, config.splash_path(@project, IOS_PLATFORM))
         stage
       end
 
@@ -140,6 +142,54 @@ module Zui
           "info" => { "author" => "zui", "version" => 1 }
         }
         File.write(File.join(directory, "Contents.json"), "#{JSON.pretty_generate(manifest)}\n")
+      end
+
+      def create_splash_screen(stage, splash)
+        return unless splash
+
+        directory = File.join(stage, "Assets.xcassets", "ZuiSplash.imageset")
+        FileUtils.mkdir_p(directory)
+        FileUtils.cp(splash, File.join(directory, "ZuiSplash.png"))
+        manifest = {
+          "images" => [{ "filename" => "ZuiSplash.png", "idiom" => "universal", "scale" => "1x" }],
+          "info" => { "author" => "zui", "version" => 1 }
+        }
+        File.write(File.join(directory, "Contents.json"), "#{JSON.pretty_generate(manifest)}\n")
+        File.write(File.join(stage, "LaunchScreen.storyboard"), <<~XML)
+          <?xml version="1.0" encoding="UTF-8" standalone="no"?>
+          <document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" targetRuntime="iOS.CocoaTouch" useAutolayout="YES" launchScreen="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES" initialViewController="zui-launch-controller">
+              <dependencies>
+                  <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="23506"/>
+                  <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
+              </dependencies>
+              <scenes>
+                  <scene sceneID="zui-launch-scene">
+                      <objects>
+                          <viewController id="zui-launch-controller" sceneMemberID="viewController">
+                              <view key="view" contentMode="scaleToFill" id="zui-launch-view">
+                                  <rect key="frame" x="0.0" y="0.0" width="390" height="844"/>
+                                  <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                                  <subviews>
+                                      <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFill" image="ZuiSplash" translatesAutoresizingMaskIntoConstraints="NO" id="zui-splash-image">
+                                          <rect key="frame" x="0.0" y="0.0" width="390" height="844"/>
+                                      </imageView>
+                                  </subviews>
+                                  <color key="backgroundColor" red="0.02745098039" green="0.06666666667" blue="0.05098039216" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                  <constraints>
+                                      <constraint firstItem="zui-splash-image" firstAttribute="leading" secondItem="zui-launch-view" secondAttribute="leading" id="zui-splash-leading"/>
+                                      <constraint firstAttribute="trailing" secondItem="zui-splash-image" secondAttribute="trailing" id="zui-splash-trailing"/>
+                                      <constraint firstItem="zui-splash-image" firstAttribute="top" secondItem="zui-launch-view" secondAttribute="top" id="zui-splash-top"/>
+                                      <constraint firstAttribute="bottom" secondItem="zui-splash-image" secondAttribute="bottom" id="zui-splash-bottom"/>
+                                  </constraints>
+                              </view>
+                          </viewController>
+                          <placeholder placeholderIdentifier="IBFirstResponder" id="zui-launch-responder" sceneMemberID="firstResponder"/>
+                      </objects>
+                  </scene>
+              </scenes>
+              <resources><image name="ZuiSplash" width="1024" height="1024"/></resources>
+          </document>
+        XML
       end
 
       def build_mruby(sdk, build_name, platform: "simulator")
@@ -182,7 +232,7 @@ module Zui
         build = File.join(@output, "xcode")
         FileUtils.mkdir_p(build)
         @out.puts("Generating the native iOS application...")
-        run!([
+        arguments = [
           File.join(@qt_ios, "bin", "qt-cmake"), "-S", File.join(@framework_root, "native"),
           "-B", build, "-G", "Xcode", "-DQT_HOST_PATH=#{@qt_host}",
           "-DCMAKE_OSX_DEPLOYMENT_TARGET=#{@deployment_target}", "-DZUI_EMBEDDED_RUNTIME=ON",
@@ -190,7 +240,11 @@ module Zui
           "-DZUI_MOBILE_APP_DIR=#{stage}", "-DZUI_MOBILE_APP_NAME=#{config.name}",
           "-DZUI_MOBILE_BUNDLE_ID=#{config.identifier}", "-DZUI_MOBILE_APP_VERSION=#{config.version}",
           "-DZUI_MOBILE_BUILD_VERSION=1"
-        ], label: "generating the Xcode project", timeout: 240)
+        ]
+        custom_launch_screen = File.join(stage, "LaunchScreen.storyboard")
+        launch_screen = File.file?(custom_launch_screen) ? custom_launch_screen : File.join(@framework_root, "native", "LaunchScreen.storyboard")
+        arguments << "-DZUI_IOS_LAUNCH_SCREEN=#{launch_screen}"
+        run!(arguments, label: "generating the Xcode project", timeout: 240)
         project = File.join(build, "zui-host.xcodeproj")
         raise ArgumentError, "Qt did not generate #{project}" unless File.directory?(project)
 
@@ -223,6 +277,22 @@ module Zui
         available.fetch("udid")
       rescue JSON::ParserError, KeyError => error
         raise ArgumentError, "could not read the installed iOS Simulators: #{error.message}"
+      end
+
+      def select_physical_device(xcode_project)
+        return @device unless @device == "auto"
+
+        destinations = command_output([
+          "xcodebuild", "-project", xcode_project, "-scheme", "zui-host", "-showdestinations"
+        ], label: "finding connected physical iPhones", timeout: 120)
+        devices = destinations.scan(/\{\s*platform:iOS,\s*arch:[^,}]+,\s*id:([^,}\s]+),\s*name:([^}]+)\}/)
+        device = devices.find { |identifier, _name| !identifier.include?("placeholder") }
+        unless device
+          raise ArgumentError, "no physical iPhone is connected; unlock it, trust this Mac, and enable Developer Mode"
+        end
+
+        @out.puts("Using physical iPhone #{device.last.strip} (#{device.first})")
+        device.first
       end
 
       def compatible_simulators(xcode_project)
@@ -272,6 +342,9 @@ module Zui
             "--terminate-existing", bundle_id
           ], label: "launching the iPhone application", timeout: 120)
           pid = output[/process identifier (\d+)/i, 1]&.to_i
+          pid ||= wait_for_physical_pid(destination, app)
+          raise ArgumentError, "iPhone application exited during launch" unless pid
+
           return Result.new(app:, bundle_id:, device: destination, pid:)
         end
 
@@ -282,6 +355,22 @@ module Zui
                                 label: "launching the iOS application", timeout: 120)
         pid = output[/:\s*(\d+)/, 1]&.to_i
         Result.new(app:, bundle_id:, simulator: destination, pid:)
+      end
+
+      def wait_for_physical_pid(device, app)
+        bundle_name = File.basename(app)
+        executable = File.basename(app, ".app")
+        pattern = /^\s*(\d+)\s+.*\/#{Regexp.escape(bundle_name)}\/#{Regexp.escape(executable)}(?:\s|$)/
+        20.times do
+          result = @command.run([
+            "xcrun", "devicectl", "device", "info", "processes", "--device", device
+          ], timeout: 30, max_output_bytes: 16_000_000)
+          pid = result.stdout[pattern, 1]&.to_i if result.success?
+          return pid if pid && pid.positive?
+
+          sleep(0.25)
+        end
+        nil
       end
 
       def command_output(arguments, label:, timeout: 60)
@@ -307,4 +396,5 @@ module Zui
   end
 end
 
+require_relative "mobile/setup"
 require_relative "mobile/android_builder"

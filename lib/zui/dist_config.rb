@@ -13,13 +13,17 @@ module Zui
       android: %w[.png],
       ios: %w[.png]
     }.freeze
+    MOBILE_SPLASH_EXTENSIONS = {
+      android: %w[.png],
+      ios: %w[.png]
+    }.freeze
 
     class Config
       attr_reader :name, :identifier, :version, :publisher, :description, :license,
-                  :homepage, :icons, :categories
+                  :homepage, :icons, :splashes, :categories
 
       def initialize(name:, identifier:, version:, publisher:, description:, license:,
-                     homepage:, icons:, categories:)
+                     homepage:, icons:, splashes:, categories:)
         @name = name
         @identifier = identifier
         @version = version
@@ -28,6 +32,7 @@ module Zui
         @license = license
         @homepage = homepage
         @icons = icons.transform_keys(&:to_sym).transform_values(&:to_s).freeze
+        @splashes = splashes.transform_keys(&:to_sym).transform_values(&:to_s).freeze
         @categories = categories.map(&:to_s).freeze
         freeze
       end
@@ -55,6 +60,7 @@ module Zui
         end
 
         icon_path(project, platform)
+        splash_path(project, platform) if splashes.key?(platform.os)
         self
       end
 
@@ -92,6 +98,32 @@ module Zui
         real_path
       end
 
+      def splash_path(project, platform)
+        os = platform.os
+        relative = splashes[os]
+        return nil if relative.nil? || relative.empty?
+        unless MOBILE_SPLASH_EXTENSIONS.key?(os)
+          raise ArgumentError, "#{CONFIG_FILE} splash is only supported for ios and android"
+        end
+        if Pathname.new(relative).absolute? || relative.include?("\0")
+          raise ArgumentError, "#{CONFIG_FILE} #{os} splash must be a project-relative path"
+        end
+
+        path = File.expand_path(relative, project)
+        raise ArgumentError, "#{CONFIG_FILE} #{os} splash was not found: #{relative}" unless File.file?(path)
+        real_path = File.realpath(path)
+        unless real_path.start_with?("#{File.realpath(project)}#{File::SEPARATOR}")
+          raise ArgumentError, "#{CONFIG_FILE} #{os} splash must stay inside the project"
+        end
+        unless File.extname(real_path).downcase == ".png"
+          raise ArgumentError, "#{CONFIG_FILE} #{os} splash must use .png"
+        end
+        raise ArgumentError, "#{CONFIG_FILE} splash is too large" if File.size(real_path) > 20 * 1024 * 1024
+
+        validate_image_signature!(real_path, ".png", "splash")
+        real_path
+      end
+
       private
 
       def validate_text!(field, value, maximum:)
@@ -102,6 +134,10 @@ module Zui
       end
 
       def validate_icon_signature!(path, extension)
+        validate_image_signature!(path, extension, "icon")
+      end
+
+      def validate_image_signature!(path, extension, kind)
         header = File.binread(path, 512)
         valid = case extension
                 when ".png" then header.start_with?("\x89PNG\r\n\x1a\n".b)
@@ -109,13 +145,13 @@ module Zui
                 when ".icns" then header.start_with?("icns")
                 when ".ico" then header.start_with?("\x00\x00\x01\x00".b)
                 end
-        raise ArgumentError, "#{CONFIG_FILE} icon contents do not match #{extension}" unless valid
+        raise ArgumentError, "#{CONFIG_FILE} #{kind} contents do not match #{extension}" unless valid
       end
     end
 
     class Builder
       def initialize
-        @values = { homepage: nil, icons: {}, categories: ["Utility"] }
+        @values = { homepage: nil, icons: {}, splashes: {}, categories: ["Utility"] }
       end
 
       %i[name identifier version publisher description license homepage].each do |field|
@@ -131,6 +167,13 @@ module Zui
         raise ArgumentError, "unknown icon platform: #{unknown.first}" unless unknown.empty?
 
         @values[:icons].merge!(paths.transform_keys(&:to_sym))
+      end
+
+      def splash(**paths)
+        unknown = paths.keys.map(&:to_sym) - MOBILE_SPLASH_EXTENSIONS.keys
+        raise ArgumentError, "unknown splash platform: #{unknown.first}" unless unknown.empty?
+
+        @values[:splashes].merge!(paths.transform_keys(&:to_sym))
       end
 
       def categories(*values)

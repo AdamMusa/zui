@@ -237,6 +237,106 @@ class CLITest < Minitest::Test
     assert_includes output.string, "Android device PHONE (PID 84)"
   end
 
+  def test_mobile_enable_and_fix_use_the_persistent_mobile_setup
+    calls = []
+    setup = Object.new
+    setup.define_singleton_method(:enable!) { calls << :enable }
+    setup.define_singleton_method(:fix!) { calls << :fix; { "enabled" => true } }
+    setup.define_singleton_method(:summary) { |_config = nil| ["Mobile support: enabled"] }
+    output = StringIO.new
+
+    Zui::Mobile::Setup.stub(:new, setup) do
+      assert_equal 0, Zui::CLI.run(["mobile", "--enable"], out: output, err: StringIO.new)
+      assert_equal 0, Zui::CLI.run(["mobile", "--fix"], out: output, err: StringIO.new)
+    end
+
+    assert_equal %i[enable fix], calls
+    assert_includes output.string, "Mobile development enabled"
+    assert_includes output.string, "Mobile development is ready"
+  end
+
+  def test_build_android_uses_setup_and_writes_below_dist_android
+    request = nil
+    install_request = nil
+    builder = Object.new
+    builder.define_singleton_method(:build) do |install:|
+      install_request = install
+      Zui::Mobile::Result.new(apk: "/project/dist/android/touch.apk", bundle_id: "dev.zui.touch")
+    end
+    output = StringIO.new
+
+    with_mobile_setup do
+      status = Zui::Mobile::AndroidBuilder.stub(:new, lambda { |**arguments|
+        request = arguments
+        builder
+      }) do
+        Zui::CLI.run(["build", "android", "/project"], out: output, err: StringIO.new)
+      end
+
+      assert_equal 0, status
+    end
+
+    assert_equal "/project/dist/android", request.fetch(:output)
+    assert_equal false, install_request
+    assert_equal "/qt/android", request.fetch(:qt_android)
+    assert_equal "/sdk", request.fetch(:android_sdk)
+    assert_includes output.string, "/project/dist/android/touch.apk"
+  end
+
+  def test_install_android_defaults_to_emulator_and_device_switches_to_physical
+    requests = []
+    install_requests = []
+    builder = Object.new
+    builder.define_singleton_method(:build) do |install:|
+      install_requests << install
+      Zui::Mobile::Result.new(
+        apk: "/project/dist/android/touch.apk", bundle_id: "dev.zui.touch", device: "ANDROID", pid: 91
+      )
+    end
+
+    with_mobile_setup do
+      Zui::Mobile::AndroidBuilder.stub(:new, lambda { |**arguments|
+        requests << arguments
+        builder
+      }) do
+        assert_equal 0, Zui::CLI.run(["install", "android", "/project"], out: StringIO.new, err: StringIO.new)
+        assert_equal 0, Zui::CLI.run(["install", "android", "--device", "/project"], out: StringIO.new, err: StringIO.new)
+      end
+    end
+
+    assert_equal :emulator, requests.fetch(0).fetch(:device_kind)
+    assert_equal :physical, requests.fetch(1).fetch(:device_kind)
+    assert_equal [true, true], install_requests
+    refute requests.fetch(1).key?(:device)
+  end
+
+  def test_install_ios_device_auto_selects_a_physical_iphone
+    request = nil
+    install_request = nil
+    builder = Object.new
+    builder.define_singleton_method(:build) do |install:|
+      install_request = install
+      Zui::Mobile::Result.new(
+        app: "/project/dist/ios/Touch.app", bundle_id: "dev.zui.touch", device: "IPHONE", pid: 92
+      )
+    end
+
+    with_mobile_setup do
+      status = Zui::Mobile::IOSBuilder.stub(:new, lambda { |**arguments|
+        request = arguments
+        builder
+      }) do
+        Zui::CLI.run(["install", "ios", "--device", "/project"], out: StringIO.new, err: StringIO.new)
+      end
+      assert_equal 0, status
+    end
+
+    assert_equal "auto", request.fetch(:device)
+    assert_equal true, install_request
+    assert_equal "TEAM", request.fetch(:team)
+    assert_equal "/project/dist/ios", request.fetch(:output)
+  end
+
   def test_bundle_can_explicitly_disable_tree_shaking
     options = nil
     distribution = Object.new
@@ -394,5 +494,17 @@ class CLITest < Minitest::Test
     Zui::LiteRuntime.stub(:new, lite_runtime) do
       Zui::Client.stub(:new, client, &block)
     end
+  end
+
+  def with_mobile_setup(&block)
+    setup = Object.new
+    setup.define_singleton_method(:dependencies) do |_target|
+      {
+        "qt_host" => "/qt/host", "qt_ios" => "/qt/ios", "qt_android" => "/qt/android",
+        "mruby_root" => "/src/mruby", "mruby_json" => "/src/mruby-json",
+        "android_sdk" => "/sdk", "android_ndk" => "/ndk", "apple_team" => "TEAM"
+      }
+    end
+    Zui::Mobile::Setup.stub(:new, setup, &block)
   end
 end

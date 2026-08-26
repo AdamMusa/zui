@@ -15,6 +15,7 @@ module Zui
 
       def initialize(project:, qt_android: nil, qt_host: nil, android_sdk: nil, android_ndk: nil,
                      mruby_root: nil, mruby_json: nil, output: nil, device: nil,
+                     device_kind: nil,
                      abi: DEFAULT_ABI, api: DEFAULT_API, target_api: DEFAULT_TARGET_API,
                      framework_root: FRAMEWORK_ROOT, environment: ENV,
                      host_platform: Platform.current, command: Command, out: $stdout)
@@ -34,6 +35,7 @@ module Zui
         @target_api = Integer(target_api)
         @output = File.expand_path(output || File.join(@project, "dist", "android-#{@abi}"))
         @requested_device = device
+        @device_kind = device_kind&.to_sym
         @framework_root = File.expand_path(framework_root)
         @host_platform = host_platform
         @command = command
@@ -99,6 +101,9 @@ module Zui
         unless %w[arm64-v8a armeabi-v7a x86_64 x86].include?(@abi)
           raise ArgumentError, "Android ABI must be arm64-v8a, armeabi-v7a, x86_64, or x86"
         end
+        unless [nil, :physical, :emulator].include?(@device_kind)
+          raise ArgumentError, "Android device kind must be physical or emulator"
+        end
         raise ArgumentError, "Android API must be at least 23" if @api < 23
         raise ArgumentError, "Android target API must be at least the minimum API" if @target_api < @api
       end
@@ -115,10 +120,14 @@ module Zui
 
       def prepare_stage(config)
         stage = File.join(@output, "stage")
+        FileUtils.rm_rf(stage)
         FileUtils.mkdir_p(stage)
         File.binwrite(File.join(stage, "app.rb"), LiteSource.new(project: @project).call)
         copy_assets(stage)
-        create_android_package(stage, config, config.icon_path(@project, ANDROID_PLATFORM))
+        create_android_package(
+          stage, config, config.icon_path(@project, ANDROID_PLATFORM),
+          config.splash_path(@project, ANDROID_PLATFORM)
+        )
         stage
       end
 
@@ -132,13 +141,25 @@ module Zui
         FileUtils.cp_r(entries.map { |entry| File.join(source, entry) }, destination) unless entries.empty?
       end
 
-      def create_android_package(stage, config, icon)
+      def create_android_package(stage, config, icon, splash)
         package = File.join(stage, "android")
         drawable = File.join(package, "res", "drawable")
         values = File.join(package, "res", "values")
         FileUtils.mkdir_p(drawable)
         FileUtils.mkdir_p(values)
         FileUtils.cp(icon, File.join(drawable, "zui_icon.png"))
+        window_background = "#07110d"
+        if splash
+          FileUtils.cp(splash, File.join(drawable, "zui_splash.png"))
+          File.write(File.join(drawable, "zui_launch_background.xml"), <<~XML)
+            <?xml version="1.0" encoding="utf-8"?>
+            <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+                <item android:drawable="#07110d" />
+                <item><bitmap android:src="@drawable/zui_splash" android:gravity="fill" /></item>
+            </layer-list>
+          XML
+          window_background = "@drawable/zui_launch_background"
+        end
         name = CGI.escapeHTML(config.name)
         version = CGI.escapeHTML(config.version)
         manifest = <<~XML
@@ -185,7 +206,7 @@ module Zui
                   <item name="android:windowFullscreen">true</item>
                   <item name="android:windowNoTitle">true</item>
                   <item name="android:windowActionModeOverlay">true</item>
-                  <item name="android:windowBackground">#07110d</item>
+                  <item name="android:windowBackground">#{window_background}</item>
                   <item name="android:colorAccent">#66ffb2</item>
                   <item name="android:statusBarColor">#07110d</item>
                   <item name="android:navigationBarColor">#07110d</item>
@@ -325,28 +346,100 @@ module Zui
       end
 
       def select_device
-        output = command_output([adb, "devices"], label: "listing Android devices")
-        devices = output.lines.filter_map do |line|
-          serial, state = line.split
-          [serial, state] if serial && state && serial != "List"
-        end
+        devices = connected_devices
         if @requested_device
           match = devices.find { |serial, _state| serial == @requested_device }
           raise ArgumentError, "requested Android device is not connected: #{@requested_device}" unless match
           raise ArgumentError, "Android device #{@requested_device} is #{match.last}; authorize USB debugging" unless match.last == "device"
+          validate_device_kind!(@requested_device)
           verify_device_abi(@requested_device)
           return @requested_device
         end
 
         available = devices.select { |_serial, state| state == "device" }
+        available.select! { |serial, _state| device_matches_kind?(serial) } if @device_kind
+        if available.empty? && @device_kind == :emulator
+          start_emulator
+          devices = connected_devices
+          available = devices.select do |serial, state|
+            state == "device" && device_matches_kind?(serial)
+          end
+        end
         if available.empty?
           blocked = devices.map { |serial, state| "#{serial} (#{state})" }.join(", ")
-          message = blocked.empty? ? "no Android device is connected" : "no authorized Android device is connected: #{blocked}"
-          raise ArgumentError, "#{message}; connect a phone with USB debugging enabled"
+          message = if @device_kind == :physical
+                      "no authorized physical Android device is connected"
+                    elsif @device_kind == :emulator
+                      "no compatible Android emulator is running"
+                    else
+                      "no authorized Android device is connected"
+                    end
+          message += ": #{blocked}" unless blocked.empty?
+          hint = @device_kind == :emulator ? "create an Android virtual device and rerun the command" : "connect a phone with USB debugging enabled"
+          raise ArgumentError, "#{message}; #{hint}"
         end
         device = available.first.first
         verify_device_abi(device)
         device
+      end
+
+      def connected_devices
+        output = command_output([adb, "devices"], label: "listing Android devices")
+        output.lines.filter_map do |line|
+          serial, state = line.split
+          [serial, state] if serial && state && serial != "List"
+        end
+      end
+
+      def validate_device_kind!(device)
+        return if !@device_kind || device_matches_kind?(device)
+
+        actual = emulator_device?(device) ? "an emulator" : "a physical device"
+        raise ArgumentError, "Android device #{device} is #{actual}, not the requested #{@device_kind} target"
+      end
+
+      def device_matches_kind?(device)
+        emulator = emulator_device?(device)
+        @device_kind == :emulator ? emulator : !emulator
+      end
+
+      def emulator_device?(device)
+        return true if device.start_with?("emulator-")
+
+        result = @command.run([adb, "-s", device, "shell", "getprop", "ro.kernel.qemu"],
+                              timeout: 15, max_output_bytes: 1_000_000)
+        result.success? && result.stdout.strip == "1"
+      end
+
+      def start_emulator
+        executable = File.join(@android_sdk, "emulator", executable_name("emulator"))
+        validate_file!(executable, "Android emulator")
+        avds = command_output([executable, "-list-avds"], label: "listing Android virtual devices").lines.map(&:strip).reject(&:empty?)
+        raise ArgumentError, "no Android virtual device is configured; create one in Android Studio" if avds.empty?
+
+        FileUtils.mkdir_p(@output)
+        log = File.open(File.join(@output, "emulator.log"), "ab")
+        @out.puts("Starting Android emulator #{avds.first}...")
+        pid = Process.spawn(executable, "-avd", avds.first, "-no-snapshot-save", out: log, err: log)
+        Process.detach(pid)
+        log.close
+
+        60.times do
+          sleep(1)
+          candidate = connected_devices.find do |serial, state|
+            state == "device" && device_matches_kind?(serial) && emulator_booted?(serial)
+          end
+          return candidate.first if candidate
+        end
+        raise ArgumentError, "Android emulator did not finish booting; see #{File.join(@output, 'emulator.log')}"
+      ensure
+        log&.close unless log&.closed?
+      end
+
+      def emulator_booted?(device)
+        result = @command.run([adb, "-s", device, "shell", "getprop", "sys.boot_completed"],
+                              timeout: 15, max_output_bytes: 1_000_000)
+        result.success? && result.stdout.strip == "1"
       end
 
       def verify_device_abi(device)

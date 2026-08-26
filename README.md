@@ -5,7 +5,7 @@
 <h1 align="center">Native applications in pure Ruby</h1>
 
 <p align="center">
-  Build reactive Linux, macOS, Windows, and iOS interfaces with one Ruby API, a native Qt renderer,
+  Build reactive Linux, macOS, Windows, iOS, and Android interfaces with one Ruby API, a native Qt renderer,
   and no application-owned QML or browser runtime.
 </p>
 
@@ -43,7 +43,7 @@ and complete component catalog. The result is a native application—not a web p
   <tr>
     <td><strong>241 named components</strong><br>Use specific controls with validated properties and events instead of a generic markup escape hatch.</td>
     <td><strong>Reactive by default</strong><br>Update only changed properties and publish multi-value transactions as atomic patch batches.</td>
-    <td><strong>Portable source</strong><br>Run the same application on Linux, macOS, Windows, iOS, or through an environment adapter such as Omarchy UI.</td>
+    <td><strong>Portable source</strong><br>Run the same application on Linux, macOS, Windows, iOS, Android, or through an environment adapter such as Omarchy UI.</td>
   </tr>
 </table>
 
@@ -78,37 +78,44 @@ system-wide Qt installation.
 version, verifies their SHA-256 checksums and manifests, and activates them atomically in the user
 cache. It does not modify shell startup files or global Qt environment variables.
 
-### Run on iPhone
+### Run on iOS and Android
 
 Mobile builds use the same Ruby source and native renderer, with mruby embedded directly in the
-iOS application. On a Mac with Xcode, a Qt 6.8 iOS SDK and matching host Qt SDK, mruby, and
-mruby-json, run:
+application process. Enable mobile development once, then let Zui detect, install, or repair the
+required SDK-side dependencies:
 
 ```bash
-zui mobile ios path/to/application \
-  --qt-ios ~/Qt/6.8.3/ios \
-  --qt-host ~/Qt/6.8.3/macos \
-  --mruby ~/src/mruby \
-  --mruby-json ~/src/mruby-json
+zui mobile --enable
+zui mobile --fix
 ```
 
-Zui precompiles the app to mruby bytecode, creates an optimized native `.app`, selects a compatible
-simulator, installs it, and launches it. The VM and Qt renderer run in the same process; no Ruby
-child process is started. The
-paths can instead be set once through `ZUI_QT_IOS`, `ZUI_QT_HOST`, `ZUI_MRUBY_ROOT`, and
-`ZUI_MRUBY_JSON`. Use `--simulator ID` to select a device or `--build-only` to stop after building.
-The app name, bundle identifier, version, and 1024×1024 PNG icon come from `config.rb`.
-
-To sign, install, and launch on a paired physical iPhone with Developer Mode enabled, pass its
-Xcode device UDID and your Apple development team:
+Build products use the project metadata and launcher icons in `config.rb` and are always placed in
+the project under `dist/ios` or `dist/android`:
 
 ```bash
-zui mobile ios path/to/application --device DEVICE_UDID --team APPLE_TEAM_ID \
-  --qt-ios ~/Qt/6.8.3/ios --qt-host ~/Qt/6.8.3/macos \
-  --mruby ~/src/mruby --mruby-json ~/src/mruby-json
+zui build ios
+zui build android
 ```
 
-`ZUI_APPLE_TEAM` can be used instead of `--team`.
+Install on a simulator or emulator by default. Add `--device` to auto-select a connected physical
+phone, or `--device=ID` to select one explicitly:
+
+```bash
+zui install ios
+zui install android
+zui install ios --device
+zui install android --device=SERIAL
+```
+
+Physical iPhone builds require Xcode, Developer Mode, and an Apple team. Set `ZUI_APPLE_TEAM`
+before `zui mobile --fix` to record it. Android phones must have USB debugging enabled and trust
+the development computer. Add optional launch artwork to the distribution DSL with
+`splash ios: "assets/splash.png", android: "assets/splash.png"`.
+
+Zui precompiles the app to mruby bytecode and links that runtime with the Qt renderer. The VM and
+renderer run in the same process; mobile builds do not use a web view or start a Ruby child process.
+The advanced `zui mobile ios` and `zui mobile android` commands remain available when individual
+SDK paths or lower-level build options need to be supplied directly.
 
 ## Your first application
 
@@ -204,7 +211,7 @@ end
 ## Platform support
 
 Zui uses the same Ruby API, protocol, renderer, catalog, and application source on every supported
-target. Desktop releases use a versioned client; iOS embeds the renderer and mruby inside the app.
+target. Desktop releases use a versioned client; iOS and Android embed the renderer and mruby inside the app.
 
 | Operating system | Architecture | Runtime shape | Build output | Release status |
 | --- | --- | --- | --- | --- |
@@ -213,6 +220,8 @@ target. Desktop releases use a versioned client; iOS embeds the renderer and mru
 | macOS | Intel x86-64 | `zui-client-macos-x86_64` | Standard `.app` bundle | Supported and CI verified |
 | Windows | x86-64 | `zui-client-windows-x86_64` | Portable application directory | Supported and CI verified |
 | iOS Simulator | x86-64 | Embedded native host + mruby | Standard simulator `.app` | Mobile preview, install and launch verified |
+| iPhone | ARM64 | Embedded native host + mruby | Signed device `.app` | Physical install and launch verified |
+| Android | ARM64 | Embedded native host + mruby | Signed APK | Emulator install and launch verified |
 
 Desktop application bundles do not require Ruby on the destination. The default `--lite` mode embeds Zui's
 versioned mruby runtime. `--full` embeds a private CRuby plus only the non-Zui gems resolved by the
@@ -265,6 +274,11 @@ an explicit error.
 | `zui bundle --name NAME --output PATH` | Override the generated product name and destination |
 | `zui bundle --no-tree-shake` | Retain the complete component and Qt feature catalog for metaprogrammed applications |
 | `zui bundle --dist [DIRECTORY]` | Build release installers from the required project-root `config.rb` |
+| `zui mobile --enable` | Enable native mobile development for the current user |
+| `zui mobile --fix` | Detect, install, and repair mobile build dependencies |
+| `zui build ios|android [DIRECTORY]` | Build below `dist/ios` or `dist/android` using `config.rb` assets |
+| `zui install ios|android [DIRECTORY]` | Build, install, and launch on a simulator or emulator |
+| `zui install ios|android --device[=ID]` | Build, install, and launch on a physical device |
 | `zui version` | Print the installed framework version |
 
 Every command also supports `-h` and `--help` directly, such as `zui bundle --help`.
@@ -295,7 +309,7 @@ are reported by the operation that encounters them.
 ```
 
 Ruby owns application logic. The native client owns the Qt event loop and graphics runtime. On
-desktop, the versioned protocol crosses a private process boundary. On iOS, the same protocol is
+desktop, the versioned protocol crosses a private process boundary. On iOS and Android, the same protocol is
 carried by an in-process mruby bridge. The renderer applies the same validated trees and bounded
 reactive patch batches in both forms.
 
@@ -394,13 +408,15 @@ Zui::Dist.configure do
   icon linux: "assets/icon.png",
        macos: "assets/icon.icns",
        windows: "assets/icon.ico",
-       ios: "assets/icon.png"
+       ios: "assets/icon.png",
+       android: "assets/icon.png"
+  splash ios: "assets/splash.png", android: "assets/splash.png"
   categories "Utility", "Development"
 end
 ```
 
 Only the current platform's icon is required when packaging: PNG or SVG on Linux, ICNS on macOS,
-ICO on Windows, and a 1024×1024 PNG on iOS. Paths must remain inside the project. `--output DIRECTORY` selects the artifact
+ICO on Windows, and a PNG on iOS or Android. Mobile splash artwork is optional. Paths must remain inside the project. `--output DIRECTORY` selects the artifact
 directory, and existing artifacts are never overwritten. Linux RPM creation requires `rpmbuild`
 (`rpm-build` or `rpm-tools`), macOS uses the system `hdiutil`, and Windows requires Inno Setup 6's
 `ISCC.exe` on `PATH`.
@@ -424,7 +440,7 @@ The repository includes complete Ruby applications rather than isolated visual s
 | [Quantum Market Terminal](examples/quantum_market_terminal/) | Portfolio state, trading simulation, charts, allocation controls, and transactions |
 | [Smart Home Energy](examples/smart_home_energy/) | Room imagery, lighting, device state, energy telemetry, and home simulation |
 | [Cinematic Music Studio](examples/cinematic_music_studio/) | Local and remote media, playback state, seeking, playlists, and audio controls |
-| [Mobile Counter](examples/mobile_counter/) | Embedded mruby, native iOS packaging, touch events, bindings, and simulator launch |
+| [Mobile Counter](examples/mobile_counter/) | Embedded mruby, native iOS and Android packaging, touch events, bindings, and device launch |
 
 Run any showcase through the normal client:
 

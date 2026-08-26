@@ -76,6 +76,37 @@ class DistConfigTest < Minitest::Test
     end
   end
 
+  def test_loads_optional_mobile_splash_artwork
+    with_project do |project|
+      write_icon(project, "assets/icon.png", "\x89PNG\r\n\x1a\n".b)
+      write_icon(project, "assets/splash.png", "\x89PNG\r\n\x1a\n".b)
+      write_config(project, splash: 'splash ios: "assets/splash.png", android: "assets/splash.png"')
+
+      config = Zui::Dist.load(
+        project:, platform: Zui::Platform.new(os: :ios, arch: :arm64)
+      )
+
+      assert_equal File.realpath(File.join(project, "assets", "splash.png")),
+                   config.splash_path(project, Zui::Platform.new(os: :ios, arch: :arm64))
+      assert_equal File.realpath(File.join(project, "assets", "splash.png")),
+                   config.splash_path(project, Zui::Platform.new(os: :android, arch: :arm64))
+    end
+  end
+
+  def test_rejects_mobile_splash_artwork_with_the_wrong_contents
+    with_project do |project|
+      write_icon(project, "assets/icon.png", "\x89PNG\r\n\x1a\n".b)
+      write_icon(project, "assets/splash.png", "not a png")
+      write_config(project, splash: 'splash ios: "assets/splash.png"')
+
+      error = assert_raises(ArgumentError) do
+        Zui::Dist.load(project:, platform: Zui::Platform.new(os: :ios, arch: :arm64))
+      end
+
+      assert_includes error.message, "splash contents do not match .png"
+    end
+  end
+
   def test_config_file_must_return_the_dsl_result
     with_project do |project|
       File.write(File.join(project, Zui::Dist::CONFIG_FILE), "{ name: 'Demo' }\n")
@@ -104,7 +135,7 @@ class DistConfigTest < Minitest::Test
     File.binwrite(path, contents)
   end
 
-  def write_config(project, linux_icon: "assets/icon.png")
+  def write_config(project, linux_icon: "assets/icon.png", splash: nil)
     File.write(File.join(project, Zui::Dist::CONFIG_FILE), <<~RUBY)
       Zui::Dist.configure do
         name "Signal Board"
@@ -116,6 +147,7 @@ class DistConfigTest < Minitest::Test
         homepage "https://example.com/signal-board"
         icon linux: #{linux_icon.dump}, macos: "assets/icon.icns", windows: "assets/icon.ico",
              android: "assets/icon.png", ios: "assets/icon.png"
+        #{splash}
         categories "Utility", "Development"
       end
     RUBY

@@ -14,7 +14,9 @@ module Zui
       "doctor" => "Check or repair the local Zui installation",
       "run" => "Run a Ruby application with the native client",
       "bundle" => "Build a standalone app or release installer",
-      "mobile" => "Build, install, and launch a native mobile application",
+      "mobile" => "Enable or repair native mobile development",
+      "build" => "Build a native iOS or Android application",
+      "install" => "Install and launch a mobile application",
       "version" => "Print the installed Zui version"
     }.freeze
 
@@ -30,7 +32,9 @@ module Zui
         doctor         #{COMMANDS.fetch("doctor")}
         run FILE       #{COMMANDS.fetch("run")}
         bundle [DIR]   #{COMMANDS.fetch("bundle")}
-        mobile TARGET  #{COMMANDS.fetch("mobile")}
+        mobile         #{COMMANDS.fetch("mobile")}
+        build TARGET   #{COMMANDS.fetch("build")}
+        install TARGET #{COMMANDS.fetch("install")}
         version        #{COMMANDS.fetch("version")}
 
       Global options:
@@ -116,9 +120,23 @@ module Zui
           zui bundle --dist --full .
       HELP
       "mobile" => <<~HELP,
-        Build, install, and launch a native Zui application on iOS or Android.
+        Enable or repair native mobile development.
 
         Usage:
+          zui mobile --enable
+          zui mobile --fix
+
+        --enable turns on the mobile commands for this user. --fix installs or
+        repairs the required Qt and embedded Ruby dependencies, and records the
+        detected Apple and Android SDK paths.
+
+        Once configured:
+          zui build ios
+          zui build android
+          zui install ios
+          zui install android --device
+
+        The existing low-level commands remain available for advanced use:
           zui mobile ios [DIRECTORY] [options]
           zui mobile android [DIRECTORY] [options]
 
@@ -153,6 +171,43 @@ module Zui
         Android example:
           zui mobile android my_mobile_app --qt-android ~/Qt/6.8.3/android_arm64_v8a
       HELP
+      "build" => <<~HELP,
+        Build a native mobile application with Ruby embedded in the app process.
+
+        Usage:
+          zui build ios [DIRECTORY] [options]
+          zui build android [DIRECTORY] [options]
+
+        Options:
+              --architecture ARCH  iOS Simulator architecture: x86_64 or arm64
+              --deployment VERSION Minimum iOS version (default: 16.0)
+              --abi ABI            Android ABI (default: arm64-v8a)
+              --api LEVEL          Minimum Android API (default: 28)
+              --target-api LEVEL   Target Android API (default: 35)
+
+        DIRECTORY defaults to the current project. Configuration, launcher icons,
+        and optional splash artwork are read from config.rb. Artifacts are written
+        below dist/ios or dist/android.
+      HELP
+      "install" => <<~HELP,
+        Build, install, and launch a mobile application.
+
+        Usage:
+          zui install [ios|android] [DIRECTORY] [options]
+
+        Options:
+              --device[=ID]        Install on a physical device; auto-select when ID is omitted
+              --simulator ID       Use a specific iOS Simulator
+              --architecture ARCH  iOS Simulator architecture: x86_64 or arm64
+              --deployment VERSION Minimum iOS version (default: 16.0)
+              --abi ABI            Android ABI (default: arm64-v8a)
+              --api LEVEL          Minimum Android API (default: 28)
+              --target-api LEVEL   Target Android API (default: 35)
+
+        Without --device, iOS uses a simulator and Android uses an emulator.
+        When TARGET is omitted, Zui infers it from an existing dist/ios or
+        dist/android directory.
+      HELP
       "version" => <<~HELP
         Print the installed Zui version.
 
@@ -185,6 +240,8 @@ module Zui
       when "run" then run_file(arguments)
       when "bundle" then bundle_project(arguments)
       when "mobile" then mobile_project(arguments)
+      when "build" then build_mobile_project(arguments)
+      when "install" then install_mobile_project(arguments)
       when "doctor" then doctor(arguments)
       when "version", "--version", "-v" then print_version(arguments)
       else unknown_command(command)
@@ -260,7 +317,34 @@ module Zui
     end
 
     def mobile_project(arguments)
-      target = arguments.shift || raise(UsageError, "mobile requires a target: ios or android")
+      setup = Mobile::Setup.new(out: @out)
+      if arguments.empty?
+        @out.puts(setup.summary)
+        if setup.enabled?
+          @out.puts("Build with `zui build ios` or `zui build android`; run `zui mobile --fix` if a dependency is missing.")
+        else
+          @out.puts("Run `zui mobile --enable`, then `zui mobile --fix` to prepare mobile development.")
+        end
+        return 0
+      end
+      if arguments.first == "--enable"
+        raise UsageError, "mobile --enable accepts no other arguments" unless arguments == ["--enable"]
+
+        setup.enable!
+        @out.puts("Mobile development enabled.")
+        @out.puts("Run `zui mobile --fix` to install or repair its dependencies.")
+        return 0
+      end
+      if arguments.first == "--fix"
+        raise UsageError, "mobile --fix accepts no other arguments" unless arguments == ["--fix"]
+
+        config = setup.fix!
+        @out.puts(setup.summary(config))
+        @out.puts("Mobile development is ready.")
+        return 0
+      end
+
+      target = arguments.shift
       return mobile_ios_project(arguments) if target == "ios"
       return mobile_android_project(arguments) if target == "android"
 
@@ -294,6 +378,137 @@ module Zui
         @out.puts("Launched #{result.bundle_id} on #{target}#{result.pid ? " (PID #{result.pid})" : ''}")
       end
       0
+    end
+
+    def build_mobile_project(arguments)
+      target = mobile_target!(arguments.shift, command: "build")
+      options = parse_mobile_build_options(arguments, target:)
+      source = mobile_source!(arguments, command: "build")
+      result = mobile_builder(target, source, options).build(install: false)
+      report_mobile_build(target, result)
+      0
+    end
+
+    def install_mobile_project(arguments)
+      options = parse_mobile_install_options(arguments)
+      target = arguments.first && %w[ios android].include?(arguments.first) ? arguments.shift : nil
+      source = mobile_source!(arguments, command: "install")
+      target ||= infer_mobile_target(source)
+      target = mobile_target!(target, command: "install")
+      validate_mobile_install_options!(target, options)
+
+      device_requested = options.delete(:device_requested)
+      if target == "ios"
+        options[:device] = options.delete(:device) || "auto" if device_requested
+      else
+        requested_device = options.delete(:device)
+        options[:device] = requested_device unless requested_device.nil? || requested_device == "auto"
+        options[:device_kind] = device_requested ? :physical : :emulator
+      end
+
+      result = mobile_builder(target, source, options).build(install: true)
+      report_mobile_build(target, result)
+      destination = if target == "ios"
+                      result.device ? "physical iPhone #{result.device}" : "iOS Simulator #{result.simulator}"
+                    elsif device_requested
+                      "physical Android device #{result.device}"
+                    else
+                      "Android emulator #{result.device}"
+                    end
+      @out.puts("Launched #{result.bundle_id} on #{destination}#{result.pid ? " (PID #{result.pid})" : ''}")
+      0
+    end
+
+    def parse_mobile_build_options(arguments, target:)
+      options = {}
+      OptionParser.new do |option|
+        if target == "ios"
+          option.on("--architecture ARCH") { |value| options[:architecture] = value }
+          option.on("--deployment VERSION") { |value| options[:deployment_target] = value }
+        else
+          option.on("--abi ABI") { |value| options[:abi] = value }
+          option.on("--api LEVEL", Integer) { |value| options[:api] = value }
+          option.on("--target-api LEVEL", Integer) { |value| options[:target_api] = value }
+        end
+      end.parse!(arguments)
+      options
+    end
+
+    def parse_mobile_install_options(arguments)
+      options = { device_requested: false }
+      OptionParser.new do |option|
+        option.on("--device[=ID]") do |value|
+          options[:device_requested] = true
+          options[:device] = value || "auto"
+        end
+        option.on("--simulator ID") { |value| options[:simulator] = value }
+        option.on("--architecture ARCH") { |value| options[:architecture] = value }
+        option.on("--deployment VERSION") { |value| options[:deployment_target] = value }
+        option.on("--abi ABI") { |value| options[:abi] = value }
+        option.on("--api LEVEL", Integer) { |value| options[:api] = value }
+        option.on("--target-api LEVEL", Integer) { |value| options[:target_api] = value }
+      end.parse!(arguments)
+      options
+    end
+
+    def validate_mobile_install_options!(target, options)
+      unsupported = if target == "ios"
+                      %i[abi api target_api]
+                    else
+                      %i[simulator architecture deployment_target]
+                    end
+      supplied = unsupported.select { |key| options.key?(key) }
+      return if supplied.empty?
+
+      names = supplied.map { |key| "--#{key.to_s.tr('_', '-')}" }.join(", ")
+      raise UsageError, "#{names} #{supplied.one? ? 'is' : 'are'} not valid for #{target}"
+    end
+
+    def mobile_source!(arguments, command:)
+      source = File.expand_path(arguments.shift || Dir.pwd)
+      raise UsageError, "#{command} accepts only one project directory" unless arguments.empty?
+
+      source
+    end
+
+    def mobile_target!(target, command:)
+      return target if %w[ios android].include?(target)
+
+      raise UsageError, "#{command} requires a target: ios or android"
+    end
+
+    def infer_mobile_target(source)
+      targets = %w[ios android].select { |target| File.directory?(File.join(source, "dist", target)) }
+      return targets.first if targets.one?
+      raise UsageError, "install cannot infer a target; pass ios or android" if targets.empty?
+
+      raise UsageError, "install found both dist/ios and dist/android; pass a target"
+    end
+
+    def mobile_builder(target, source, options)
+      dependencies = Mobile::Setup.new(out: @out).dependencies(target)
+      output = File.join(source, "dist", target)
+      if target == "ios"
+        Mobile::IOSBuilder.new(
+          project: source, output:, out: @out,
+          qt_ios: dependencies.fetch("qt_ios"), qt_host: dependencies.fetch("qt_host"),
+          mruby_root: dependencies.fetch("mruby_root"), mruby_json: dependencies.fetch("mruby_json"),
+          team: dependencies["apple_team"], **options
+        )
+      else
+        Mobile::AndroidBuilder.new(
+          project: source, output:, out: @out,
+          qt_android: dependencies.fetch("qt_android"), qt_host: dependencies.fetch("qt_host"),
+          android_sdk: dependencies.fetch("android_sdk"), android_ndk: dependencies.fetch("android_ndk"),
+          mruby_root: dependencies.fetch("mruby_root"), mruby_json: dependencies.fetch("mruby_json"),
+          **options
+        )
+      end
+    end
+
+    def report_mobile_build(target, result)
+      artifact = target == "ios" ? result.app : result.apk
+      @out.puts("Built #{target == 'ios' ? 'iOS application' : 'Android APK'} #{artifact}")
     end
 
     def mobile_android_project(arguments)
