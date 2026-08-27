@@ -241,6 +241,35 @@ class TreeShakerTest < Minitest::Test
     end
   end
 
+  def test_mobile_qml_modules_are_retained_only_when_the_app_uses_them
+    with_payload(<<~RUBY) do |project, framework, _native, _platform|
+      Zui.app do
+        app do
+          safe_area do
+            map provider: "osm"
+            accelerometer active: true
+            text_to_speech
+            web_view "about:blank", visible: false
+          end
+        end
+      end
+    RUBY
+      platform = Zui::Platform.new(os: :ios, arch: :arm64)
+      report = Zui::TreeShaker.new(project:, framework:, native: nil, platform:).shake!
+
+      %i[accelerometer map safe_area text_to_speech web_view].each do |component|
+        assert_includes report.components, component
+      end
+      %w[QtLocation QtPositioning QtSensors QtTextToSpeech QtWebView].each do |qml_module|
+        assert_includes report.qml_modules, qml_module
+      end
+      refute_includes report.qml_modules, "QtQuick.Pdf"
+      assert File.file?(File.join(framework, "Components", "Builtins", "WebView.qml"))
+      refute File.exist?(File.join(framework, "Components", "Builtins", "PdfView.qml"))
+      assert_operator report.saved_bytes, :>, 0
+    end
+  end
+
   private
 
   def with_payload(source)
