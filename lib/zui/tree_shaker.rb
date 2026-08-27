@@ -197,13 +197,58 @@ module Zui
         FileUtils.rm_f(path) unless adapters.include?(File.basename(path))
       end
       sources = adapters.map { |name| File.join(builtins, name) }
-      support_required = sources.any? do |path|
-        source = File.read(path)
-        source.include?('import "Support"') || source.include?("Support/")
-      end
+      prune_framework_support(File.join(builtins, "Support"), sources)
       shaders_required = adapters.include?("ShaderEffect.qml")
-      remove_tree(File.join(builtins, "Support")) unless support_required
       remove_tree(File.join(builtins, "Shaders")) unless shaders_required
+    end
+
+    def prune_framework_support(root, adapter_sources)
+      return unless File.directory?(root)
+
+      available = Dir[File.join(root, "**", "{*.qml,*.js}")].to_h do |path|
+        [path.delete_prefix("#{root}#{File::SEPARATOR}"), path]
+      end
+      by_component = available.each_with_object({}) do |(relative, _path), components|
+        components[File.basename(relative, ".qml")] = relative if relative.end_with?(".qml")
+      end
+      required = Set.new
+      queue = adapter_sources.dup
+      until queue.empty?
+        source_path = queue.shift
+        source = File.read(source_path)
+        support_references(source, source_path.start_with?("#{root}#{File::SEPARATOR}"), by_component).each do |relative|
+          path = available[relative]
+          next unless path && required.add?(path)
+
+          queue << path
+        end
+      end
+
+      return remove_tree(root) if required.empty?
+
+      available.each_value { |path| FileUtils.rm_f(path) unless required.include?(path) }
+      Dir[File.join(root, "**", "*")].sort_by { |path| -path.count(File::SEPARATOR) }.each do |path|
+        Dir.rmdir(path) if File.directory?(path) && Dir.empty?(path)
+      end
+    end
+
+    def support_references(source, support_source, by_component)
+      references = Set.new
+      source.scan(/\bSupport\.([A-Z][A-Za-z0-9_]*)\b/) do |match|
+        references << "#{match.first}.qml"
+      end
+      source.scan(/["']Support\/([^"']+\.(?:qml|js))["']/) do |match|
+        references << match.first
+      end
+      if support_source
+        by_component.each do |name, relative|
+          references << relative if source.match?(/\b#{Regexp.escape(name)}\s*\{/)
+        end
+        source.scan(/["']([^"']+\.(?:qml|js))["']/) do |match|
+          references << match.first unless match.first.include?("..")
+        end
+      end
+      references
     end
 
     def qml_imports(paths)

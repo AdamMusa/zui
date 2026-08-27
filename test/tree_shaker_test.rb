@@ -65,6 +65,31 @@ class TreeShakerTest < Minitest::Test
     end
   end
 
+  def test_prunes_unreferenced_support_helpers_and_their_qml_modules
+    with_payload("Zui.app { app { stacked_bar_chart [] } }\n") do |project, framework, native, platform|
+      report = Zui::TreeShaker.new(project:, framework:, native:, platform:).shake!
+      support = File.join(framework, "Components", "Builtins", "Support")
+
+      assert File.file?(File.join(support, "ChartCanvas.qml"))
+      refute File.exist?(File.join(support, "ModelView3dScene.qml"))
+      refute File.exist?(File.join(support, "OptionalModuleState.js"))
+      refute_includes report.qml_modules, "QtQuick3D"
+      refute File.exist?(File.join(native, "qml", "QtQuick3D"))
+    end
+  end
+
+  def test_keeps_support_files_loaded_by_relative_url
+    with_payload("Zui.app { app { model_view_3d source: 'model.glb' } }\n") do |project, framework, native, platform|
+      report = Zui::TreeShaker.new(project:, framework:, native:, platform:).shake!
+      support = File.join(framework, "Components", "Builtins", "Support")
+
+      assert File.file?(File.join(support, "ModelView3dScene.qml"))
+      assert File.file?(File.join(support, "OptionalModuleState.js"))
+      assert_includes report.qml_modules, "QtQuick3D"
+      assert File.directory?(File.join(native, "qml", "QtQuick3D"))
+    end
+  end
+
   def test_keeps_linux_desktop_platform_plugins
     with_payload("Zui.app { app { text 'hello' } }\n") do |project, framework, native, platform|
       platforms = File.join(native, "plugins", "platforms")
