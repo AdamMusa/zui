@@ -91,12 +91,12 @@ Map {
     onTapped: function(point) { var value = root.toCoordinate(point.position); root.send("tap", { x: point.position.x, y: point.position.y, latitude: value.latitude, longitude: value.longitude }) }
     onLongPressed: { var value = root.toCoordinate(mapTap.point.position); root.send("long_press", { x: mapTap.point.position.x, y: mapTap.point.position.y, latitude: value.latitude, longitude: value.longitude }) }
   }
-  onCenterChanged: send("center_change", { latitude: center.latitude, longitude: center.longitude, altitude: center.altitude })
-  onZoomLevelChanged: send("zoom_change", { value: zoomLevel })
-  onActiveMapTypeChanged: send("map_type_change", { name: activeMapType ? activeMapType.name : "" })
-  onCopyrightLinkActivated: function(link) { send("copyright", { url: String(link) }) }
-  onErrorChanged: if (Number(error) !== 0) renderer.componentError("map_failed", errorString, { native_code: Number(error) })
-  onSupportedMapTypesChanged: selectMapType()
+  onCenterChanged: root.send("center_change", { latitude: root.center.latitude, longitude: root.center.longitude, altitude: root.center.altitude })
+  onZoomLevelChanged: root.send("zoom_change", { value: root.zoomLevel })
+  onActiveMapTypeChanged: root.send("map_type_change", { name: root.activeMapType ? root.activeMapType.name : "" })
+  onCopyrightLinkActivated: function(link) { root.send("copyright", { url: String(link) }) }
+  onErrorChanged: if (Number(root.error) !== 0) root.renderer.componentError("map_failed", root.errorString, { native_code: Number(root.error) })
+  onSupportedMapTypesChanged: root.selectMapType()
   Component.onCompleted: { configurePlugin(); selectMapType() }
   Connections { target: renderer; function onNodeChanged() { root.configurePlugin(); root.selectMapType() } }
 }

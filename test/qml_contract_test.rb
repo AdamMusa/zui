@@ -128,6 +128,13 @@ class QmlContractTest < Minitest::Test
     refute_includes speech, 'locale: String(root.renderer.prop("locale", ""))'
   end
 
+  def test_mobile_map_signal_handlers_read_qualified_map_properties
+    map = source("Components/Builtins/Map.qml")
+
+    assert_includes map, 'onZoomLevelChanged: root.send("zoom_change", { value: root.zoomLevel })'
+    assert_includes map, "latitude: root.center.latitude"
+  end
+
   def test_service_uses_one_injected_bidirectional_transport
     qml = source("Service.qml")
     native = source("native/ZuiProcess.cpp")
