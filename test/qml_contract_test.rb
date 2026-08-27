@@ -329,6 +329,17 @@ class QmlContractTest < Minitest::Test
     refute_includes renderer, 'onSourceComponentChanged:'
   end
 
+  def test_renderer_snapshots_nodes_once_per_published_bridge_revision
+    renderer = source("ControlNode.qml")
+
+    assert_includes renderer, "property var node: null"
+    assert_includes renderer, "function synchronizeNode()"
+    assert_includes renderer, "function onRevisionChanged() { root.synchronizeNode() }"
+    assert_includes renderer, "onBridgeChanged: synchronizeNode()"
+    assert_includes renderer, "onControlIdChanged: synchronizeNode()"
+    refute_includes renderer, "var currentRevision = bridge ? bridge.revision : 0"
+  end
+
   def test_framework_loads_bundled_cross_platform_text_and_icon_fonts
     fonts = source("Theme/Fonts.qml")
     style = source("Theme/Style.qml")

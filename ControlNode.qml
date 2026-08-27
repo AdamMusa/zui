@@ -23,19 +23,22 @@ Loader {
   readonly property Component layoutChildDelegateComponent: layoutChildDelegate
   readonly property Component splitChildDelegateComponent: splitChildDelegate
 
-  readonly property var node: {
-    var currentRevision = bridge ? bridge.revision : 0
-    return bridge ? bridge.nodeFor(controlId) : null
-  }
-
-  readonly property var nativeSchema: {
-    var currentRevision = bridge ? bridge.revision : 0
-    return bridge && node ? bridge.componentDefinition(node.type) : null
-  }
+  // Keep a stable snapshot per published bridge revision. A computed binding
+  // that calls through bridge.nodeFor() can be re-entered by native QML while
+  // several controls are resolving their adapters on iOS.
+  property var node: null
+  property var nativeSchema: null
   readonly property bool builtIn: nativeSchema ? nativeSchema.builtIn === true : false
   readonly property bool structuralContainer: nativeSchema ? nativeSchema.container === true : false
   property string loadedAdapterKey: ""
   property string lastComponentErrorKey: ""
+
+  function synchronizeNode() {
+    var nextNode = bridge ? bridge.nodeFor(controlId) : null
+    var nextSchema = bridge && nextNode ? bridge.componentDefinition(nextNode.type) : null
+    if (nativeSchema !== nextSchema) nativeSchema = nextSchema
+    if (node !== nextNode) node = nextNode
+  }
 
   function prop(name, fallback) {
     var props = node && node.props ? node.props : null
@@ -285,6 +288,8 @@ Loader {
   readonly property string adapterSource: !node || !nativeSchema ? ""
     : (builtIn ? builtInSource(node.type) : bridge.componentSource(node.type))
   onAdapterSourceChanged: ensureAdapterLoaded()
+  onBridgeChanged: synchronizeNode()
+  onControlIdChanged: synchronizeNode()
   onLoaded: {
     lastComponentErrorKey = ""
     if (!item) return
@@ -310,7 +315,15 @@ Loader {
     if (!builtIn) syncNativeProperties()
     Qt.callLater(runTransition)
   }
-  Component.onCompleted: root.ensureAdapterLoaded()
+  Component.onCompleted: {
+    root.synchronizeNode()
+    root.ensureAdapterLoaded()
+  }
+
+  Connections {
+    target: root.bridge
+    function onRevisionChanged() { root.synchronizeNode() }
+  }
 
   TapHandler {
     enabled: root.structuralContainer && root.subscribed("click")
