@@ -8,6 +8,25 @@ require "set"
 module Zui
   class FullRuntime
     SYSTEM_LIBRARIES = /\A(?:ld-linux|libc\.|libdl\.|libgcc_s\.|libm\.|libpthread\.|librt\.|libSystem\.|libutil\.)/.freeze
+    ZUI_RUNTIME_FILES = %w[
+      lib/zui.rb
+      lib/zui/animation.rb
+      lib/zui/application.rb
+      lib/zui/builder.rb
+      lib/zui/component_registry.rb
+      lib/zui/components.rb
+      lib/zui/node.rb
+      lib/zui/protocol.rb
+      lib/zui/runtime_entry.rb
+      lib/zui/scheduler.rb
+      lib/zui/state_store.rb
+      lib/zui/value.rb
+    ].freeze
+    ZUI_RUNTIME_ENTRYPOINT = <<~RUBY.freeze
+      # frozen_string_literal: true
+
+      require_relative "zui/runtime_entry"
+    RUBY
 
     attr_reader :platform
 
@@ -166,7 +185,9 @@ module Zui
         end
 
         files = packaged_gem_files(spec)
-        install_gem_files(spec, File.join(gem_home, "gems", spec.full_name), files:)
+        gem_target = File.join(gem_home, "gems", spec.full_name)
+        install_gem_files(spec, gem_target, files:)
+        install_zui_runtime_entrypoint(gem_target) if spec.name == "zui"
         File.write(
           File.join(gem_home, "specifications", "#{spec.full_name}.gemspec"),
           spec.to_ruby(files:)
@@ -205,7 +226,16 @@ module Zui
       files = Array(spec.files).map(&:to_s).reject(&:empty?).uniq.sort
       return files unless spec.name == "zui"
 
-      files.select { |path| path.start_with?("lib/") && path.end_with?(".rb") }
+      files & ZUI_RUNTIME_FILES
+    end
+
+    def install_zui_runtime_entrypoint(target)
+      runtime = File.join(target, "lib", "zui", "runtime_entry.rb")
+      unless File.file?(runtime)
+        raise ArgumentError, "zui runtime entrypoint is missing: lib/zui/runtime_entry.rb"
+      end
+
+      File.write(File.join(target, "lib", "zui.rb"), ZUI_RUNTIME_ENTRYPOINT)
     end
 
     def install_gem_extensions(spec, gem_home)

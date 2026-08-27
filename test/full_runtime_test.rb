@@ -47,6 +47,9 @@ class FullRuntimeTest < Minitest::Test
       File.binwrite(native_dependency, "native-dependency-fixture")
       app_spec.extension_dir = native_extension
       zui_spec = fake_spec(directory, "zui", Zui::VERSION)
+      FileUtils.mkdir_p(File.join(zui_spec.full_gem_path, "lib", "zui"))
+      File.write(File.join(zui_spec.full_gem_path, "lib", "zui", "runtime_entry.rb"), "# runtime fixture\n")
+      zui_spec.files << "lib/zui/runtime_entry.rb"
       FileUtils.mkdir_p(File.join(zui_spec.full_gem_path, "mobile"))
       File.write(File.join(zui_spec.full_gem_path, "mobile", "builder.rb"), "# development only\n")
       zui_spec.files << "mobile/builder.rb"
@@ -83,6 +86,9 @@ class FullRuntimeTest < Minitest::Test
       assert File.file?(File.join(destination, "gems", "specifications", "paint-1.2.3.gemspec"))
       assert File.file?(File.join(destination, "lib", "libpaint.so"))
       assert File.file?(File.join(destination, "gems", "gems", "zui-#{Zui::VERSION}", "lib", "zui.rb"))
+      assert_includes File.read(
+        File.join(destination, "gems", "gems", "zui-#{Zui::VERSION}", "lib", "zui.rb")
+      ), 'require_relative "zui/runtime_entry"'
       refute File.exist?(File.join(destination, "gems", "gems", "zui-#{Zui::VERSION}", "mobile"))
       refute File.exist?(File.join(destination, "gems", "gems", "json-2.0.0"))
       manifest = JSON.parse(File.read(File.join(destination, "runtime.json")))
