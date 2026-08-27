@@ -354,11 +354,15 @@ class QmlContractTest < Minitest::Test
     assert_includes responsive, "item.renderDepth = viewport.renderer.renderDepth + 1"
   end
 
-  def test_responsive_view_incubates_cards_below_the_first_visible_row
+  def test_responsive_view_incubates_cards_only_as_the_viewport_approaches
     responsive = source("Components/Builtins/ResponsiveView.qml")
 
     assert_includes responsive, "readonly property int eagerCardCount: Math.max(1, columns)"
+    assert_includes responsive, "readonly property real estimatedCardHeight"
     assert_includes responsive, "required property int index"
+    assert_includes responsive, "property bool activated: index < viewport.eagerCardCount"
+    assert_includes responsive, "feed.contentY + feed.height * 1.5"
+    assert_includes responsive, "active: cardWrapper.activated"
     assert_includes responsive, "asynchronous: cardWrapper.index >= viewport.eagerCardCount"
   end
 

@@ -26,6 +26,7 @@ Item {
     Math.floor((availableWidth + cardSpacing) / (cardWidth + cardSpacing))))
   readonly property real cellWidth: (availableWidth - cardSpacing * (columns - 1)) / columns
   readonly property int eagerCardCount: Math.max(1, columns)
+  readonly property real estimatedCardHeight: Math.max(320, cardWidth * 1.15)
   readonly property int requestedIndex: Math.max(0, Number(renderer.prop("scroll_index", 0)))
 
   function revealRequestedCard() {
@@ -72,9 +73,26 @@ Item {
           id: cardWrapper
           required property int index
           required property var modelData
+          property bool activated: index < viewport.eagerCardCount
           width: viewport.cellWidth
           readonly property real contentScale: Math.min(1, width / viewport.cardWidth)
-          height: Math.ceil(cardLoader.implicitHeight * contentScale)
+          height: cardLoader.status === Loader.Ready
+            ? Math.ceil(cardLoader.implicitHeight * contentScale)
+            : Math.ceil(viewport.estimatedCardHeight * contentScale)
+
+          function activateIfNearViewport() {
+            if (activated) return
+            var prefetchBottom = feed.contentY + feed.height * 1.5
+            if (y <= prefetchBottom) activated = true
+          }
+
+          onYChanged: activateIfNearViewport()
+          Component.onCompleted: activateIfNearViewport()
+
+          Connections {
+            target: feed
+            function onContentYChanged() { cardWrapper.activateIfNearViewport() }
+          }
 
           Loader {
             id: cardLoader
@@ -83,6 +101,7 @@ Item {
             width: viewport.cardWidth
             scale: cardWrapper.contentScale
             transformOrigin: Item.TopLeft
+            active: cardWrapper.activated
             asynchronous: cardWrapper.index >= viewport.eagerCardCount
             source: Qt.resolvedUrl("../../ControlNode.qml")
             onLoaded: {
