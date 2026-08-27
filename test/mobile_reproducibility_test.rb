@@ -20,6 +20,7 @@ class MobileReproducibilityTest < Minitest::Test
 
       assert_equal identities.first.payload_sha256, identities.last.payload_sha256
       assert_equal identities.first.artifact_sha256, identities.last.artifact_sha256
+      assert_equal false, identities.first.signed
       report = Zui::Mobile::Reproducibility.verify!(*identities)
       assert report.verified
       assert report.artifact_byte_identical

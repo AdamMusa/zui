@@ -48,6 +48,7 @@ module Zui
       module_function
 
       def ios_identity(app:, signed:, source_date_epoch:, toolchain:, command: Command)
+        signed = signed == true
         ReproducibleBuild.normalize_tree(app, epoch: source_date_epoch)
         artifact_sha256 = ReproducibleBuild.tree_digest(app)
         payload_sha256 = signed ? unsigned_ios_payload_digest(app, source_date_epoch, command) : artifact_sha256
