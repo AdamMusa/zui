@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Window
 import "../../Theme"
 
 Rectangle {
@@ -48,6 +49,8 @@ Rectangle {
           height: parent.height - 76
           fillMode: Image.PreserveAspectCrop
           source: renderer.assetUrl(carouselRoot.field(modelData, "image_field", "image") || "")
+          sourceSize.width: Util.scalableImageSourceSize(source, -1, width, Screen.devicePixelRatio)
+          sourceSize.height: Util.scalableImageSourceSize(source, -1, height, Screen.devicePixelRatio)
           visible: source !== ""
           onStatusChanged: {
             if (status === Image.Error)

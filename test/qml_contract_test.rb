@@ -1363,7 +1363,9 @@ class QmlContractTest < Minitest::Test
     assert_includes alert, "delegate: ZuiControls.Button {"
     assert_includes alert, 'renderer.prop("button_accent"'
     assert_includes alert, 'renderer.prop("image"'
-    assert_includes alert, "renderer.assetUrl(alertRoot.imageSource)"
+    assert_includes alert, 'alertRoot.requestedOpen ? renderer.assetUrl(alertRoot.imageSource) : ""'
+    assert_includes alert, 'renderer.prop("image_source_width", -1)'
+    assert_includes alert, "Util.scalableImageSourceSize"
     assert_includes alert, '"accept", {'
     assert_includes alert, '"reject", {'
   end
@@ -1377,6 +1379,7 @@ class QmlContractTest < Minitest::Test
     assert_includes image, 'renderer.prop("cache", true)'
     assert_includes image, 'renderer.prop("horizontal_alignment", "center")'
     assert_includes image, 'renderer.prop("vertical_alignment", "center")'
+    assert_includes image, 'Util.scalableImageSourceSize(source, renderer.prop("source_width", -1), width, Screen.devicePixelRatio)'
     assert_includes image, 'send("loaded", payload)'
     assert_includes image, 'renderer.componentError("image_load_failed"'
   end

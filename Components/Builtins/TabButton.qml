@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Window
 import QtQuick.Controls as QQC
 import "../../Theme"
 
@@ -32,6 +33,8 @@ QQC.TabButton {
       source: String(renderer.prop("icon_source", ""))
       width: Number(renderer.prop("icon_width", Style.font.body))
       height: Number(renderer.prop("icon_height", Style.font.body))
+      sourceSize.width: Util.scalableImageSourceSize(source, -1, width, Screen.devicePixelRatio)
+      sourceSize.height: Util.scalableImageSourceSize(source, -1, height, Screen.devicePixelRatio)
       fillMode: Image.PreserveAspectFit
       onStatusChanged: {
         if (status === Image.Error)

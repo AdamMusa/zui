@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Window
 import QtQuick.Controls as QQC
 import QtQuick.Layouts
 import "../../Theme"
@@ -31,6 +32,8 @@ Rectangle {
         id: avatarImage
         anchors.fill: parent
         source: renderer.assetUrl(avatarRoot.avatarSource)
+        sourceSize.width: Util.scalableImageSourceSize(source, -1, width, Screen.devicePixelRatio)
+        sourceSize.height: Util.scalableImageSourceSize(source, -1, height, Screen.devicePixelRatio)
         fillMode: Image.PreserveAspectCrop
         asynchronous: renderer.prop("asynchronous", true) !== false
         cache: renderer.prop("cache", true) !== false

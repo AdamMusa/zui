@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls as QQC
 import QtQuick.Layouts
+import QtQuick.Window
 import "../../Theme"
 import "../../Controls" as ZuiControls
 
@@ -77,8 +78,8 @@ Image {
     source: renderer.assetUrl(renderer.prop("source", ""))
     width: Number(renderer.prop("width", 120))
     height: Number(renderer.prop("height", 120))
-    sourceSize.width: Number(renderer.prop("source_width", -1))
-    sourceSize.height: Number(renderer.prop("source_height", -1))
+    sourceSize.width: Util.scalableImageSourceSize(source, renderer.prop("source_width", -1), width, Screen.devicePixelRatio)
+    sourceSize.height: Util.scalableImageSourceSize(source, renderer.prop("source_height", -1), height, Screen.devicePixelRatio)
     asynchronous: renderer.prop("asynchronous", true) !== false
     cache: renderer.prop("cache", true) !== false
     smooth: renderer.prop("smooth", true) !== false

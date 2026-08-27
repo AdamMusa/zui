@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls as QQC
+import QtQuick.Window
 import "../../Theme"
 import "../../Controls" as ZuiControls
 
@@ -297,7 +298,9 @@ QQC.Dialog {
 
             Image {
                 anchors.fill: parent
-                source: renderer.assetUrl(alertRoot.imageSource)
+                source: alertRoot.requestedOpen ? renderer.assetUrl(alertRoot.imageSource) : ""
+                sourceSize.width: Util.scalableImageSourceSize(source, renderer.prop("image_source_width", -1), width, Screen.devicePixelRatio)
+                sourceSize.height: Util.scalableImageSourceSize(source, renderer.prop("image_source_height", -1), height, Screen.devicePixelRatio)
                 fillMode: alertRoot.fillModeValue(renderer.prop("image_fill_mode", "preserve_aspect_fit"))
                 asynchronous: renderer.prop("image_asynchronous", true) !== false
                 cache: renderer.prop("image_cache", true) !== false
