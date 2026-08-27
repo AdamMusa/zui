@@ -25,11 +25,37 @@ class MobileKitchenSinkTest < Minitest::Test
        audio_recorder recording_player motion_sensor motion_chart tap_test drag_test gps_source
        kitchen_map current_position trust_gauge service_chart speech_service native_keyboard_field
        qt_keyboard welcome_web network_probe system_probe paths_probe settings_probe diagnostic_log
-       report_clipboard].each do |id|
+       report_clipboard modern_tabs modern_swipe_pages modern_page_indicator bottom_navigation
+       modern_date_picker modern_time_picker modern_color_picker modern_range_picker modern_calendar
+       modern_dial modern_spin_box modern_navigation_drawer modern_standard_dialog modern_alert_dialog
+       modern_bottom_sheet].each do |id|
       assert_includes ids, id
     end
     assert_equal "responsive_view", nodes.find { |node| node["id"] == "kitchen_feed" }.fetch("type")
     assert_equal "capture_session", nodes.find { |node| node["id"] == "studio_session" }.fetch("type")
+  end
+
+  def test_modern_navigation_pickers_and_overlays_are_reactive
+    application = MobileKitchenSink.build
+    application.start(output: StringIO.new, error: StringIO.new)
+
+    application.receive(event("modern_tabs", "change", "value" => 2))
+    application.receive(event("bottom_navigation", "change", "value" => 1))
+    application.receive(event("modern_date_picker", "change", "value" => "2027-02-14"))
+    application.receive(event("modern_range_picker", "change", "lower" => 16, "upper" => 27))
+    application.receive(event("open_navigation_drawer"))
+
+    assert_equal 2, application.state.tab_index
+    assert_equal 1, application.state.bottom_nav_index
+    assert_equal "2027-02-14", application.state.selected_date
+    assert_equal 16.0, application.state.range_lower
+    assert_equal 27.0, application.state.range_upper
+    assert_equal true, application.state.drawer_open
+
+    application.receive(event("modern_navigation_drawer", "close"))
+    assert_equal false, application.state.drawer_open
+  ensure
+    application&.stop
   end
 
   def test_controls_update_permission_media_and_camera_state

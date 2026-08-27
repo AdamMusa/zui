@@ -364,6 +364,270 @@ module MobileKitchenSink
       end
     end
 
+    def modern_navigation_card
+      card width: 348, padding: 18, color: PANEL, border_color: BORDER do
+        column spacing: 12 do
+          section_title :menu, "Modern navigation", "Tabs, swipe pages, and bottom destinations"
+
+          tabs_node = tabs %w[Overview Activity Profile], id: :modern_tabs,
+                           current_index: state.tab_index, width: 312, height: 178,
+                           tab_height: 46, background: PANEL_ALT,
+                           content_background: "#0a1727", foreground: WHITE,
+                           muted: MUTED, accent: CYAN, border_color: BORDER, radius: 14 do
+            rectangle width: 312, height: 132, color: "#0a1727" do
+              center width: 312, height: 132 do
+                text "OVERVIEW · Native tab content", size: 12, bold: true,
+                     color: CYAN, wrap: false
+              end
+            end
+            rectangle width: 312, height: 132, color: "#0a1727" do
+              center width: 312, height: 132 do
+                text "ACTIVITY · Reactive Ruby state", size: 12, bold: true,
+                     color: MINT, wrap: false
+              end
+            end
+            rectangle width: 312, height: 132, color: "#0a1727" do
+              center width: 312, height: 132 do
+                text "PROFILE · Touch-ready controls", size: 12, bold: true,
+                     color: GOLD, wrap: false
+              end
+            end
+          end
+          bind(tabs_node, :current_index) { state.tab_index }
+          on(tabs_node, :change) do |event|
+            state.tab_index = event.fetch("value", 0).to_i
+            log("Tab changed to #{state.tab_index + 1}")
+          end
+
+          swipe = swipe_view id: :modern_swipe_pages, current_index: state.swipe_index,
+                             width: 312, height: 108, interactive: true,
+                             background: "#0a1727", border_color: BORDER, radius: 14 do
+            [
+              ["SWIPE LEFT", CYAN],
+              ["NATIVE PAGE", MINT],
+              ["SWIPE RIGHT", GOLD]
+            ].each do |label, color|
+              rectangle width: 312, height: 108, radius: 14, color: "#0a1727" do
+                center width: 312, height: 108 do
+                  text label, size: 13, bold: true, color: color, wrap: false
+                end
+              end
+            end
+          end
+          bind(swipe, :current_index) { state.swipe_index }
+          on(swipe, :change) { |event| state.swipe_index = event.fetch("value", 0).to_i }
+          indicator = page_indicator 3, id: :modern_page_indicator,
+                                     current_index: state.swipe_index, interactive: true,
+                                     width: 92, height: 30, accent: CYAN, foreground: MUTED
+          bind(indicator, :current_index) { state.swipe_index }
+          on(indicator, :change) { |event| state.swipe_index = event.fetch("value", 0).to_i }
+
+          text "BOTTOM NAVIGATION", size: 10, bold: true, color: MUTED, wrap: false
+          bottom_nav = tab_bar [
+            { label: "Home", icon: :house },
+            { label: "Activity", icon: :terminal },
+            { label: "Settings", icon: :gear }
+          ], id: :bottom_navigation, current_index: state.bottom_nav_index,
+             position: :bottom, width: 312, height: 58, background: PANEL_ALT,
+             foreground: WHITE, muted: MUTED, accent: MINT,
+             border_color: BORDER, radius: 14
+          bind(bottom_nav, :current_index) { state.bottom_nav_index }
+          on(bottom_nav, :change) do |event|
+            state.bottom_nav_index = event.fetch("value", 0).to_i
+            log("Bottom destination changed to #{state.bottom_nav_index + 1}")
+          end
+        end
+      end
+    end
+
+    def picker_calendar_card
+      card width: 348, padding: 18, color: PANEL, border_color: BORDER do
+        column spacing: 12 do
+          section_title :calendar, "Pickers + calendar", "Dates, time, color, ranges, and numeric input"
+
+          date = date_picker state.selected_date, id: :modern_date_picker,
+                             label: "Date", format: "MMM d, yyyy",
+                             minimum: "2025-01-01", maximum: "2030-12-31",
+                             width: 312, height: 50, popup_width: 312,
+                             foreground: WHITE, muted: MUTED,
+                             background: PANEL_ALT, popup_background: PANEL,
+                             border_color: BORDER, accent: CYAN, radius: 13 do |event|
+            state.selected_date = event.fetch("value", state.selected_date).to_s
+            log("Date selected: #{state.selected_date}")
+          end
+          bind(date, :date) { state.selected_date }
+
+          time = time_picker state.selected_time, id: :modern_time_picker,
+                             label: "Time", use_24_hour: false, minute_step: 5,
+                             width: 312, height: 50, popup_width: 312,
+                             foreground: WHITE, muted: MUTED,
+                             background: PANEL_ALT, popup_background: PANEL,
+                             border_color: BORDER, accent: MINT, radius: 13 do |event|
+            state.selected_time = event.fetch("value", state.selected_time).to_s
+            log("Time selected: #{state.selected_time}")
+          end
+          bind(time, :time) { state.selected_time }
+
+          color = color_picker state.selected_color, id: :modern_color_picker,
+                               label: "Accent color", title: "Choose an accent",
+                               show_alpha: true, width: 312, height: 50,
+                               foreground: WHITE, background: PANEL_ALT,
+                               border_color: BORDER, radius: 13 do |event|
+            state.selected_color = event.fetch("value", state.selected_color).to_s
+            log("Accent changed: #{state.selected_color}")
+          end
+          bind(color, :color) { state.selected_color }
+
+          range_label = text "Comfort range 18–24 °C", id: :modern_range_label,
+                             size: 11, color: MUTED, wrap: false
+          bind(range_label, :text) { "Comfort range #{state.range_lower.round}–#{state.range_upper.round} °C" }
+          range = range_slider state.range_lower, state.range_upper,
+                               id: :modern_range_picker, minimum: 10, maximum: 35,
+                               step: 1, snap: :release, width: 312, height: 48,
+                               foreground: WHITE, background: PANEL_ALT, accent: GOLD do |event|
+            transaction do
+              state.range_lower = event.fetch("lower", state.range_lower).to_f
+              state.range_upper = event.fetch("upper", state.range_upper).to_f
+            end
+          end
+          bind(range, :lower) { state.range_lower }
+          bind(range, :upper) { state.range_upper }
+
+          row spacing: 18, alignment: :center do
+            dial_node = dial state.dial_value, id: :modern_dial, minimum: 0,
+                             maximum: 100, step: 5, snap: :release, size: 112,
+                             foreground: WHITE, background: PANEL_ALT, accent: CYAN do |event|
+              state.dial_value = event.fetch("value", state.dial_value).to_f
+            end
+            bind(dial_node, :value) { state.dial_value }
+            spin = spin_box state.guest_count, id: :modern_spin_box,
+                            minimum: 1, maximum: 12, step: 1,
+                            prefix: "Guests ", width: 180,
+                            foreground: WHITE, background: PANEL_ALT, accent: MINT do |event|
+              state.guest_count = event.fetch("value", state.guest_count).to_i
+            end
+            bind(spin, :value) { state.guest_count }
+          end
+
+          calendar_node = calendar state.selected_date, id: :modern_calendar,
+                                   width: 312, height: 330, show_week_numbers: true,
+                                   background: "#0a1727", header_background: PANEL_ALT,
+                                   selected_background: CYAN, today_background: "#17344f",
+                                   foreground: WHITE, muted: MUTED, accent: CYAN,
+                                   border_color: BORDER, radius: 14
+          bind(calendar_node, :date) { state.selected_date }
+          on(calendar_node, :change) do |event|
+            state.selected_date = event.fetch("value", state.selected_date).to_s
+            log("Calendar selected #{state.selected_date}")
+          end
+        end
+      end
+    end
+
+    def overlay_card
+      card width: 348, padding: 18, color: PANEL, border_color: BORDER do
+        column spacing: 12 do
+          section_title :menu, "Overlays + surfaces", "Drawer, dialogs, and a draggable bottom sheet"
+          [["Drawer", :open_navigation_drawer, :drawer_open],
+           ["Dialog", :open_standard_dialog, :dialog_open],
+           ["Alert", :open_alert_dialog, :alert_open],
+           ["Bottom sheet", :open_bottom_sheet, :sheet_open]].each_slice(2) do |pair|
+            row spacing: 8 do
+              pair.each do |label, id, state_name|
+                button label, id: id, width: 152, height: 50,
+                       background: PANEL_ALT, foreground: WHITE, bordered: true do
+                  state.public_send("#{state_name}=", true)
+                  log("Opened #{label.downcase}")
+                end
+              end
+            end
+          end
+
+          drawer_node = drawer id: :modern_navigation_drawer,
+                               opened: state.drawer_open, edge: :left,
+                               modal: true, dim: true, interactive: true,
+                               close_policy: %i[escape outside], layout: :column,
+                               spacing: 14, padding: 22, width: 306, height: 760,
+                               background: PANEL, foreground: WHITE,
+                               border_color: BORDER, radius: 18 do
+            text "ZUI NAVIGATION", size: 20, bold: true, color: CYAN, wrap: false
+            text "A real edge-swipe Qt drawer", size: 11, color: MUTED, wrap: false
+            divider color: BORDER, width: 262
+            %w[Dashboard Devices Automations Settings].each_with_index do |label, index|
+              button label, id: "drawer.destination.#{index}", width: 262, height: 52,
+                     icon: %i[house phone refresh gear][index],
+                     background: index.zero? ? "#153455" : PANEL_ALT,
+                     foreground: index.zero? ? CYAN : WHITE do
+                state.drawer_open = false
+                log("Drawer selected #{label}")
+              end
+            end
+            button "Close drawer", id: :close_navigation_drawer,
+                   width: 262, height: 52, background: "#572334", foreground: RED do
+              state.drawer_open = false
+            end
+          end
+          bind(drawer_node, :opened) { state.drawer_open }
+          on(drawer_node, :close) { state.drawer_open = false }
+
+          standard_dialog = dialog "Modern dialog", id: :modern_standard_dialog,
+                                   opened: state.dialog_open, centered: true,
+                                   standard_buttons: %i[ok cancel], width: 336, height: 248,
+                                   modal: true, dim: true, layout: :column,
+                                   spacing: 12, padding: 20,
+                                   background: PANEL, foreground: WHITE,
+                                   border_color: BORDER, radius: 18 do
+            text "A touch-friendly Qt dialog rendered from Ruby.", size: 13,
+                 color: WHITE, width: 288, wrap: true
+            text "Accept or dismiss it to verify the complete event path.", size: 11,
+                 color: MUTED, width: 288, wrap: true
+          end
+          bind(standard_dialog, :opened) { state.dialog_open }
+          on(standard_dialog, :accept) { state.dialog_open = false; log("Dialog accepted") }
+          on(standard_dialog, :reject) { state.dialog_open = false; log("Dialog dismissed") }
+          on(standard_dialog, :close) { state.dialog_open = false }
+
+          alert = alert_dialog "Service verified", "Zui overlays are running through native Qt Quick Controls.",
+                               id: :modern_alert_dialog, severity: :success,
+                               opened: state.alert_open, centered: true,
+                               informative_text: "This is the production alert adapter.",
+                               standard_buttons: [:ok], width: 336, height: 300,
+                               background: PANEL, header_background: PANEL_ALT,
+                               footer_background: PANEL_ALT, foreground: WHITE,
+                               muted: MUTED, accent: MINT, border_color: BORDER, radius: 18
+          bind(alert, :opened) { state.alert_open }
+          on(alert, :accept) { state.alert_open = false; log("Alert accepted") }
+          on(alert, :reject) { state.alert_open = false }
+          on(alert, :close) { state.alert_open = false }
+
+          sheet = bottom_sheet id: :modern_bottom_sheet, opened: state.sheet_open,
+                               modal: true, dim: true, dismissible: true, draggable: true,
+                               height: 272, max_width: 366, margin: 12,
+                               dismiss_threshold: 0.3, padding: 20,
+                               background: PANEL, foreground: WHITE,
+                               muted: MUTED, accent: CYAN, border_color: BORDER, radius: 20 do
+            text "QUICK ACTIONS", size: 18, bold: true, color: WHITE, wrap: false
+            text "Drag down to dismiss this native bottom sheet.", size: 11,
+                 color: MUTED, width: 310, wrap: true
+            row spacing: 8 do
+              button "Apply", id: :sheet_apply, width: 151, height: 52,
+                     background: "#174b3a", foreground: MINT do
+                state.sheet_open = false
+                log("Bottom sheet applied")
+              end
+              button "Cancel", id: :sheet_cancel, width: 151, height: 52,
+                     background: PANEL_ALT, foreground: WHITE do
+                state.sheet_open = false
+              end
+            end
+          end
+          bind(sheet, :opened) { state.sheet_open }
+          on(sheet, :close) { state.sheet_open = false }
+          on(sheet, :dismiss) { state.sheet_open = false; log("Bottom sheet dismissed") }
+        end
+      end
+    end
+
     def diagnostics_card
       card width: 348, padding: 18, color: "#0a1727", border_color: BORDER do
         column spacing: 10 do
@@ -407,6 +671,9 @@ module MobileKitchenSink
           motion_touch_card
           location_charts_card
           services_card
+          modern_navigation_card
+          picker_calendar_card
+          overlay_card
           diagnostics_card
         end
       end
@@ -451,6 +718,20 @@ module MobileKitchenSink
       state :network_label, "checking"
       state :system_label, "checking"
       state :storage_label, "resolving"
+      state :tab_index, 0
+      state :swipe_index, 0
+      state :bottom_nav_index, 0
+      state :selected_date, "2026-08-27"
+      state :selected_time, "09:30"
+      state :selected_color, CYAN
+      state :range_lower, 18.0
+      state :range_upper, 24.0
+      state :dial_value, 65.0
+      state :guest_count, 4
+      state :drawer_open, false
+      state :dialog_open, false
+      state :alert_open, false
+      state :sheet_open, false
       state :clipboard_revision, 0
       state :clipboard_text, nil
 
