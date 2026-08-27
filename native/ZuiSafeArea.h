@@ -28,4 +28,5 @@ private:
   qreal m_top = 0;
   qreal m_right = 0;
   qreal m_bottom = 0;
+  bool m_refreshPending = false;
 };

@@ -137,6 +137,10 @@ class QmlContractTest < Minitest::Test
     assert_includes cmake, "WrapOpenGL::WrapOpenGL"
     assert_includes cmake, "list(REMOVE_ITEM zui_qt_gui_libraries WrapOpenGL::WrapOpenGL)"
     assert_includes cmake, "QT_IOS_LAUNCH_SCREEN"
+    android_safe_area = source("native/ZuiSafeArea.cpp")
+    assert_includes android_safe_area, "getRootWindowInsets"
+    assert_includes android_safe_area, "displayCutout"
+    assert_includes android_safe_area, "runOnAndroidMainThread"
     assert_includes desktop, 'visibility: zuiMobile || option("fullscreen", false) === true'
     assert_includes desktop, 'width: zuiMobile ? Screen.width : Number(option("width", 760))'
     assert_includes desktop, 'height: zuiMobile ? Screen.height : Number(option("height", 520))'
