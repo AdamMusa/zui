@@ -14,6 +14,7 @@ class QtBundleConfigurationTest < Minitest::Test
       assert_empty configuration.features
       assert_empty configuration.qml_modules
       assert_empty configuration.plugins
+      assert_empty configuration.ruby_stdlib
     end
   end
 
@@ -26,7 +27,8 @@ class QtBundleConfigurationTest < Minitest::Test
           "features" => %w[tls jpeg tls],
           "qml_modules" => %w[QtPositioning QtLocation],
           "plugins" => %w[position/libqtposition_positionpoll imageformats/libqjpeg]
-        }
+        },
+        "ruby" => { "stdlib" => %w[openssl net/http openssl] }
       ))
 
       configuration = Zui::QtBundleConfiguration.load(project)
@@ -36,6 +38,7 @@ class QtBundleConfigurationTest < Minitest::Test
       assert_equal %w[jpeg tls], configuration.features
       assert_equal %w[QtLocation QtPositioning], configuration.qml_modules
       assert_equal %w[imageformats/libqjpeg position/libqtposition_positionpoll], configuration.plugins
+      assert_equal %w[net/http openssl], configuration.ruby_stdlib
     end
   end
 
@@ -56,6 +59,16 @@ class QtBundleConfigurationTest < Minitest::Test
 
       error = assert_raises(ArgumentError) { Zui::QtBundleConfiguration.load(project) }
       assert_includes error.message, "unknown Qt features"
+    end
+  end
+
+  def test_rejects_unsafe_ruby_standard_library_paths
+    Dir.mktmpdir do |project|
+      File.write(File.join(project, Zui::QtBundleConfiguration::CONFIG_FILE),
+                 '{"ruby":{"stdlib":["../outside"]}}')
+
+      error = assert_raises(ArgumentError) { Zui::QtBundleConfiguration.load(project) }
+      assert_includes error.message, "ruby.stdlib"
     end
   end
 end

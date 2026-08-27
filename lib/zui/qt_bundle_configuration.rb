@@ -11,8 +11,9 @@ module Zui
     ].freeze
     QT_NAME = /\A[A-Za-z][A-Za-z0-9_.+-]*\z/
     PLUGIN_NAME = /\A[A-Za-z0-9][A-Za-z0-9_.+-]*\/[A-Za-z0-9][A-Za-z0-9_.+-]*\z/
+    RUBY_FEATURE = /\A[A-Za-z0-9][A-Za-z0-9_.\/-]*\z/
 
-    attr_reader :components, :style, :features, :qml_modules, :plugins
+    attr_reader :components, :style, :features, :qml_modules, :plugins, :ruby_stdlib
 
     def self.load(project)
       new(File.join(File.expand_path(project), CONFIG_FILE))
@@ -36,6 +37,16 @@ module Zui
       end
       @qml_modules = string_array(qt.fetch("qml_modules", []), "qt.qml_modules", pattern: QT_NAME)
       @plugins = string_array(qt.fetch("plugins", []), "qt.plugins", pattern: PLUGIN_NAME)
+      ruby = document.fetch("ruby", {})
+      raise ArgumentError, "#{CONFIG_FILE} ruby must be a JSON object" unless ruby.is_a?(Hash)
+
+      @ruby_stdlib = string_array(ruby.fetch("stdlib", []), "ruby.stdlib", pattern: RUBY_FEATURE)
+      unsafe = @ruby_stdlib.select do |feature|
+        feature.start_with?("/") || feature.split("/").any? { |part| %w[. ..].include?(part) }
+      end
+      unless unsafe.empty?
+        raise ArgumentError, "#{CONFIG_FILE} ruby.stdlib contains unsafe features: #{unsafe.join(', ')}"
+      end
     end
 
     def to_h
