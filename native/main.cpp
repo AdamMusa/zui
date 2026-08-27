@@ -13,6 +13,7 @@ using ZuiRuntimeTransport = ZuiProcess;
 #endif
 
 #include <QCommandLineParser>
+#include <QColor>
 #include <QDebug>
 #include <QDir>
 #include <QElapsedTimer>
@@ -22,6 +23,7 @@ using ZuiRuntimeTransport = ZuiProcess;
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
+#include <QQuickWindow>
 #include <QQuickStyle>
 #include <QStandardPaths>
 #include <QTimer>
@@ -110,6 +112,15 @@ int main(int argc, char *argv[]) {
   QCoreApplication::setApplicationName(QStringLiteral("Zui"));
   QCoreApplication::setOrganizationName(QStringLiteral("Zui"));
 #if defined(ZUI_EMBEDDED_RUNTIME)
+  // Qt creates its platform window before the QML engine has parsed the real
+  // application window. Keep that interval branded instead of exposing the
+  // platform's default black backing surface.
+  QQuickWindow startupWindow;
+  startupWindow.setColor(QColor(QStringLiteral("#0b1118")));
+  startupWindow.showFullScreen();
+  QCoreApplication::processEvents();
+#endif
+#if defined(ZUI_EMBEDDED_RUNTIME)
   const QString qmlCache = QDir(QStandardPaths::writableLocation(QStandardPaths::CacheLocation))
                                .filePath(QStringLiteral("qmlcache"));
   QDir(qmlCache).removeRecursively();
@@ -193,6 +204,20 @@ int main(int argc, char *argv[]) {
   QObject::connect(&engine, &QQmlApplicationEngine::objectCreationFailed, &application,
                    [] { QCoreApplication::exit(1); }, Qt::QueuedConnection);
 #if defined(ZUI_EMBEDDED_RUNTIME)
+  QObject::connect(&engine, &QQmlApplicationEngine::objectCreated, &startupWindow,
+                   [&startupWindow, &startupTimer](QObject *object, const QUrl &) {
+    auto *window = qobject_cast<QQuickWindow *>(object);
+    if (!window)
+      return;
+    QObject::connect(window, &QQuickWindow::frameSwapped, &startupWindow,
+                     [&startupWindow, &startupTimer] {
+      qInfo().noquote() << "Zui startup: first frame visible in"
+                        << startupTimer.elapsed() << "ms";
+      startupWindow.hide();
+      startupWindow.destroy();
+    }, Qt::SingleShotConnection);
+    window->requestUpdate();
+  });
   engine.load(QUrl(QStringLiteral("qrc:/zui/Desktop.qml")));
 #else
   engine.load(QUrl::fromLocalFile(QDir(qmlRoot).filePath(QStringLiteral("Desktop.qml"))));

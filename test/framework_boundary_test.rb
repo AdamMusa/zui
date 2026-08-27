@@ -124,6 +124,18 @@ class FrameworkBoundaryTest < Minitest::Test
     assert_includes host, "QDir(qmlCache).removeRecursively();"
   end
 
+  def test_mobile_shell_covers_native_startup_until_the_first_qml_frame
+    host = File.read(File.join(ROOT, "native", "main.cpp"))
+
+    assert_includes host, "QQuickWindow startupWindow;"
+    assert_includes host, "startupWindow.showFullScreen();"
+    assert_includes host, "&QQuickWindow::frameSwapped"
+    assert_includes host, "startupWindow.destroy();"
+    assert_includes host, "Zui startup: first frame visible in"
+    assert_operator host.index("startupWindow.showFullScreen();"), :<,
+                    host.index("installBundledFonts(qmlRoot)")
+  end
+
   def test_mobile_virtual_keyboard_is_linked_and_activated_only_when_tree_shaking_keeps_it
     cmake = File.read(File.join(ROOT, "native", "CMakeLists.txt"))
     host = File.read(File.join(ROOT, "native", "main.cpp"))
