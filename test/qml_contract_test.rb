@@ -25,7 +25,7 @@ class QmlContractTest < Minitest::Test
 
   def assert_dynamic_component_route(renderer, component)
     assert_equal true, Zui::DEFAULT_COMPONENTS.protocol_schema.dig(component, "built_in")
-    assert_includes renderer, "definition.builtIn === true"
+    assert_includes renderer, "nativeSchema.builtIn === true"
     assert_includes renderer, "builtInSource(node.type)"
     assert_includes renderer, "sourceComponent: null"
   end
@@ -38,9 +38,9 @@ class QmlContractTest < Minitest::Test
     assert_includes router, "sourceComponent: null"
     assert_includes router, "function builtInSource(typeName)"
     assert_includes router, "builtInSource(node.type)"
-    assert_includes router, "definition.builtIn === true"
+    assert_includes router, "nativeSchema.builtIn === true"
     refute_includes router, 'readonly property bool builtIn: ['
-    assert_includes router, "Component.onCompleted: root.ensureAdapterLoaded()"
+    assert_includes router, "onAdapterSourceChanged: ensureAdapterLoaded()"
     refute_includes router, "Qt.callLater(ensureAdapterLoaded)"
 
     Zui::COMPONENTS.each_key do |component_name|
@@ -198,7 +198,7 @@ class QmlContractTest < Minitest::Test
   def test_renderer_keeps_loaded_adapters_across_reactive_revisions
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'if (!node) {'
+    assert_includes renderer, 'if (!node || adapterSource === "") {'
     assert_includes renderer, 'if (loadedAdapterKey === adapterKey && item) return'
     refute_includes renderer, 'sourceComponent !== null'
     refute_includes renderer, 'onSourceComponentChanged:'

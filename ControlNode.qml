@@ -28,14 +28,12 @@ Loader {
     return bridge ? bridge.nodeFor(controlId) : null
   }
 
-  readonly property bool builtIn: {
-    var definition = nativeDefinition()
-    return definition ? definition.builtIn === true : false
+  readonly property var nativeSchema: {
+    var currentRevision = bridge ? bridge.revision : 0
+    return bridge && node ? bridge.componentDefinition(node.type) : null
   }
-  readonly property bool structuralContainer: {
-    var definition = nativeDefinition()
-    return definition ? definition.container === true : false
-  }
+  readonly property bool builtIn: nativeSchema ? nativeSchema.builtIn === true : false
+  readonly property bool structuralContainer: nativeSchema ? nativeSchema.container === true : false
   property string loadedAdapterKey: ""
   property string lastComponentErrorKey: ""
 
@@ -176,12 +174,11 @@ Loader {
   }
 
   function ensureAdapterLoaded() {
-    if (!node) {
+    if (!node || adapterSource === "") {
       loadedAdapterKey = ""
       if (source !== "") source = ""
       return
     }
-    var adapterSource = builtIn ? builtInSource(node.type) : bridge.componentSource(node.type)
     var adapterKey = String(node.type) + ":" + String(adapterSource)
     if (loadedAdapterKey === adapterKey && item) return
     loadedAdapterKey = adapterKey
@@ -190,7 +187,7 @@ Loader {
   }
 
   function nativeDefinition() {
-    return bridge && node ? bridge.componentDefinition(node.type) : null
+    return nativeSchema
   }
 
   function optionValue(option) {
@@ -280,6 +277,9 @@ Loader {
   z: Number(prop("z", 0))
   sourceComponent: null
   source: ""
+  readonly property string adapterSource: !node || !nativeSchema ? ""
+    : (builtIn ? builtInSource(node.type) : bridge.componentSource(node.type))
+  onAdapterSourceChanged: ensureAdapterLoaded()
   onLoaded: {
     lastComponentErrorKey = ""
     if (!item) return
@@ -301,7 +301,6 @@ Loader {
       componentError("component_load_failed", "Unable to load the declared " + (node ? node.type : "component") + " renderer", { source: String(source) })
   }
   onNodeChanged: {
-    root.ensureAdapterLoaded()
     if (item && !builtIn && item.hasOwnProperty("node")) item.node = node
     if (!builtIn) syncNativeProperties()
     Qt.callLater(runTransition)
