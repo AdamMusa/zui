@@ -44,6 +44,11 @@ class FullRuntimeTest < Minitest::Test
       native_dependency = File.join(prefix, "lib", "libpaint.so")
       FileUtils.mkdir_p(native_extension)
       File.binwrite(File.join(native_extension, "paint.bundle"), "native-gem-fixture")
+      File.write(File.join(native_extension, "generated.rb"), "module PaintGenerated; end\n")
+      File.write(File.join(native_extension, "gem.build_complete"), "")
+      File.write(File.join(native_extension, "gem_make.out"), "compiler output")
+      File.write(File.join(native_extension, "mkmf.log"), "compiler probe")
+      File.binwrite(File.join(native_extension, "paint.o"), "object file")
       File.binwrite(native_dependency, "native-dependency-fixture")
       app_spec.extension_dir = native_extension
       zui_spec = fake_spec(directory, "zui", Zui::VERSION)
@@ -84,6 +89,15 @@ class FullRuntimeTest < Minitest::Test
       assert File.file?(File.join(destination, "gems", "gems", "paint-1.2.3", "lib", "paint.rb"))
       refute File.exist?(File.join(destination, "gems", "gems", "paint-1.2.3", "dist"))
       assert File.file?(File.join(destination, "gems", "specifications", "paint-1.2.3.gemspec"))
+      installed_extension = File.join(
+        destination, "gems", "extensions", "x86_64-linux", "3.3.0", "paint-1.2.3"
+      )
+      assert File.file?(File.join(installed_extension, "paint.bundle"))
+      assert File.file?(File.join(installed_extension, "generated.rb"))
+      assert File.file?(File.join(installed_extension, "gem.build_complete"))
+      refute File.exist?(File.join(installed_extension, "gem_make.out"))
+      refute File.exist?(File.join(installed_extension, "mkmf.log"))
+      refute File.exist?(File.join(installed_extension, "paint.o"))
       assert File.file?(File.join(destination, "lib", "libpaint.so"))
       assert File.file?(File.join(destination, "gems", "gems", "zui-#{Zui::VERSION}", "lib", "zui.rb"))
       assert_includes File.read(
@@ -209,6 +223,35 @@ class FullRuntimeTest < Minitest::Test
       assert_equal "ruby-library", File.binread(installed_library)
       assert File.symlink?(installed_alias)
       assert_equal File.basename(library), File.readlink(installed_alias)
+    end
+  end
+
+  def test_rejects_conflicting_native_dependency_basenames
+    Dir.mktmpdir do |directory|
+      destination = File.join(directory, "runtime")
+      ruby = File.join(destination, "bin", "ruby")
+      first_extension = File.join(destination, "gems", "first.bundle")
+      second_extension = File.join(destination, "gems", "second.bundle")
+      first_dependency = File.join(directory, "first", "libpaint.so")
+      second_dependency = File.join(directory, "second", "libpaint.so")
+      [ruby, first_extension, second_extension, first_dependency, second_dependency].each do |path|
+        FileUtils.mkdir_p(File.dirname(path))
+        File.binwrite(path, path)
+      end
+      runtime = Zui::FullRuntime.new(platform: Zui::Platform.new(os: :linux, arch: :x86_64))
+      runtime.define_singleton_method(:dependencies) do |binary|
+        case File.basename(binary)
+        when "first.bundle" then [first_dependency]
+        when "second.bundle" then [second_dependency]
+        else []
+        end
+      end
+
+      error = assert_raises(ArgumentError) do
+        runtime.send(:install_native_dependencies, destination)
+      end
+
+      assert_includes error.message, "native dependency collision for libpaint.so"
     end
   end
 

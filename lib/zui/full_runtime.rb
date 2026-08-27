@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "digest"
 require "fileutils"
 require "json"
 require "rbconfig"
@@ -27,6 +28,8 @@ module Zui
 
       require_relative "zui/runtime_entry"
     RUBY
+    EXTENSION_BUILD_FILES = %w[.DS_Store Makefile gem_make.out mkmf.log].freeze
+    EXTENSION_BUILD_EXTENSIONS = %w[.a .exp .ilk .lib .o .obj .pdb].freeze
 
     attr_reader :platform
 
@@ -145,7 +148,14 @@ module Zui
           next if SYSTEM_LIBRARIES.match?(name)
 
           target = File.join(library_root, name)
-          next if File.file?(target)
+          if File.file?(target)
+            identical = File.size(target) == File.size(source) &&
+                        Digest::SHA256.file(target).digest == Digest::SHA256.file(source).digest
+            unless identical
+              raise ArgumentError, "native dependency collision for #{name}: #{source}"
+            end
+            next
+          end
 
           FileUtils.cp(source, target)
           binaries << target
@@ -179,7 +189,7 @@ module Zui
       FileUtils.mkdir_p([File.join(gem_home, "gems"), File.join(gem_home, "specifications")])
       names = Set.new
       specs.sort_by(&:full_name).each do |spec|
-        raise ArgumentError, "duplicate bundled gem: #{spec.full_name}" unless names.add?(spec.full_name)
+        raise ArgumentError, "duplicate bundled gem: #{spec.name}" unless names.add?(spec.name)
         unless File.directory?(spec.full_gem_path)
           raise ArgumentError, "project gem is not installed: #{spec.full_name}; run `bundle install`"
         end
@@ -248,8 +258,23 @@ module Zui
 
       relative = File.join(*parts[(index + 1)..])
       target = File.join(gem_home, "extensions", relative)
-      FileUtils.mkdir_p(File.dirname(target))
-      FileUtils.cp_r(source, target)
+      root = File.realpath(source)
+      Dir.glob(File.join(source, "**", "*"), File::FNM_DOTMATCH).sort.each do |path|
+        next unless File.file?(path)
+
+        name = File.basename(path)
+        next if EXTENSION_BUILD_FILES.include?(name)
+        next if EXTENSION_BUILD_EXTENSIONS.include?(File.extname(name).downcase)
+
+        resolved = File.realpath(path)
+        unless inside?(resolved, root)
+          raise ArgumentError, "gem #{spec.full_name} has an extension file outside its root: #{path}"
+        end
+        extension_relative = path.delete_prefix("#{source}#{File::SEPARATOR}")
+        installed = File.join(target, extension_relative)
+        FileUtils.mkdir_p(File.dirname(installed))
+        FileUtils.cp(path, installed, preserve: true)
+      end
     end
 
     def runtime_relative_path(path)
