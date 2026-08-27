@@ -31,6 +31,13 @@ module Zui
       end
     end
 
+    def self.configured_release_assets(project:, config:)
+      (config.icons.values + config.splashes.values).uniq.filter_map do |relative|
+        path = File.expand_path(relative, project)
+        path if File.file?(path)
+      end
+    end
+
     class IOSBuilder
       DEFAULT_DEPLOYMENT_TARGET = "16.0"
       DEFAULT_ARCHITECTURE = "x86_64"
@@ -215,7 +222,7 @@ module Zui
       def copy_assets(stage, config)
         Mobile.copy_project_assets(
           project: @project, stage:,
-          excluding: [config.icon_path(@project, IOS_PLATFORM), config.splash_path(@project, IOS_PLATFORM)]
+          excluding: Mobile.configured_release_assets(project: @project, config:)
         )
       end
 

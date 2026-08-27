@@ -84,6 +84,7 @@ class MobileTest < Minitest::Test
       assert_includes application, "class EmbeddedOutput"
       assert_includes application, 'text "Touch ready"'
       refute File.exist?(File.join(stage, "assets", "ruby.png"))
+      refute File.exist?(File.join(stage, "assets", "release.ico"))
       assert_equal "runtime asset", File.read(File.join(stage, "assets", "runtime.txt"))
       assert_equal "AppIcon.png", manifest.dig("images", 0, "filename")
       assert File.file?(File.join(stage, "Assets.xcassets", "AppIcon.appiconset", "AppIcon.png"))
@@ -315,6 +316,7 @@ class MobileTest < Minitest::Test
     RUBY
     icon = File.join(ROOT, "lib", "zui", "generator_assets", "ruby.png")
     FileUtils.cp(icon, File.join(project, "assets", "ruby.png"))
+    File.write(File.join(project, "assets", "release.ico"), "desktop release icon")
     File.write(File.join(project, "assets", "runtime.txt"), "runtime asset")
     File.write(File.join(project, "config.rb"), <<~RUBY)
       Zui::Dist.configure do
@@ -324,7 +326,7 @@ class MobileTest < Minitest::Test
         publisher "Zui"
         description "A mobile test application."
         license "MIT"
-        icon ios: "assets/ruby.png"
+        icon ios: "assets/ruby.png", windows: "assets/release.ico"
         splash ios: "assets/ruby.png"
         categories "Utility"
       end

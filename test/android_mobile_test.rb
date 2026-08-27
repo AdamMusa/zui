@@ -59,6 +59,7 @@ class AndroidMobileTest < Minitest::Test
       assert_includes File.read(File.join(stage, "android", "zui.gradle")), "mobile-sdk"
       assert File.file?(File.join(stage, "android", "src", "dev", "zui", "MobileBridge.java"))
       refute File.exist?(File.join(stage, "assets", "ruby.png"))
+      refute File.exist?(File.join(stage, "assets", "release.icns"))
       assert_equal "runtime asset", File.read(File.join(stage, "assets", "runtime.txt"))
     end
   end
@@ -200,6 +201,7 @@ class AndroidMobileTest < Minitest::Test
     RUBY
     icon = File.join(ROOT, "lib", "zui", "generator_assets", "ruby.png")
     FileUtils.cp(icon, File.join(project, "assets", "ruby.png"))
+    File.write(File.join(project, "assets", "release.icns"), "desktop release icon")
     File.write(File.join(project, "assets", "runtime.txt"), "runtime asset")
     File.write(File.join(project, "config.rb"), <<~RUBY)
       Zui::Dist.configure do
@@ -209,7 +211,7 @@ class AndroidMobileTest < Minitest::Test
         publisher "Zui"
         description "A mobile test application."
         license "MIT"
-        icon android: "assets/ruby.png"
+        icon android: "assets/ruby.png", macos: "assets/release.icns"
         splash android: "assets/ruby.png"
         categories "Utility"
       end

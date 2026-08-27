@@ -135,9 +135,7 @@ module Zui
       def copy_assets(stage, config)
         Mobile.copy_project_assets(
           project: @project, stage:,
-          excluding: [
-            config.icon_path(@project, ANDROID_PLATFORM), config.splash_path(@project, ANDROID_PLATFORM)
-          ]
+          excluding: Mobile.configured_release_assets(project: @project, config:)
         )
       end
 
