@@ -90,6 +90,22 @@ class ClientTest < Minitest::Test
     end
   end
 
+  def test_rejects_a_native_client_built_for_an_older_runtime_contract
+    Dir.mktmpdir do |directory|
+      platform = Zui::Platform.new(os: :linux, arch: :x86_64)
+      root = ClientFixture.create(File.join(directory, "client"), platform:)
+      manifest_path = File.join(root, "client.json")
+      manifest = JSON.parse(File.read(manifest_path))
+      manifest["runtime_contract_sha256"] = "0" * 64
+      File.write(manifest_path, JSON.pretty_generate(manifest))
+      client = Zui::Client.new(platform:, environment: { "ZUI_CLIENT_ROOT" => root })
+
+      refute client.configured?
+      error = assert_raises(ArgumentError) { client.manifest }
+      assert_includes error.message, "runtime_contract_sha256"
+    end
+  end
+
   def test_invalid_explicit_client_root_is_never_replaced
     Dir.mktmpdir do |directory|
       root = File.join(directory, "mine")

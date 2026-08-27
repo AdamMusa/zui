@@ -9,10 +9,12 @@ module Zui
   class ClientPackager
     attr_reader :platform
 
-    def initialize(platform: Platform.current, version: VERSION, source_date_epoch: nil)
+    def initialize(platform: Platform.current, version: VERSION, source_date_epoch: nil,
+                   framework_root: FRAMEWORK_ROOT)
       @platform = platform.assert_supported!
       @version = version.to_s
       @source_date_epoch = ReproducibleBuild.epoch(source_date_epoch)
+      @framework_root = File.expand_path(framework_root)
     end
 
     def package(source:, output:, executable:, qt_version: nil)
@@ -58,6 +60,7 @@ module Zui
         "framework" => "zui",
         "client_version" => @version,
         "platform" => platform.id,
+        "runtime_contract_sha256" => Client.runtime_contract(framework_root: @framework_root),
         "bundle_capable" => true,
         "executable" => executable,
         "environment" => runtime_environment,

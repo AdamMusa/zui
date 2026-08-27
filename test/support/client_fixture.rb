@@ -24,6 +24,7 @@ module ClientFixture
       "framework" => "zui",
       "client_version" => version,
       "platform" => platform.id,
+      "runtime_contract_sha256" => Zui::Client.runtime_contract,
       "bundle_capable" => true,
       "payload" => %w[native-host qt-engine],
       "executable" => executable,

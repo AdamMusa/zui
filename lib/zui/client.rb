@@ -18,17 +18,40 @@ module Zui
     MAX_EXPANDED_BYTES = 2_147_483_648
     MAX_ENTRIES = 100_000
     REDIRECT_LIMIT = 5
+    RUNTIME_CONTRACT_FILES = %w[
+      native/main.cpp
+      native/ZuiClipboard.cpp
+      native/ZuiClipboard.h
+      native/ZuiProcess.cpp
+      native/ZuiProcess.h
+      native/ZuiSafeArea.cpp
+      native/ZuiSafeArea.h
+    ].freeze
 
     attr_reader :platform, :version
 
     def initialize(platform: Platform.current, version: VERSION, environment: ENV,
-                   cache_root: nil, release_base_url: nil, downloader: nil)
+                   cache_root: nil, release_base_url: nil, downloader: nil,
+                   framework_root: FRAMEWORK_ROOT)
       @platform = platform.assert_supported!
       @version = version.to_s
       @environment = environment
       @cache_root = cache_root
       @release_base_url = release_base_url
       @downloader = downloader || method(:download)
+      @framework_root = File.expand_path(framework_root)
+    end
+
+    def self.runtime_contract(framework_root: FRAMEWORK_ROOT)
+      root = File.expand_path(framework_root)
+      digest = Digest::SHA256.new
+      RUNTIME_CONTRACT_FILES.each do |relative|
+        path = File.join(root, relative)
+        raise ArgumentError, "native client contract source is missing: #{path}" unless File.file?(path)
+
+        digest << relative << "\0" << Digest::SHA256.file(path).digest << "\0"
+      end
+      digest.hexdigest
     end
 
     def root
@@ -163,7 +186,8 @@ module Zui
         "format" => FORMAT,
         "framework" => "zui",
         "client_version" => version,
-        "platform" => platform.id
+        "platform" => platform.id,
+        "runtime_contract_sha256" => self.class.runtime_contract(framework_root: @framework_root)
       }
       expected.each do |key, value|
         actual = manifest[key]
