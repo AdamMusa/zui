@@ -184,7 +184,7 @@ module Zui
 
     def install_application_runtime(project, destination)
       builder = @runtime_builder || if runtime_mode == :full
-                                      FullRuntime.new(platform:, ruby: @ruby)
+                                      FullRuntime.new(platform:, ruby: @ruby, tree_shake: @tree_shake)
                                     else
                                       LiteRuntime.new(platform:)
                                     end
@@ -329,7 +329,11 @@ module Zui
         "name" => app_name, "client_version" => @client.manifest.fetch("client_version"),
         "tree_shaken" => !@tree_shake_report.nil?, "ruby_runtime" => runtime_mode.to_s
       }
-      manifest["tree_shake"] = @tree_shake_report.to_h if @tree_shake_report
+      if @tree_shake_report
+        report = @tree_shake_report.to_h
+        report["ruby"] = @application_runtime.tree_shake if @application_runtime&.tree_shake
+        manifest["tree_shake"] = report
+      end
       if @bundle_config
         manifest["identifier"] = @bundle_config.identifier
         manifest["application_version"] = @bundle_config.version

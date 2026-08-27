@@ -27,7 +27,7 @@ class FullRuntimeTest < Minitest::Test
       FileUtils.mkdir_p([File.dirname(ruby), architecture_library, File.join(prefix, "lib")])
       File.binwrite(ruby, "ruby-fixture")
       FileUtils.chmod(0o755, ruby)
-      File.write(File.join(standard_library, "json.rb"), "module JSON; end\n")
+      File.write(File.join(standard_library, "json.rb"), "require 'json.so'\nmodule JSON; end\n")
       File.binwrite(File.join(architecture_library, "json.so"), "native-fixture")
       debug_symbols = File.join(architecture_library, "json.so.dSYM", "Contents", "Resources", "DWARF")
       FileUtils.mkdir_p(debug_symbols)
@@ -38,6 +38,7 @@ class FullRuntimeTest < Minitest::Test
       FileUtils.mkdir_p(project)
       File.write(File.join(project, "Gemfile"), "source 'https://rubygems.org'\n")
       File.write(File.join(project, "Gemfile.lock"), "GEM\n  specs:\n")
+      File.write(File.join(project, "main.rb"), "require 'json'\n")
       app_spec = fake_spec(directory, "paint", "1.2.3")
       FileUtils.mkdir_p(File.join(app_spec.full_gem_path, "dist"))
       File.binwrite(File.join(app_spec.full_gem_path, "dist", "development-build.bin"), "must not ship")
@@ -112,6 +113,11 @@ class FullRuntimeTest < Minitest::Test
       manifest = JSON.parse(File.read(File.join(destination, "runtime.json")))
       assert_equal "cruby", manifest.fetch("engine")
       assert_equal ["gems"], manifest.fetch("environment").fetch("GEM_HOME")
+      assert_includes manifest.fetch("environment").fetch("RUBYLIB"),
+                      "gems/gems/zui-#{Zui::VERSION}/lib"
+      assert_equal "--disable-gems", manifest.fetch("variables").fetch("RUBYOPT")
+      assert_equal true, manifest.fetch("tree_shaken")
+      assert_includes manifest.fetch("tree_shake").fetch("features"), "json"
       assert_equal "", manifest.fetch("load_path")
     end
   end

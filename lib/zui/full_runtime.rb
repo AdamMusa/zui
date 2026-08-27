@@ -32,15 +32,17 @@ module Zui
     EXTENSION_BUILD_EXTENSIONS = %w[.a .exp .ilk .lib .o .obj .pdb].freeze
     NON_RUNTIME_DIRECTORIES = %w[.dSYM].freeze
 
-    attr_reader :platform
+    attr_reader :platform, :tree_shake_report
 
     def initialize(platform: Platform.current, ruby: RbConfig.ruby, environment: ENV,
-                   rbconfig: RbConfig::CONFIG, spec_loader: nil)
+                   rbconfig: RbConfig::CONFIG, spec_loader: nil, tree_shake: true)
       @platform = platform.assert_supported!
       @ruby = File.expand_path(ruby)
       @environment = environment.to_h
       @rbconfig = rbconfig.to_h
       @spec_loader = spec_loader || LockedGems.new(environment: @environment).method(:specs)
+      @tree_shake = tree_shake == true
+      @tree_shake_report = nil
     end
 
     def install(project:, destination:)
@@ -55,8 +57,10 @@ module Zui
       install_runtime_libraries(destination)
       gems = install_project_gems(project, destination)
       prune_non_runtime_artifacts(destination)
+      @tree_shake_report = shake_standard_library(project, destination, library_paths) if @tree_shake
       install_native_dependencies(destination)
       optimize_native_binaries(destination)
+      library_paths += gem_load_paths(destination, gems)
       environment = {
         "RUBYLIB" => library_paths,
         "GEM_HOME" => ["gems"],
@@ -70,8 +74,10 @@ module Zui
         version: ruby_version,
         executable:,
         environment:,
+        variables: tree_shake_report&.tree_shaken? ? { "RUBYOPT" => "--disable-gems" } : {},
         gems: gems.map(&:full_name),
-        load_path: ""
+        load_path: "",
+        tree_shake: tree_shake_report&.to_h
       ).write(destination)
     rescue StandardError
       FileUtils.remove_entry(destination) if destination && File.exist?(destination)
@@ -162,6 +168,30 @@ module Zui
           binaries << target
         end
       end
+    end
+
+    def shake_standard_library(project, destination, library_paths)
+      configuration = QtBundleConfiguration.load(project)
+      RubyRuntimeShaker.new(
+        project:,
+        runtime: destination,
+        load_paths: library_paths,
+        configured_features: configuration.ruby_stdlib
+      ).shake!
+    end
+
+    def gem_load_paths(destination, specs)
+      paths = specs.flat_map do |spec|
+        require_paths = spec.respond_to?(:require_paths) ? Array(spec.require_paths) : ["lib"]
+        require_paths.map { |path| File.join("gems", "gems", spec.full_name, path) }
+      end
+      specs.each do |spec|
+        root = File.join(destination, "gems", "extensions")
+        Dir.glob(File.join(root, "**", spec.full_name)).sort.each do |path|
+          paths << path.delete_prefix("#{destination}#{File::SEPARATOR}") if File.directory?(path)
+        end
+      end
+      paths.map { |path| path.tr(File::SEPARATOR, "/") }.uniq.sort
     end
 
     def prune_non_runtime_artifacts(destination)

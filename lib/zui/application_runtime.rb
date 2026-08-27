@@ -6,10 +6,11 @@ module Zui
   class ApplicationRuntime
     FORMAT = 1
 
-    attr_reader :engine, :version, :executable, :environment, :variables, :gems, :program, :load_path
+    attr_reader :engine, :version, :executable, :environment, :variables, :gems, :program, :load_path,
+                :tree_shake
 
     def initialize(engine:, version:, executable:, environment: {}, variables: {}, gems: [], program: nil,
-                   load_path: nil)
+                   load_path: nil, tree_shake: nil)
       @engine = engine.to_s
       @version = version.to_s
       @executable = executable.to_s
@@ -20,6 +21,7 @@ module Zui
       @gems = Array(gems).map(&:to_s).sort.freeze
       @program = program&.to_s
       @load_path = load_path&.to_s
+      @tree_shake = tree_shake&.transform_keys(&:to_s)&.freeze
       freeze
     end
 
@@ -40,6 +42,10 @@ module Zui
       }
       result["program"] = program unless program.nil?
       result["load_path"] = load_path unless load_path.nil?
+      unless tree_shake.nil?
+        result["tree_shaken"] = tree_shake["fallback"].nil?
+        result["tree_shake"] = tree_shake
+      end
       result
     end
   end
