@@ -148,6 +148,20 @@ class FrameworkBoundaryTest < Minitest::Test
     assert_includes host, "TARGET_OS_SIMULATOR"
   end
 
+  def test_mruby_startup_overlaps_qml_loading_without_racing_running_state
+    host = File.read(File.join(ROOT, "native", "main.cpp"))
+    runtime = File.read(File.join(ROOT, "native", "ZuiEmbeddedRuntime.h"))
+
+    assert_includes host, "std::async(std::launch::async"
+    assert_includes host, "runtimeStartup.get();"
+    assert_includes host, "!defined(ZUI_EMBEDDED_CRUBY)"
+    assert_operator host.index("std::async(std::launch::async"), :<,
+                    host.index("installBundledFonts(qmlRoot)")
+    assert_operator host.index("engine.load(QUrl(QStringLiteral(\"qrc:/zui/Desktop.qml\")))"), :<,
+                    host.index("runtimeStartup.get();")
+    assert_includes runtime, "std::atomic_bool m_running"
+  end
+
   def test_mobile_virtual_keyboard_is_linked_and_activated_only_when_tree_shaking_keeps_it
     cmake = File.read(File.join(ROOT, "native", "CMakeLists.txt"))
     host = File.read(File.join(ROOT, "native", "main.cpp"))

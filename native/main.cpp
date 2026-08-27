@@ -28,6 +28,8 @@ using ZuiRuntimeTransport = ZuiProcess;
 #include <QStandardPaths>
 #include <QTimer>
 
+#include <future>
+
 #if defined(ZUI_USES_WEBVIEW)
 #include <QtWebView/QtWebView>
 #endif
@@ -171,12 +173,23 @@ int main(int argc, char *argv[]) {
   const QString applicationName = parser.value(QStringLiteral("name"));
 #endif
 
+  ZuiRuntimeTransport process;
+#if defined(ZUI_EMBEDDED_RUNTIME) && !defined(ZUI_EMBEDDED_CRUBY)
+  // mruby has no GUI-thread affinity. Build the immutable application tree in
+  // parallel with font registration and QML parsing, then synchronize before
+  // entering the event loop. Its queued protocol messages are delivered only
+  // after Service.qml has installed its transport connections.
+  auto runtimeStartup = std::async(std::launch::async,
+                                   [&process, &runtimeExecutable, &program, &project, &rubyLoadPath] {
+    process.start(runtimeExecutable, program, project, rubyLoadPath);
+  });
+#endif
+
   const BundledFonts bundledFonts = installBundledFonts(qmlRoot);
 #if defined(ZUI_EMBEDDED_RUNTIME)
   qInfo().noquote() << "Zui startup: fonts registered in" << startupTimer.elapsed() << "ms";
 #endif
 
-  ZuiRuntimeTransport process;
   ZuiClipboard clipboard;
   ZuiSafeArea safeArea;
   QQmlApplicationEngine engine;
@@ -232,6 +245,9 @@ int main(int argc, char *argv[]) {
 #endif
 #if defined(ZUI_EMBEDDED_RUNTIME)
   qInfo().noquote() << "Zui startup: interface loaded in" << startupTimer.elapsed() << "ms";
+#endif
+#if defined(ZUI_EMBEDDED_RUNTIME) && !defined(ZUI_EMBEDDED_CRUBY)
+  runtimeStartup.get();
 #endif
   scheduleAllocatorPressureRelief(&application);
   return application.exec();

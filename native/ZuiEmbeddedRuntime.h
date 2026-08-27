@@ -1,5 +1,7 @@
 #pragma once
 
+#include <atomic>
+
 #include <QObject>
 #include <QString>
 
@@ -36,5 +38,5 @@ private:
   void finish(int exitCode);
 
   mrb_state *m_state = nullptr;
-  bool m_running = false;
+  std::atomic_bool m_running = false;
 };

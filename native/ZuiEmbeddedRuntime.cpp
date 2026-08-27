@@ -37,11 +37,11 @@ ZuiEmbeddedRuntime::ZuiEmbeddedRuntime(QObject *parent) : QObject(parent) {}
 
 ZuiEmbeddedRuntime::~ZuiEmbeddedRuntime() { stop(); }
 
-bool ZuiEmbeddedRuntime::running() const { return m_running; }
+bool ZuiEmbeddedRuntime::running() const { return m_running.load(); }
 
 void ZuiEmbeddedRuntime::start(const QString &, const QString &program,
                                const QString &, const QString &) {
-  if (m_running || program.isEmpty())
+  if (m_running.load() || program.isEmpty())
     return;
 
   QElapsedTimer timer;
@@ -58,7 +58,7 @@ void ZuiEmbeddedRuntime::start(const QString &, const QString &program,
   mrb_define_module_function(m_state, bridge, "emit", emitLine, MRB_ARGS_REQ(1));
   mrb_define_module_function(m_state, bridge, "emit_error", emitError, MRB_ARGS_REQ(1));
 
-  m_running = true;
+  m_running.store(true);
   emit runningChanged();
   if (!loadProgram(program))
     finish(1);
@@ -67,16 +67,16 @@ void ZuiEmbeddedRuntime::start(const QString &, const QString &program,
 }
 
 void ZuiEmbeddedRuntime::write(const QString &data) {
-  if (!m_running || !m_state)
+  if (!m_running.load() || !m_state)
     return;
   if (!callZui("embedded_receive", &data))
     finish(1);
 }
 
 void ZuiEmbeddedRuntime::stop() {
-  if (!m_state && !m_running)
+  if (!m_state && !m_running.load())
     return;
-  if (m_state && m_running)
+  if (m_state && m_running.load())
     callZui("embedded_stop");
   finish(0);
 }
@@ -133,8 +133,7 @@ QString ZuiEmbeddedRuntime::exceptionMessage() const {
 }
 
 void ZuiEmbeddedRuntime::finish(int exitCode) {
-  const bool wasRunning = m_running;
-  m_running = false;
+  const bool wasRunning = m_running.exchange(false);
   if (m_state) {
     mrb_close(m_state);
     m_state = nullptr;
