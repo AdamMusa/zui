@@ -340,6 +340,18 @@ class QmlContractTest < Minitest::Test
     refute_includes renderer, "var currentRevision = bridge ? bridge.revision : 0"
   end
 
+  def test_explicit_native_text_sizes_do_not_evaluate_implicit_size_fallbacks
+    renderer = source("ControlNode.qml")
+    adapters = %w[Text Label RichText Markdown SelectableText LayoutItemProxy].map do |name|
+      source("Components/Builtins/#{name}.qml")
+    end.join("\n")
+
+    assert_includes renderer, "function hasProp(name)"
+    assert_includes adapters, 'renderer.hasProp("width") ? Number(renderer.prop("width", 0)) : implicitWidth'
+    refute_match(/prop\("width",\s*implicitWidth\)/, adapters)
+    refute_match(/prop\("height",\s*implicitHeight\)/, adapters)
+  end
+
   def test_framework_loads_bundled_cross_platform_text_and_icon_fonts
     fonts = source("Theme/Fonts.qml")
     style = source("Theme/Style.qml")

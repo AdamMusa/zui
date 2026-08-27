@@ -13,7 +13,7 @@ Text {
       font.family: renderer.fontFamily
       font.pixelSize: Number(renderer.prop("size", Style.font.body))
       font.bold: renderer.prop("bold", false) === true
-      width: Number(renderer.prop("width", implicitWidth))
+      width: renderer.hasProp("width") ? Number(renderer.prop("width", 0)) : implicitWidth
       wrapMode: renderer.prop("wrap", true) !== false ? Text.Wrap : Text.NoWrap
       maximumLineCount: Number(renderer.prop("maximum_lines", 2147483647))
       onLinkActivated: function(link) { renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "link", { value: link }) }

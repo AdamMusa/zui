@@ -18,5 +18,5 @@ Text {
       }
       font.bold: renderer.prop("bold", false) || String(renderer.prop("style", "body")) === "heading"
       wrapMode: renderer.prop("wrap", true) ? Text.Wrap : Text.NoWrap
-      width: Number(renderer.prop("width", implicitWidth))
+      width: renderer.hasProp("width") ? Number(renderer.prop("width", 0)) : implicitWidth
     }

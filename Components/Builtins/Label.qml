@@ -11,7 +11,7 @@ QQC.Label {
       font.family: renderer.fontFamily
       font.pixelSize: Number(renderer.prop("size", Style.font.body))
       font.bold: renderer.prop("bold", false) === true
-      width: Number(renderer.prop("width", implicitWidth))
+      width: renderer.hasProp("width") ? Number(renderer.prop("width", 0)) : implicitWidth
       wrapMode: renderer.prop("wrap", false) === true ? Text.Wrap : Text.NoWrap
       elide: {
         var mode = String(renderer.prop("elide", "none"))

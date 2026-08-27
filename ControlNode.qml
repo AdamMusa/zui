@@ -46,6 +46,11 @@ Loader {
     return value === undefined || value === null ? fallback : value
   }
 
+  function hasProp(name) {
+    var props = node && node.props ? node.props : null
+    return props && props[name] !== undefined && props[name] !== null
+  }
+
   function iconGlyph(name) {
     var icons = {
       ruby: "\uf3a5",

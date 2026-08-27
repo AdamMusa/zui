@@ -7,8 +7,8 @@ LayoutItemProxy {
   required property var renderer
   readonly property string targetId: String(renderer.prop("target", ""))
 
-  width: renderer.prop("width", null) === null ? implicitWidth : Number(renderer.prop("width", implicitWidth))
-  height: renderer.prop("height", null) === null ? implicitHeight : Number(renderer.prop("height", implicitHeight))
+  width: renderer.hasProp("width") ? Number(renderer.prop("width", 0)) : implicitWidth
+  height: renderer.hasProp("height") ? Number(renderer.prop("height", 0)) : implicitHeight
   Layout.fillWidth: renderer.prop("fill_width", false) === true
   Layout.fillHeight: renderer.prop("fill_height", false) === true
   Layout.preferredWidth: Number(renderer.prop("preferred_width", -1))
