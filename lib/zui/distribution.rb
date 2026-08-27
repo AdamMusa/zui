@@ -103,6 +103,7 @@ module Zui
       MacOSQmlPayload.deduplicate!(native)
       shake_bundle(project, File.join(resources, "runtime"))
       MacOSArchitecture.thin!(native, architecture: platform.arch)
+      MacOSBundleSeal.seal!(native)
       icon_name = install_macos_release_icon(resources)
       File.write(File.join(macos, "run"), macos_launcher(app_name))
       FileUtils.chmod(0o755, File.join(macos, "run"))
