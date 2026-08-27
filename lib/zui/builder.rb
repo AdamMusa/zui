@@ -621,7 +621,8 @@ module Zui
     end
 
     %i[accelerometer ambient_light_sensor ambient_temperature_sensor compass gyroscope humidity_sensor
-       light_sensor magnetometer orientation_sensor pressure_sensor proximity_sensor rotation_sensor tilt_sensor].each do |type|
+       ir_proximity_sensor lid_sensor light_sensor magnetometer orientation_sensor pressure_sensor
+       proximity_sensor rotation_sensor tap_sensor tilt_sensor].each do |type|
       define_method(type) do |id: nil, **props, &handler|
         node = component(type, id:, **props)
         @application.register_handler(node.id, :reading, handler) if handler

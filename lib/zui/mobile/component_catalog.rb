@@ -59,12 +59,15 @@ module Zui
         "Compass" => :compass,
         "Gyroscope" => :gyroscope,
         "HumiditySensor" => :humidity_sensor,
+        "IRProximitySensor" => :ir_proximity_sensor,
+        "LidSensor" => :lid_sensor,
         "LightSensor" => :light_sensor,
         "Magnetometer" => :magnetometer,
         "OrientationSensor" => :orientation_sensor,
         "PressureSensor" => :pressure_sensor,
         "ProximitySensor" => :proximity_sensor,
         "RotationSensor" => :rotation_sensor,
+        "TapSensor" => :tap_sensor,
         "TiltSensor" => :tilt_sensor
       }.freeze
 

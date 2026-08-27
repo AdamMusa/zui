@@ -312,12 +312,15 @@ transitions, and animation groups receive Ruby APIs even though they are not vis
 - [x] compass
 - [x] gyroscope
 - [x] humidity_sensor
+- [x] ir_proximity_sensor
+- [x] lid_sensor
 - [x] light_sensor
 - [x] magnetometer
 - [x] orientation_sensor
 - [x] pressure_sensor
 - [x] proximity_sensor
 - [x] rotation_sensor
+- [x] tap_sensor
 - [x] tilt_sensor
 
 ## Mobile positioning
