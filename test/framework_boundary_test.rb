@@ -110,6 +110,11 @@ class FrameworkBoundaryTest < Minitest::Test
 
     assert_includes cmake, 'EXISTS "${ZUI_FRAMEWORK_ROOT}/Components/Builtins/WebView.qml"'
     assert_includes cmake, "target_link_libraries(zui-host PRIVATE Qt6::WebView)"
+    assert_includes cmake, "INCLUDE_BY_TYPE multimedia Qt6::QDarwinMediaPlugin"
+    assert_includes cmake, "INCLUDE_BY_TYPE texttospeech Qt6::QTextToSpeechDarwinPlugin"
+    assert_includes cmake, "INCLUDE_BY_TYPE position Qt6::QGeoPositionInfoSourceFactoryCLPlugin"
+    assert_includes cmake, "INCLUDE_BY_TYPE sensors Qt6::IOSSensorPlugin"
+    assert_includes cmake, "INCLUDE_BY_TYPE webview Qt6::QDarwinWebViewPlugin"
     assert_includes host, "QtWebView::initialize();"
     assert_includes host, "ZUI_USES_WEBVIEW"
   end
