@@ -104,21 +104,39 @@ Item {
   }
 
   function validateComponents(components) {
-    if (!plainObject(components)) return false
+    if (!plainObject(components)) {
+      console.warn("zui registry: payload is not an object")
+      return false
+    }
     var names = Object.keys(components)
-    if (names.length === 0 || names.length > maxComponentDefinitions) return false
+    if (names.length === 0 || names.length > maxComponentDefinitions) {
+      console.warn("zui registry: invalid component count", names.length)
+      return false
+    }
     var validated = ({})
     for (var i = 0; i < names.length; i++) {
       var name = names[i]
       var definition = components[name]
-      if (!/^[a-z][a-z0-9_]*$/.test(name) || !plainObject(definition)) return false
-      if (!/^[A-Z][A-Za-z0-9]*\.qml$/.test(String(definition.qml || ""))) return false
+      if (!/^[a-z][a-z0-9_]*$/.test(name) || !plainObject(definition)) {
+        console.warn("zui registry: invalid definition", name)
+        return false
+      }
+      if (!/^[A-Z][A-Za-z0-9]*\.qml$/.test(String(definition.qml || ""))) {
+        console.warn("zui registry: invalid adapter", name, definition.qml)
+        return false
+      }
       if (!Array.isArray(definition.properties) || !Array.isArray(definition.events)
-          || !plainObject(definition.property_map || {}) || !plainObject(definition.event_map || {})) return false
+          || !plainObject(definition.property_map || {}) || !plainObject(definition.event_map || {})) {
+        console.warn("zui registry: invalid schema", name)
+        return false
+      }
       var propertyMap = ({})
       for (var p = 0; p < definition.properties.length; p++) {
         var propertyName = String(definition.properties[p])
-        if (!/^[a-z][a-z0-9_]*$/.test(propertyName)) return false
+        if (!/^[a-z][a-z0-9_]*$/.test(propertyName)) {
+          console.warn("zui registry: invalid property", name, propertyName)
+          return false
+        }
         propertyMap[propertyName] = true
       }
       validated[name] = {
