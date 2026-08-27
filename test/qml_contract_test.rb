@@ -347,7 +347,11 @@ class QmlContractTest < Minitest::Test
     end.join("\n")
 
     assert_includes renderer, "function hasProp(name)"
-    assert_includes adapters, 'renderer.hasProp("width") ? Number(renderer.prop("width", 0)) : implicitWidth'
+    assert_includes adapters, "function synchronizeWidth()"
+    assert_includes adapters, "function synchronizeDimensions()"
+    assert_includes adapters, "Component.onCompleted: synchronizeWidth()"
+    refute_match(/^\s*width:\s*.*implicitWidth/, adapters)
+    refute_match(/^\s*height:\s*.*implicitHeight/, adapters)
     refute_match(/prop\("width",\s*implicitWidth\)/, adapters)
     refute_match(/prop\("height",\s*implicitHeight\)/, adapters)
   end

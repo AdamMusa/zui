@@ -7,8 +7,6 @@ LayoutItemProxy {
   required property var renderer
   readonly property string targetId: String(renderer.prop("target", ""))
 
-  width: renderer.hasProp("width") ? Number(renderer.prop("width", 0)) : implicitWidth
-  height: renderer.hasProp("height") ? Number(renderer.prop("height", 0)) : implicitHeight
   Layout.fillWidth: renderer.prop("fill_width", false) === true
   Layout.fillHeight: renderer.prop("fill_height", false) === true
   Layout.preferredWidth: Number(renderer.prop("preferred_width", -1))
@@ -29,18 +27,34 @@ LayoutItemProxy {
     if (resolved && resolved !== proxy) target = resolved
   }
 
+  function synchronizeDimensions() {
+    var resolvedWidth = renderer.hasProp("width") ? Number(renderer.prop("width", 0)) : implicitWidth
+    var resolvedHeight = renderer.hasProp("height") ? Number(renderer.prop("height", 0)) : implicitHeight
+    if (!isNaN(resolvedWidth) && width !== resolvedWidth) width = resolvedWidth
+    if (!isNaN(resolvedHeight) && height !== resolvedHeight) height = resolvedHeight
+  }
+
   onTargetIdChanged: {
     target = null
     Qt.callLater(resolveTarget)
   }
   onTargetChanged: {
+    Qt.callLater(synchronizeDimensions)
     if (renderer.subscribed("target_change"))
       renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "target_change", {
         target: target ? targetId : null,
         resolved: target !== null
       })
   }
-  Component.onCompleted: Qt.callLater(resolveTarget)
+  Component.onCompleted: {
+    Qt.callLater(resolveTarget)
+    Qt.callLater(synchronizeDimensions)
+  }
+
+  Connections {
+    target: proxy.renderer
+    function onNodeChanged() { Qt.callLater(proxy.synchronizeDimensions) }
+  }
 
   Timer {
     interval: 16

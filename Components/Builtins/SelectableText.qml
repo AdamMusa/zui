@@ -5,7 +5,12 @@ import "../../Theme"
 import "../../Controls" as ZuiControls
 
 TextEdit {
+  id: root
   required property var renderer
+      function synchronizeWidth() {
+        var resolved = renderer.hasProp("width") ? Number(renderer.prop("width", 0)) : implicitWidth
+        if (!isNaN(resolved) && width !== resolved) width = resolved
+      }
       text: String(renderer.prop("text", ""))
       readOnly: true
       selectByMouse: true
@@ -16,7 +21,12 @@ TextEdit {
       font.family: renderer.fontFamily
       font.pixelSize: Number(renderer.prop("size", Style.font.body))
       font.bold: renderer.prop("bold", false) === true
-      width: renderer.hasProp("width") ? Number(renderer.prop("width", 0)) : implicitWidth
+      onTextChanged: Qt.callLater(root.synchronizeWidth)
+      Component.onCompleted: synchronizeWidth()
+      Connections {
+        target: root.renderer
+        function onNodeChanged() { Qt.callLater(root.synchronizeWidth) }
+      }
       wrapMode: renderer.prop("wrap", true) !== false ? TextEdit.Wrap : TextEdit.NoWrap
       textFormat: {
         var format = String(renderer.prop("format", "plain"))

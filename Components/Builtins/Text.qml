@@ -5,7 +5,12 @@ import "../../Theme"
 import "../../Controls" as ZuiControls
 
 Text {
+  id: root
   required property var renderer
+      function synchronizeWidth() {
+        var resolved = renderer.hasProp("width") ? Number(renderer.prop("width", 0)) : implicitWidth
+        if (!isNaN(resolved) && width !== resolved) width = resolved
+      }
       text: String(renderer.prop("text", ""))
       textFormat: Text.PlainText
       color: renderer.prop("color", renderer.foreground)
@@ -18,5 +23,10 @@ Text {
       }
       font.bold: renderer.prop("bold", false) || String(renderer.prop("style", "body")) === "heading"
       wrapMode: renderer.prop("wrap", true) ? Text.Wrap : Text.NoWrap
-      width: renderer.hasProp("width") ? Number(renderer.prop("width", 0)) : implicitWidth
+      onTextChanged: Qt.callLater(root.synchronizeWidth)
+      Component.onCompleted: synchronizeWidth()
+      Connections {
+        target: root.renderer
+        function onNodeChanged() { Qt.callLater(root.synchronizeWidth) }
+      }
     }
