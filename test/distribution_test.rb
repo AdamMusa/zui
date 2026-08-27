@@ -97,6 +97,22 @@ class DistributionTest < Minitest::Test
       end
       FileUtils.mkdir_p(File.join(project, "assets"))
       File.write(File.join(project, "assets", ".DS_Store"), "metadata")
+      File.binwrite(File.join(project, "assets", "icon.icns"), "icnsfixture")
+      File.binwrite(File.join(project, "assets", "icon.ico"), "\x00\x00\x01\x00fixture".b)
+      File.binwrite(File.join(project, "assets", "icon.png"), "\x89PNG\r\n\x1a\n".b)
+      File.write(File.join(project, "README.md"), "development documentation")
+      File.write(File.join(project, "config.rb"), <<~RUBY)
+        Zui::Dist.configure do
+          name "Desktop"
+          identifier "dev.zui.desktop"
+          version "1.0.0"
+          publisher "Zui"
+          description "Desktop fixture."
+          license "MIT"
+          icon macos: "assets/icon.icns", windows: "assets/icon.ico", ios: "assets/icon.png"
+          categories "Utility"
+        end
+      RUBY
       destination = File.join(File.dirname(project), "Desktop.app")
 
       lite_distribution(client:, platform:).bundle(project, destination:)
@@ -109,6 +125,11 @@ class DistributionTest < Minitest::Test
         refute File.exist?(File.join(application, entry))
       end
       refute File.exist?(File.join(application, "assets", ".DS_Store"))
+      refute File.exist?(File.join(application, "README.md"))
+      %w[icon.icns icon.ico icon.png].each do |entry|
+        refute File.exist?(File.join(application, "assets", entry))
+      end
+      assert File.file?(File.join(destination, "Contents", "Resources", "Application.icns"))
     end
   end
 

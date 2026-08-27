@@ -11,7 +11,7 @@ module Zui
       .bundle .git .github .ruby-lsp android coverage dist ios log spec test tmp
     ].freeze
     DESKTOP_APPLICATION_FILES = %w[
-      .DS_Store .gitattributes .gitignore Gemfile Gemfile.lock Rakefile config.rb
+      .DS_Store .gitattributes .gitignore Gemfile Gemfile.lock README.md Rakefile config.rb
     ].freeze
 
     attr_reader :platform, :tree_shake_report, :runtime_mode
@@ -33,6 +33,8 @@ module Zui
       @runtime_builder = runtime_builder
       @application_runtime = nil
       @source_date_epoch = ReproducibleBuild.epoch(source_date_epoch)
+      @bundle_config = nil
+      @release_asset_paths = []
     end
 
     def bundle(source, name: nil, destination: nil)
@@ -44,6 +46,8 @@ module Zui
       unless @client.configured?
         raise ArgumentError, "Zui is not configured for #{platform.id}; run `zui doctor --fix` before bundling"
       end
+      @bundle_config = @release_config || load_project_config(project)
+      @release_asset_paths = configured_release_assets(project)
       app_name = name || titleize(File.basename(project))
       destination ||= default_destination(project, app_name)
       destination = File.expand_path(destination)
@@ -153,6 +157,7 @@ module Zui
     def desktop_application_excluded?(relative)
       parts = relative.split(File::SEPARATOR)
       return true if parts.include?(".DS_Store")
+      return true if @release_asset_paths.include?(relative.tr(File::SEPARATOR, "/"))
       return false unless parts.length == 1
 
       DESKTOP_APPLICATION_EXCLUDES.include?(parts.first) ||
@@ -285,8 +290,8 @@ module Zui
     end
 
     def info_plist(app_name, icon_name: nil)
-      identifier = @release_config&.identifier || "dev.zui.#{slug(app_name).tr("-", ".")}"
-      application_version = @release_config&.version || VERSION
+      identifier = @bundle_config&.identifier || "dev.zui.#{slug(app_name).tr("-", ".")}"
+      application_version = @bundle_config&.version || VERSION
       icon_entry = icon_name ? "<key>CFBundleIconFile</key><string>#{xml_escape(icon_name)}</string>" : ""
       <<~PLIST
         <?xml version="1.0" encoding="UTF-8"?>
@@ -312,9 +317,9 @@ module Zui
         "tree_shaken" => !@tree_shake_report.nil?, "ruby_runtime" => runtime_mode.to_s
       }
       manifest["tree_shake"] = @tree_shake_report.to_h if @tree_shake_report
-      if @release_config
-        manifest["identifier"] = @release_config.identifier
-        manifest["application_version"] = @release_config.version
+      if @bundle_config
+        manifest["identifier"] = @bundle_config.identifier
+        manifest["application_version"] = @bundle_config.version
       end
       File.write(File.join(directory, "zui-bundle.json"), JSON.pretty_generate(manifest))
     end
@@ -332,18 +337,18 @@ module Zui
     end
 
     def install_macos_release_icon(resources)
-      return nil unless @release_config
+      return nil unless @bundle_config
 
-      source = @release_config.icon_path(@project, platform)
+      source = @bundle_config.icon_path(@project, platform)
       name = "Application.icns"
       FileUtils.cp(source, File.join(resources, name))
       name
     end
 
     def install_windows_release_icon(destination)
-      return unless @release_config
+      return unless @bundle_config
 
-      FileUtils.cp(@release_config.icon_path(@project, platform), File.join(destination, "app.ico"))
+      FileUtils.cp(@bundle_config.icon_path(@project, platform), File.join(destination, "app.ico"))
     end
 
     def shake_bundle(project, runtime)
@@ -357,6 +362,23 @@ module Zui
     def default_destination(project, app_name)
       base = File.join(project, "dist")
       platform.macos? ? File.join(base, "#{app_name}.app") : File.join(base, "#{slug(app_name)}-#{platform.id}")
+    end
+
+    def load_project_config(project)
+      return unless File.file?(File.join(project, Dist::CONFIG_FILE))
+
+      Dist.load(project:, platform:)
+    end
+
+    def configured_release_assets(project)
+      return [] unless @bundle_config
+
+      (@bundle_config.icons.values + @bundle_config.splashes.values).filter_map do |relative|
+        expanded = File.expand_path(relative, project)
+        next unless expanded.start_with?("#{project}#{File::SEPARATOR}") && File.file?(expanded)
+
+        expanded.delete_prefix("#{project}#{File::SEPARATOR}").tr(File::SEPARATOR, "/")
+      end.uniq.sort
     end
 
     def titleize(value) = value.split(/[-_]/).map(&:capitalize).join(" ")
