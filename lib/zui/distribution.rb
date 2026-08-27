@@ -82,7 +82,7 @@ module Zui
         [Desktop Entry]
         Type=Application
         Name=#{app_name}
-        Exec=#{File.join(destination, "run")}
+        Exec=./run
         Terminal=false
         Categories=Utility;
       DESKTOP

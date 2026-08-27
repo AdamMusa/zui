@@ -6,6 +6,30 @@ require_relative "../lib/zui"
 require_relative "../lib/zui/client_packager"
 
 class ClientPackagerTest < Minitest::Test
+  def test_client_archive_is_reproducible
+    Dir.mktmpdir do |directory|
+      platform = Zui::Platform.new(os: :linux, arch: :x86_64)
+      source = File.join(directory, "stage")
+      FileUtils.mkdir_p([
+        File.join(source, "bin"), File.join(source, "lib"), File.join(source, "plugins"),
+        File.join(source, "qml")
+      ])
+      File.write(File.join(source, "bin", "zui-host"), "host")
+      FileUtils.chmod(0o755, File.join(source, "bin", "zui-host"))
+      File.write(File.join(source, "lib", "libQt6Core.so.6"), "qt")
+      first = Zui::ClientPackager.new(platform:, source_date_epoch: 1_234_567_890).package(
+        source:, output: File.join(directory, "first"), executable: "bin/zui-host"
+      )
+      File.utime(Time.now, Time.now, File.join(source, "bin", "zui-host"))
+      second = Zui::ClientPackager.new(platform:, source_date_epoch: 1_234_567_890).package(
+        source:, output: File.join(directory, "second"), executable: "bin/zui-host"
+      )
+
+      assert_equal File.binread(first), File.binread(second)
+      assert_equal File.read("#{first}.sha256").split.first, File.read("#{second}.sha256").split.first
+    end
+  end
+
   def test_does_not_duplicate_payload_referenced_by_framework_symlinks
     Dir.mktmpdir do |directory|
       platform = Zui::Platform.new(os: :linux, arch: :x86_64)

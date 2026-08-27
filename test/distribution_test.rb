@@ -56,6 +56,9 @@ class DistributionTest < Minitest::Test
       assert_includes manifest.fetch("tree_shake").fetch("components"), "text"
       refute File.exist?(File.join(destination, "runtime", "qml", "Components", "Builtins", "Camera.qml"))
       assert_equal 1, Dir[File.join(destination, "share", "applications", "*.desktop")].length
+      desktop = File.read(Dir[File.join(destination, "share", "applications", "*.desktop")].first)
+      assert_includes desktop, "Exec=./run"
+      refute_includes desktop, destination
       launcher = File.read(File.join(destination, "run"))
       assert_includes launcher, 'ruby_command="$ruby_root/bin/mruby"'
       assert_includes launcher, '--program "$bundle_dir/runtime/ruby/app.rb"'
@@ -133,24 +136,30 @@ class DistributionTest < Minitest::Test
     end
   end
 
-  def test_desktop_bundle_has_a_reproducible_payload_and_timestamp
-    platform = Zui::Platform.new(os: :macos, arch: :arm64)
-    with_project(platform) do |project, client|
-      root = File.dirname(project)
-      first = File.join(root, "First.app")
-      second = File.join(root, "Second.app")
-      epoch = 1_234_567_890
+  def test_every_desktop_bundle_has_a_reproducible_payload_and_timestamp
+    [
+      Zui::Platform.new(os: :linux, arch: :x86_64),
+      Zui::Platform.new(os: :macos, arch: :arm64),
+      Zui::Platform.new(os: :windows, arch: :x86_64)
+    ].each do |platform|
+      with_project(platform) do |project, client|
+        root = File.dirname(project)
+        first = File.join(root, "First-#{platform.id}")
+        second = File.join(root, "Second-#{platform.id}")
+        epoch = 1_234_567_890
 
-      lite_distribution(client:, platform:, source_date_epoch: epoch).bundle(project, destination: first)
-      File.utime(Time.now, Time.now, File.join(project, "main.rb"))
-      lite_distribution(client:, platform:, source_date_epoch: epoch).bundle(project, destination: second)
+        lite_distribution(client:, platform:, source_date_epoch: epoch).bundle(project, destination: first)
+        File.utime(Time.now, Time.now, File.join(project, "main.rb"))
+        lite_distribution(client:, platform:, source_date_epoch: epoch).bundle(project, destination: second)
 
-      assert_equal Zui::ReproducibleBuild.tree_digest(first), Zui::ReproducibleBuild.tree_digest(second)
-      first_manifest = JSON.parse(File.read(File.join(first, "Contents", "Resources", "zui-bundle.json")))
-      second_manifest = JSON.parse(File.read(File.join(second, "Contents", "Resources", "zui-bundle.json")))
-      assert_equal first_manifest.fetch("payload_sha256"), second_manifest.fetch("payload_sha256")
-      paths = Dir.glob(File.join(first, "**", "*"), File::FNM_DOTMATCH) << first
-      assert paths.all? { |path| File.lstat(path).mtime.to_i == epoch }
+        assert_equal Zui::ReproducibleBuild.tree_digest(first), Zui::ReproducibleBuild.tree_digest(second)
+        manifest = platform.macos? ? File.join("Contents", "Resources", "zui-bundle.json") : "zui-bundle.json"
+        first_manifest = JSON.parse(File.read(File.join(first, manifest)))
+        second_manifest = JSON.parse(File.read(File.join(second, manifest)))
+        assert_equal first_manifest.fetch("payload_sha256"), second_manifest.fetch("payload_sha256")
+        paths = Dir.glob(File.join(first, "**", "*"), File::FNM_DOTMATCH) << first
+        assert paths.all? { |path| File.lstat(path).mtime.to_i == epoch }
+      end
     end
   end
 

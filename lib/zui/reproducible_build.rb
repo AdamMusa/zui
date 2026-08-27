@@ -1,6 +1,10 @@
 # frozen_string_literal: true
 
 require "digest"
+require "fileutils"
+require "rubygems/package"
+require "tempfile"
+require "zlib"
 
 module Zui
   module ReproducibleBuild
@@ -65,6 +69,42 @@ module Zui
       path
     end
 
+    def tar_gzip(output, root:, entries:, epoch: DEFAULT_EPOCH, prefix: "", include_symlinks: true)
+      output = File.expand_path(output)
+      root = File.expand_path(root)
+      timestamp = self.epoch(epoch)
+      raise ArgumentError, "archive root not found: #{root}" unless File.directory?(root)
+
+      FileUtils.mkdir_p(File.dirname(output))
+      Tempfile.create([".zui-archive-", ".tar"], File.dirname(output)) do |temporary|
+        Array(entries).map(&:to_s).uniq.sort.each do |entry|
+          path = File.expand_path(entry, root)
+          present = File.exist?(path) || File.symlink?(path)
+          unless path != root && path.start_with?("#{root}#{File::SEPARATOR}") && present
+            raise ArgumentError, "unsafe archive entry: #{entry.inspect}"
+          end
+          add_tar_entry(temporary, root, path, timestamp, prefix.to_s, include_symlinks)
+        end
+        temporary.write("\0" * 1024)
+        temporary.flush
+        temporary.rewind
+
+        File.open(output, "wb", 0o644) do |archive|
+          gzip = Zlib::GzipWriter.new(archive, Zlib::BEST_COMPRESSION)
+          gzip.mtime = [timestamp, 0xffff_ffff].min
+          IO.copy_stream(temporary, gzip)
+          gzip.finish
+        end
+      end
+      # RFC 1952's OS byte does not affect extraction. Pin it to "unknown" so
+      # identical inputs stay identical across Unix and Windows build hosts.
+      File.open(output, "r+b") do |archive|
+        archive.seek(9)
+        archive.write("\xff".b)
+      end
+      output
+    end
+
     def tree_paths(root)
       root = File.expand_path(root)
       paths = Dir.glob(File.join(root, "**", "*"), File::FNM_DOTMATCH)
@@ -73,5 +113,58 @@ module Zui
       paths
     end
     private_class_method :tree_paths
+
+    def add_tar_entry(archive, root, path, timestamp, prefix, include_symlinks)
+      relative = path.delete_prefix("#{root}#{File::SEPARATOR}").tr(File::SEPARATOR, "/")
+      archive_path = [prefix.delete_suffix("/"), relative].reject(&:empty?).join("/")
+      name, header_prefix = split_tar_name(archive_path)
+      stat = File.lstat(path)
+      attributes = {
+        name:, prefix: header_prefix, mode: stat.mode & 0o777, mtime: timestamp,
+        uid: 0, gid: 0, uname: "root", gname: "root"
+      }
+      if stat.directory?
+        archive.write(Gem::Package::TarHeader.new(**attributes, size: 0, typeflag: "5").to_s)
+        Dir.children(path).sort.each do |child|
+          add_tar_entry(archive, root, File.join(path, child), timestamp, prefix, include_symlinks)
+        end
+      elsif stat.symlink?
+        return unless include_symlinks
+
+        archive.write(
+          Gem::Package::TarHeader.new(
+            **attributes, size: 0, typeflag: "2", linkname: File.readlink(path)
+          ).to_s
+        )
+      elsif stat.file?
+        archive.write(Gem::Package::TarHeader.new(**attributes, size: stat.size).to_s)
+        File.open(path, "rb") { |source| IO.copy_stream(source, archive) }
+        padding = (512 - (stat.size % 512)) % 512
+        archive.write("\0" * padding)
+      else
+        raise ArgumentError, "unsupported archive entry: #{path}"
+      end
+    end
+    private_class_method :add_tar_entry
+
+    def split_tar_name(path)
+      if path.bytesize > 256
+        raise Gem::Package::TooLongFileName, "archive path is longer than 256 bytes: #{path}"
+      end
+      return [path, ""] if path.bytesize <= 100
+
+      parts = path.split("/", -1)
+      name = parts.pop
+      prefix = parts.join("/")
+      while !parts.empty? && (prefix.bytesize > 155 || name.empty?)
+        name = "#{parts.pop}/#{name}"
+        prefix = parts.join("/")
+      end
+      if name.bytesize > 100 || prefix.empty? || prefix.bytesize > 155
+        raise Gem::Package::TooLongFileName, "archive path cannot fit a USTAR header: #{path}"
+      end
+      [name, prefix]
+    end
+    private_class_method :split_tar_name
   end
 end

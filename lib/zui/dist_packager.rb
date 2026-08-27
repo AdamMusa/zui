@@ -2,10 +2,8 @@
 
 require "fileutils"
 require "rbconfig"
-require "rubygems/package"
 require "shellwords"
 require "tmpdir"
-require "zlib"
 
 module Zui
   class DistPackager
@@ -184,7 +182,17 @@ module Zui
       spec = File.join(topdir, "SPECS", "#{config.package_name}.spec")
       File.write(spec, rpm_spec(stage))
       rpmbuild = command!("rpmbuild", hint: "install rpm-build (Debian/Fedora) or rpm-tools (Arch)")
-      run!([rpmbuild, "--define", "_topdir #{topdir}", "-bb", spec], timeout: 900)
+      arguments = [
+        rpmbuild,
+        "--define", "_topdir #{topdir}",
+        "--define", "_buildhost reproducible",
+        "--define", "_buildtime #{@source_date_epoch}",
+        "--define", "use_source_date_epoch_as_buildtime 1",
+        "--define", "clamp_mtime_to_source_date_epoch 1",
+        "--define", "build_mtime_policy clamp_to_source_date_epoch",
+        "-bb", spec
+      ]
+      run!(arguments, timeout: 900, env: { "SOURCE_DATE_EPOCH" => @source_date_epoch.to_s })
       built = Dir[File.join(topdir, "RPMS", "**", "*.rpm")].sort
       raise ArgumentError, "rpmbuild did not produce an RPM artifact" unless built.length == 1
 
@@ -196,6 +204,8 @@ module Zui
       homepage = config.homepage ? "URL: #{rpm_escape(config.homepage)}\n" : ""
       <<~SPEC
         %global debug_package %{nil}
+        %global __os_install_post %{nil}
+        %global _build_id_links none
         Name: #{config.package_name}
         Version: #{config.version}
         Release: 1
@@ -243,7 +253,7 @@ module Zui
       script = File.join(temporary, "installer.iss")
       File.write(script, windows_inno_script(bundle, temporary, output_name))
       iscc = command!("ISCC.exe", "iscc", hint: "install Inno Setup 6 and add ISCC.exe to PATH")
-      run!([iscc, script], timeout: 900)
+      run!([iscc, "--no-ide-signtools", "--no-signing", script], timeout: 900)
       output = File.join(temporary, "#{output_name}.exe")
       raise ArgumentError, "Inno Setup did not produce a setup executable" unless File.file?(output)
 
@@ -263,16 +273,20 @@ module Zui
         DefaultGroupName=#{inno(config.name)}
         OutputDir=#{inno(output)}
         OutputBaseFilename=#{inno(output_name)}
-        SetupIconFile=#{inno(config.icon_path(@project, platform))}
+        SetupIconFile=#{inno(File.join(bundle, "app.ico"))}
         UninstallDisplayIcon={app}\\app.ico
         Compression=lzma2
+        CompressionThreads=1
+        LZMANumBlockThreads=1
         SolidCompression=yes
+        TimeStampsInUTC=yes
+        TimeStampRounding=1
         WizardStyle=modern
         ArchitecturesAllowed=#{architectures}
         ArchitecturesInstallIn64BitMode=#{architectures}
 
         [Files]
-        Source: "#{inno(File.join(bundle, "*"))}"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+        #{windows_file_entries(bundle)}
 
         [Icons]
         Name: "{autoprograms}\\#{inno(config.name)}"; Filename: "{app}\\run.cmd"; WorkingDir: "{app}"; IconFilename: "{app}\\app.ico"
@@ -281,35 +295,7 @@ module Zui
     end
 
     def gzip_tar(output, root, entries)
-      tar_path = "#{output}.tar-#{Process.pid}"
-      File.open(tar_path, "wb") do |file|
-        Gem::Package::TarWriter.new(file) do |tar|
-          entries.each { |entry| add_tar_entry(tar, root, File.join(root, entry)) }
-        end
-      end
-      Zlib::GzipWriter.open(output) do |gzip|
-        File.open(tar_path, "rb") { |tar| IO.copy_stream(tar, gzip) }
-      end
-    ensure
-      FileUtils.rm_f(tar_path) if tar_path
-    end
-
-    def add_tar_entry(tar, root, path)
-      relative = path.delete_prefix("#{root}#{File::SEPARATOR}").tr(File::SEPARATOR, "/")
-      name = "./#{relative}"
-      stat = File.lstat(path)
-      if stat.directory?
-        tar.mkdir(name, stat.mode & 0o777)
-        Dir.children(path).sort.each { |child| add_tar_entry(tar, root, File.join(path, child)) }
-      elsif stat.symlink?
-        tar.add_symlink(name, File.readlink(path), stat.mode & 0o777)
-      elsif stat.file?
-        tar.add_file(name, stat.mode & 0o777) do |target|
-          File.open(path, "rb") { |source| IO.copy_stream(source, target) }
-        end
-      else
-        raise ArgumentError, "unsupported file in distribution payload: #{path}"
-      end
+      ReproducibleBuild.tar_gzip(output, root:, entries:, epoch: @source_date_epoch, prefix: ".")
     end
 
     def write_ar(output, files)
@@ -350,8 +336,8 @@ module Zui
       raise ArgumentError, "distribution packaging requires #{names.join(' or ')}; #{hint}"
     end
 
-    def run!(arguments, timeout:)
-      result = Command.run(arguments, timeout:, max_output_bytes: 8_000_000)
+    def run!(arguments, timeout:, env: {})
+      result = Command.run(arguments, env:, timeout:, max_output_bytes: 8_000_000)
       return result if result.success?
 
       details = [result.stdout, result.stderr].reject(&:empty?).join("\n").strip
@@ -367,5 +353,17 @@ module Zui
     def deb_architecture = platform.arch == :arm64 ? "arm64" : "amd64"
     def rpm_architecture = platform.arch == :arm64 ? "aarch64" : "x86_64"
     def tree_bytes(root) = Dir[File.join(root, "**", "*")].sum { |path| File.file?(path) ? File.size(path) : 0 }
+
+    def windows_file_entries(bundle)
+      files = Dir.glob(File.join(bundle, "**", "*"), File::FNM_DOTMATCH).select do |path|
+        File.file?(path) && !File.symlink?(path) && !%w[. ..].include?(File.basename(path))
+      end
+      files.sort.map do |path|
+        relative = path.delete_prefix("#{bundle}#{File::SEPARATOR}")
+        directory = File.dirname(relative)
+        destination = directory == "." ? "{app}" : "{app}\\#{directory.tr('/', '\\')}"
+        %(Source: "#{inno(path)}"; DestDir: "#{inno(destination)}"; Flags: ignoreversion)
+      end.join("\n")
+    end
   end
 end

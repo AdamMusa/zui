@@ -3,17 +3,16 @@
 require "digest"
 require "fileutils"
 require "json"
-require "rubygems/package"
-require "zlib"
 
 module Zui
   # Internal release tooling used by native CI jobs.
   class ClientPackager
     attr_reader :platform
 
-    def initialize(platform: Platform.current, version: VERSION)
+    def initialize(platform: Platform.current, version: VERSION, source_date_epoch: nil)
       @platform = platform.assert_supported!
       @version = version.to_s
+      @source_date_epoch = ReproducibleBuild.epoch(source_date_epoch)
     end
 
     def package(source:, output:, executable:, qt_version: nil)
@@ -28,24 +27,20 @@ module Zui
       end
       reject_framework_payload!(source)
       validate_runtime_paths!(source)
+      validate_archive_paths!(source)
 
       write_manifest(source, executable, qt_version)
       FileUtils.mkdir_p(output)
       archive = File.join(output, "zui-client-#{platform.id}.tar.gz")
       raise ArgumentError, "client archive already exists: #{archive}" if File.exist?(archive)
 
-      tar_path = "#{archive}.tar-#{Process.pid}"
-      File.open(tar_path, "wb") do |tar_file|
-        Gem::Package::TarWriter.new(tar_file) { |tar| add_tree(tar, source, source) }
-      end
-      Zlib::GzipWriter.open(archive) do |gzip|
-        File.open(tar_path, "rb") { |tar_file| IO.copy_stream(tar_file, gzip) }
-      end
+      ReproducibleBuild.tar_gzip(
+        archive, root: source, entries: Dir.children(source), epoch: @source_date_epoch,
+        include_symlinks: false
+      )
       checksum = Digest::SHA256.file(archive).hexdigest
       File.write("#{archive}.sha256", "#{checksum}  #{File.basename(archive)}\n")
       archive
-    ensure
-      FileUtils.rm_f(tar_path) if tar_path
     end
 
     private
@@ -109,6 +104,14 @@ module Zui
       end
     end
 
+    def validate_archive_paths!(source)
+      Dir.glob(File.join(source, "**", "*"), File::FNM_DOTMATCH).sort.each do |path|
+        next if %w[. ..].include?(File.basename(path))
+
+        safe_relative_path!(path.delete_prefix("#{source}#{File::SEPARATOR}").tr(File::SEPARATOR, "/"))
+      end
+    end
+
     def required_runtime_paths
       if platform.linux?
         ["bin/zui-host", "lib/libQt6Core.so.6", "plugins", "qml"]
@@ -121,30 +124,6 @@ module Zui
           "zui-host.app/Contents/PlugIns",
           "zui-host.app/Contents/Resources/qml"
         ]
-      end
-    end
-
-    def add_tree(tar, root, current)
-      Dir.children(current).sort.each do |name|
-        path = File.join(current, name)
-        relative = safe_relative_path!(path.delete_prefix("#{root}/"))
-        stat = File.lstat(path)
-        if stat.symlink?
-          # Qt frameworks contain convenience aliases such as `QtCore` and
-          # `Versions/Current`. The actual load paths target `Versions/A`, so
-          # following those links would store every framework binary up to
-          # three times. Client archives deliberately contain only canonical
-          # files and never accept links during extraction.
-          next
-        elsif stat.directory?
-          tar.mkdir(relative, stat.mode & 0o777)
-          add_tree(tar, root, path)
-        elsif stat.file?
-          mode = stat.mode & 0o777
-          tar.add_file(relative, mode) { |io| File.open(path, "rb") { |file| IO.copy_stream(file, io) } }
-        else
-          raise ArgumentError, "unsupported file in client staging directory: #{path}"
-        end
       end
     end
 

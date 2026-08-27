@@ -67,7 +67,9 @@ module Zui
 
         qt = qt_installation
         install_catalog_runtime(stage, qt)
-        ClientPackager.new(platform: @platform).package(
+        ClientPackager.new(
+          platform: @platform, source_date_epoch: @environment["SOURCE_DATE_EPOCH"]
+        ).package(
           source: stage,
           output:,
           executable: executable_relative_path,
