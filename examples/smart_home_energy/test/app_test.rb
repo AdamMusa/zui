@@ -3,9 +3,15 @@
 require "json"
 require "minitest/autorun"
 require "stringio"
+require_relative "../lib/smart_home_energy"
 require_relative "../app"
 
 class SmartHomeEnergyTest < Minitest::Test
+  def test_loads_the_application_project_gem
+    assert_equal "0.1.0", SmartHomeEnergy::VERSION
+    assert SmartHomeEnergy::PROJECT_GEM
+  end
+
   def all(node)
     [node] + node.fetch("children", []).flat_map { |child| all(child) }
   end

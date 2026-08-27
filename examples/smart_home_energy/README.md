@@ -7,5 +7,11 @@ It also exercises live solar/battery/load gauges, room automation, stacked energ
 heatmaps, scheduled balancing, security state, and an energy-report dialog.
 
 ```bash
-zui run main.rb
+bundle install
+bundle exec zui run main.rb
+bundle exec zui bundle --full
 ```
+
+Smart Home is a local application gem that depends on the local Zui gem. A full bundle installs the
+locked `smart-home-energy` gem into its private CRuby runtime while Zui itself is supplied by the
+packaged framework load path.
