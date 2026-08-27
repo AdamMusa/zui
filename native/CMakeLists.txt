@@ -13,6 +13,17 @@ find_package(Qt6 6.8 REQUIRED COMPONENTS
   QuickControls2
 )
 
+# Qt 6.8's macOS package exposes AGL through WrapOpenGL even though QtGui already
+# carries its own runtime dependency. Xcode 26 removed the AGL link stub, so
+# forwarding that redundant flag makes otherwise valid dynamic Qt builds fail.
+if(APPLE AND TARGET Qt6::Gui AND TARGET WrapOpenGL::WrapOpenGL)
+  get_target_property(zui_qt_gui_libraries Qt6::Gui INTERFACE_LINK_LIBRARIES)
+  list(REMOVE_ITEM zui_qt_gui_libraries WrapOpenGL::WrapOpenGL)
+  set_target_properties(Qt6::Gui PROPERTIES
+    INTERFACE_LINK_LIBRARIES "${zui_qt_gui_libraries}"
+  )
+endif()
+
 option(ZUI_EMBEDDED_RUNTIME "Embed mruby for mobile application targets" OFF)
 option(ZUI_EMBEDDED_CRUBY "Embed CRuby for mobile application targets" OFF)
 set(ZUI_MRUBY_ROOT "" CACHE PATH "mruby source/build root for an embedded target")

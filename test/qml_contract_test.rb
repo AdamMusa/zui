@@ -119,6 +119,8 @@ class QmlContractTest < Minitest::Test
     assert_includes cmake, 'PREFIX "/zui"'
     assert_includes cmake, 'PREFIX "/app"'
     assert_includes cmake, "qt_import_qml_plugins(zui-host)"
+    assert_includes cmake, "WrapOpenGL::WrapOpenGL"
+    assert_includes cmake, "list(REMOVE_ITEM zui_qt_gui_libraries WrapOpenGL::WrapOpenGL)"
     assert_includes cmake, "QT_IOS_LAUNCH_SCREEN"
     assert_includes desktop, 'visibility: zuiMobile || option("fullscreen", false) === true'
     assert_includes desktop, 'width: zuiMobile ? Screen.width : Number(option("width", 760))'
