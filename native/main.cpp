@@ -23,6 +23,7 @@ using ZuiRuntimeTransport = ZuiProcess;
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QQuickStyle>
+#include <QStandardPaths>
 #include <QTimer>
 
 #if defined(ZUI_USES_WEBVIEW)
@@ -105,6 +106,11 @@ int main(int argc, char *argv[]) {
 #endif
   QCoreApplication::setApplicationName(QStringLiteral("Zui"));
   QCoreApplication::setOrganizationName(QStringLiteral("Zui"));
+#if defined(ZUI_EMBEDDED_RUNTIME)
+  const QString qmlCache = QDir(QStandardPaths::writableLocation(QStandardPaths::CacheLocation))
+                               .filePath(QStringLiteral("qmlcache"));
+  QDir(qmlCache).removeRecursively();
+#endif
   const QByteArray configuredStyle = qgetenv("ZUI_QT_STYLE");
   QQuickStyle::setStyle(configuredStyle.isEmpty()
                            ? QStringLiteral("Fusion")
