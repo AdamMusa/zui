@@ -87,9 +87,11 @@ module Zui
         "VoiceSelector" => :text_to_speech
       }.freeze
 
+      WEB = { "WebView" => :web_view }.freeze
+
       CORE = QUICK_CONTROLS.merge(QUICK_DIALOGS).merge(QUICK_LAYOUTS).freeze
       ALL = CORE.merge(PERMISSIONS).merge(SENSORS).merge(POSITIONING).merge(LOCATION)
-                .merge(TEXT_TO_SPEECH).freeze
+                .merge(TEXT_TO_SPEECH).merge(WEB).freeze
     end
   end
 end

@@ -25,6 +25,10 @@ using ZuiRuntimeTransport = ZuiProcess;
 #include <QQuickStyle>
 #include <QTimer>
 
+#if defined(ZUI_USES_WEBVIEW)
+#include <QtWebView/QtWebView>
+#endif
+
 #if defined(Q_OS_DARWIN)
 #include <malloc/malloc.h>
 #endif
@@ -92,6 +96,9 @@ int main(int argc, char *argv[]) {
   startupTimer.start();
 #endif
   QGuiApplication application(argc, argv);
+#if defined(ZUI_USES_WEBVIEW)
+  QtWebView::initialize();
+#endif
   QCoreApplication::setApplicationName(QStringLiteral("Zui"));
   QCoreApplication::setOrganizationName(QStringLiteral("Zui"));
   const QByteArray configuredStyle = qgetenv("ZUI_QT_STYLE");

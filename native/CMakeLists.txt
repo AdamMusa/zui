@@ -47,6 +47,12 @@ set(ZUI_ANDROID_PROJECT_DIR "" CACHE PATH "Project-owned Android native integrat
 set(ZUI_ANDROID_MIN_SDK "23" CACHE STRING "Android minimum SDK version")
 set(ZUI_ANDROID_TARGET_SDK "35" CACHE STRING "Android target SDK version")
 
+set(ZUI_USES_WEBVIEW OFF)
+if(ZUI_EMBEDDED_RUNTIME AND EXISTS "${ZUI_FRAMEWORK_ROOT}/Components/Builtins/WebView.qml")
+  find_package(Qt6 6.8 REQUIRED COMPONENTS WebView)
+  set(ZUI_USES_WEBVIEW ON)
+endif()
+
 set(zui_host_sources
   main.cpp
   ZuiClipboard.cpp
@@ -150,6 +156,11 @@ target_link_libraries(zui-host PRIVATE
   Qt6::Quick
   Qt6::QuickControls2
 )
+
+if(ZUI_USES_WEBVIEW)
+  target_link_libraries(zui-host PRIVATE Qt6::WebView)
+  target_compile_definitions(zui-host PRIVATE ZUI_USES_WEBVIEW=1)
+endif()
 
 if(ZUI_EMBEDDED_RUNTIME)
   string(REPLACE "\\" "\\\\" zui_mobile_app_name_definition "${ZUI_MOBILE_APP_NAME}")

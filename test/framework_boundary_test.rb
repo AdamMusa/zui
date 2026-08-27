@@ -50,6 +50,7 @@ class FrameworkBoundaryTest < Minitest::Test
     audio_output: "AudioOutput.qml", screen_capture: "ScreenCapture.qml",
     window_capture: "WindowCapture.qml", media_recorder: "MediaRecorder.qml",
     image_capture: "ImageCapture.qml", loader: "Loader.qml", alert_dialog: "AlertDialog.qml",
+    web_view: "WebView.qml",
     tab_button: "TabButton.qml", navigation_rail: "NavigationRail.qml",
     breadcrumb: "Breadcrumb.qml", item_delegate: "ItemDelegate.qml",
     swipe_delegate: "SwipeDelegate.qml", carousel: "Carousel.qml"
@@ -95,11 +96,22 @@ class FrameworkBoundaryTest < Minitest::Test
 
     refute_nil builder
     assert_raises(ArgumentError) { Zui::Application.new { app { component(:not_a_component) } } }
-    assert_raises(ArgumentError) { Zui::Application.new { app { component(:web_view) } } }
+    refute_nil Zui::Builder.instance_method(:web_view).source_location
     assert_includes router, "sourceComponent: null"
     assert_includes router, "builtInSource(node.type)"
     assert_includes router, 'builtIn ? builtInSource(node.type) : bridge.componentSource(node.type)'
     refute_match(/node\.type === "model_view_3d"[^\n]+imageComponent/, router)
+  end
+
+
+  def test_mobile_webview_is_linked_and_initialized_only_when_tree_shaking_keeps_it
+    cmake = File.read(File.join(ROOT, "native", "CMakeLists.txt"))
+    host = File.read(File.join(ROOT, "native", "main.cpp"))
+
+    assert_includes cmake, 'EXISTS "${ZUI_FRAMEWORK_ROOT}/Components/Builtins/WebView.qml"'
+    assert_includes cmake, "target_link_libraries(zui-host PRIVATE Qt6::WebView)"
+    assert_includes host, "QtWebView::initialize();"
+    assert_includes host, "ZUI_USES_WEBVIEW"
   end
 
   def test_component_and_resource_failures_use_the_framework_error_channel

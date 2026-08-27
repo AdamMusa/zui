@@ -340,3 +340,7 @@ transitions, and animation groups receive Ruby APIs even though they are not vis
 ## Mobile speech
 
 - [x] text_to_speech
+
+## Mobile web content
+
+- [x] web_view
