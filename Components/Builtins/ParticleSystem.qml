@@ -5,6 +5,11 @@ Item {
   id: particleRoot
   required property var renderer
   property int handledBurstRevision: -1
+  readonly property real turbulenceWidth: Math.max(0, Number(renderer.prop("turbulence_width", width)))
+  readonly property real turbulenceHeight: Math.max(0, Number(renderer.prop("turbulence_height", height)))
+  readonly property real turbulenceGridLimit: Number(renderer.prop("turbulence_grid_size", 256))
+  readonly property real turbulenceGridWidth: turbulenceGridLimit > 0 ? Math.min(turbulenceWidth, Math.max(32, turbulenceGridLimit)) : turbulenceWidth
+  readonly property real turbulenceGridHeight: turbulenceGridLimit > 0 ? Math.min(turbulenceHeight, Math.max(32, turbulenceGridLimit)) : turbulenceHeight
   implicitWidth: Number(renderer.prop("width", 320))
   implicitHeight: Number(renderer.prop("height", 200))
 
@@ -68,11 +73,17 @@ Item {
       magnitude: Number(renderer.prop("gravity", 0)); angle: Number(renderer.prop("gravity_angle", 90))
     }
     Turbulence {
+      id: turbulenceField
       system: nativeSystem
       enabled: Number(renderer.prop("turbulence", 0)) !== 0
       strength: Number(renderer.prop("turbulence", 0))
       x: Number(renderer.prop("turbulence_x", 0)); y: Number(renderer.prop("turbulence_y", 0))
-      width: Number(renderer.prop("turbulence_width", particleRoot.width)); height: Number(renderer.prop("turbulence_height", particleRoot.height))
+      width: particleRoot.turbulenceGridWidth; height: particleRoot.turbulenceGridHeight
+      transformOrigin: Item.TopLeft
+      transform: Scale {
+        xScale: turbulenceField.width > 0 ? particleRoot.turbulenceWidth / turbulenceField.width : 1
+        yScale: turbulenceField.height > 0 ? particleRoot.turbulenceHeight / turbulenceField.height : 1
+      }
     }
   }
 

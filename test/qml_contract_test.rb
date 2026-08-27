@@ -73,6 +73,8 @@ class QmlContractTest < Minitest::Test
     assert_includes effect, "MultiEffect {"
     assert_includes particles, "ParticleSystem {"
     assert_includes particles, "Emitter {"
+    assert_includes particles, 'renderer.prop("turbulence_grid_size", 256)'
+    assert_includes particles, "xScale: turbulenceField.width > 0 ? particleRoot.turbulenceWidth / turbulenceField.width : 1"
     %w[passthrough grayscale wave pixelate vignette].each do |name|
       path = File.join(ROOT, "Components", "Builtins", "Shaders", "#{name}.frag.qsb")
       assert_operator File.size(path), :>, 100, "invalid precompiled shader: #{path}"
