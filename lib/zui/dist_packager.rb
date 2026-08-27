@@ -367,7 +367,7 @@ module Zui
         relative = path.delete_prefix("#{bundle}#{File::SEPARATOR}")
         directory = File.dirname(relative)
         destination = directory == "." ? "{app}" : "{app}\\#{directory.tr('/', '\\')}"
-        %(Source: "#{inno(path)}"; DestDir: "#{inno(destination)}"; Flags: ignoreversion)
+        %(Source: "#{inno(path)}"; DestDir: "#{inno(destination)}"; Flags: ignoreversion notimestamp)
       end.join("\n")
     end
   end

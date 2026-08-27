@@ -139,6 +139,10 @@ class DistPackagerTest < Minitest::Test
         grep -q '^TimeStampsInUTC=yes$' "$script" || exit 24
         grep -q '^TimeStampRounding=1$' "$script" || exit 25
         ! grep -q 'recursesubdirs' "$script" || exit 26
+        file_count=$(grep -c '^Source: ' "$script")
+        notimestamp_count=$(grep -c '^Source: .*Flags: ignoreversion notimestamp$' "$script")
+        [ "$file_count" -gt 0 ] || exit 27
+        [ "$file_count" = "$notimestamp_count" ] || exit 28
         mkdir -p "$output"
         printf 'setup-fixture' > "$output/$base.exe"
       SH
