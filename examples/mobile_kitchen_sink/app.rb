@@ -110,9 +110,11 @@ module MobileKitchenSink
           section_title :camera, "Camera + audio", "Preview, photo, record, and replay"
           session = capture_session id: :studio_session, width: 312, height: 210,
                                     camera_active: state.camera_active,
+                                    camera_enabled: !state.audio_input_enabled,
                                     audio_input_enabled: state.audio_input_enabled,
                                     video_output_enabled: true
           bind(session, :camera_active) { state.camera_active }
+          bind(session, :camera_enabled) { !state.audio_input_enabled }
           bind(session, :audio_input_enabled) { state.audio_input_enabled }
           on(session, :error) { |event| log("Capture session: #{event.fetch("message", "failed")}") }
 
@@ -164,7 +166,10 @@ module MobileKitchenSink
                                    icon: state.recording ? :stop : :music,
                                    background: state.recording ? "#572334" : PANEL_ALT,
                                    foreground: state.recording ? RED : WHITE do
-              state.audio_input_enabled = true unless state.recording
+              unless state.recording
+                state.camera_active = false
+                state.audio_input_enabled = true
+              end
               issue(:record_command, :record_revision, state.recording ? "stop" : "record")
             end
             bind(record_button, :text) { state.recording ? "Stop" : "Record" }

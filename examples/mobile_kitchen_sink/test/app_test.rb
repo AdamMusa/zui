@@ -41,7 +41,7 @@ class MobileKitchenSinkTest < Minitest::Test
     application.receive(event("record_audio"))
 
     assert_equal 1, application.state.camera_permission_rev
-    assert_equal true, application.state.camera_active
+    assert_equal false, application.state.camera_active
     assert_equal true, application.state.audio_input_enabled
     assert_equal "record", application.state.record_command
     assert_equal 1, application.state.record_revision
