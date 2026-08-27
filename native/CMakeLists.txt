@@ -260,6 +260,31 @@ if(ZUI_EMBEDDED_RUNTIME)
   file(GLOB_RECURSE zui_mobile_app_resources CONFIGURE_DEPENDS
     "${ZUI_MOBILE_APP_DIR}/*"
   )
+
+  # QML's warm-launch cache must never survive a different signed payload.
+  # Derive its namespace from stable logical paths and file contents so equal
+  # inputs reuse it while any framework or application change gets a new one.
+  set(zui_cache_identity_input "")
+  set(zui_cache_resources ${zui_qml_resources} ${zui_mobile_app_resources})
+  list(SORT zui_cache_resources)
+  foreach(zui_cache_resource IN LISTS zui_cache_resources)
+    file(SHA256 "${zui_cache_resource}" zui_cache_resource_sha256)
+    if(zui_cache_resource IN_LIST zui_qml_resources)
+      file(RELATIVE_PATH zui_cache_resource_path "${ZUI_FRAMEWORK_ROOT}" "${zui_cache_resource}")
+      set(zui_cache_resource_path "framework/${zui_cache_resource_path}")
+    else()
+      file(RELATIVE_PATH zui_cache_resource_path "${ZUI_MOBILE_APP_DIR}" "${zui_cache_resource}")
+      set(zui_cache_resource_path "application/${zui_cache_resource_path}")
+    endif()
+    string(APPEND zui_cache_identity_input
+      "${zui_cache_resource_path}:${zui_cache_resource_sha256}\n"
+    )
+  endforeach()
+  string(SHA256 zui_qml_cache_identity "${zui_cache_identity_input}")
+  target_compile_definitions(zui-host PRIVATE
+    ZUI_QML_CACHE_IDENTITY="${zui_qml_cache_identity}"
+  )
+
   qt_add_resources(zui-host zui_mobile_application
     PREFIX "/app"
     BASE "${ZUI_MOBILE_APP_DIR}"

@@ -119,9 +119,13 @@ class FrameworkBoundaryTest < Minitest::Test
     assert_operator host.index("QtWebView::initialize();"), :<,
                     host.index("QGuiApplication application(argc, argv);")
     assert_includes host, "ZUI_USES_WEBVIEW"
-    assert_includes host, 'qputenv("QML_DISABLE_DISK_CACHE", QByteArrayLiteral("1"));'
+    refute_includes host, 'qputenv("QML_DISABLE_DISK_CACHE", QByteArrayLiteral("1"));'
+    assert_includes host, 'qputenv("QML_DISK_CACHE_PATH"'
     assert_includes host, 'QStandardPaths::writableLocation(QStandardPaths::CacheLocation)'
-    assert_includes host, "QDir(qmlCache).removeRecursively();"
+    refute_includes host, "QDir(qmlCache).removeRecursively();"
+    assert_includes host, "ZUI_QML_CACHE_IDENTITY"
+    assert_includes cmake, "file(SHA256"
+    assert_includes cmake, "string(SHA256 zui_qml_cache_identity"
   end
 
   def test_mobile_shell_covers_native_startup_until_the_first_qml_frame

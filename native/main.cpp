@@ -97,10 +97,6 @@ int main(int argc, char *argv[]) {
 #if defined(ZUI_EMBEDDED_RUNTIME)
   QElapsedTimer startupTimer;
   startupTimer.start();
-  // Mobile QML is already compiled into the signed application. A persistent
-  // disk cache can otherwise outlive deterministic reinstalls of the same
-  // bundle version and execute an older framework resource.
-  qputenv("QML_DISABLE_DISK_CACHE", QByteArrayLiteral("1"));
 #endif
 #if defined(ZUI_USES_VIRTUAL_KEYBOARD)
   qputenv("QT_IM_MODULE", QByteArrayLiteral("qtvirtualkeyboard"));
@@ -112,6 +108,12 @@ int main(int argc, char *argv[]) {
   QCoreApplication::setApplicationName(QStringLiteral("Zui"));
   QCoreApplication::setOrganizationName(QStringLiteral("Zui"));
 #if defined(ZUI_EMBEDDED_RUNTIME)
+  const QString qmlCache = QDir(QStandardPaths::writableLocation(QStandardPaths::CacheLocation))
+                               .filePath(QStringLiteral("qmlcache/%1")
+                                             .arg(QStringLiteral(ZUI_QML_CACHE_IDENTITY)));
+  QDir().mkpath(qmlCache);
+  qputenv("QML_DISK_CACHE_PATH", QDir::toNativeSeparators(qmlCache).toUtf8());
+
   // Qt creates its platform window before the QML engine has parsed the real
   // application window. Keep that interval branded instead of exposing the
   // platform's default black backing surface.
@@ -119,11 +121,6 @@ int main(int argc, char *argv[]) {
   startupWindow.setColor(QColor(QStringLiteral("#0b1118")));
   startupWindow.showFullScreen();
   QCoreApplication::processEvents();
-#endif
-#if defined(ZUI_EMBEDDED_RUNTIME)
-  const QString qmlCache = QDir(QStandardPaths::writableLocation(QStandardPaths::CacheLocation))
-                               .filePath(QStringLiteral("qmlcache"));
-  QDir(qmlCache).removeRecursively();
 #endif
   const QByteArray configuredStyle = qgetenv("ZUI_QT_STYLE");
   QQuickStyle::setStyle(configuredStyle.isEmpty()
