@@ -3064,4 +3064,47 @@ class ZuiTest < Minitest::Test
     assert_equal "Ruby", by_id.dig("model", "props", "items", 0, "name")
     assert_equal "copied", by_id.dig("clipboard", "props", "text")
   end
+
+  def test_mobile_service_and_content_builders_serialize_native_qml_payloads
+    application = Zui::Application.new do
+      app do
+        safe_area id: :safe, edges: %i[top bottom] do
+          map id: :campus, plugin: :osm, latitude: 37.3349, longitude: -122.0090 do
+            map_marker id: :office, latitude: 37.3349, longitude: -122.0090 do
+              text "Office"
+            end
+            map_polyline [[37.3349, -122.0090], [37.3317, -122.0301]], id: :route
+          end
+        end
+        camera_permission id: :camera_access, auto_request: true
+        accelerometer id: :motion, active: true, data_rate: 30
+        position_source id: :position, active: true, preferred_methods: %i[satellite non_satellite]
+        geocode_model "Apple Park", id: :geocoder, plugin: :osm
+        route_model [[37.3349, -122.0090], [37.3317, -122.0301]], id: :directions
+        text_to_speech "Welcome", id: :speech
+        web_view "https://example.test", id: :browser, visible: false
+        web_socket "wss://example.test/socket", id: :socket
+        lottie_animation "assets/loader.json", id: :loader
+        pdf_view "assets/guide.pdf", id: :guide
+      end
+    end
+
+    children = application.tree.dig("main", "children")
+    by_id = children.to_h { |node| [node.fetch("id"), node] }
+    map_node = by_id.dig("safe", "children", 0)
+    assert_equal "map", map_node.fetch("type")
+    assert_equal "osm", map_node.dig("props", "plugin")
+    assert_equal "Office", map_node.dig("children", 0, "children", 0, "props", "text")
+    assert_equal [[37.3349, -122.0090], [37.3317, -122.0301]], map_node.dig("children", 1, "props", "path")
+    assert_equal true, by_id.dig("camera_access", "props", "auto_request")
+    assert_equal 30, by_id.dig("motion", "props", "data_rate")
+    assert_equal %w[satellite non_satellite], by_id.dig("position", "props", "preferred_methods")
+    assert_equal "Apple Park", by_id.dig("geocoder", "props", "query")
+    assert_equal 2, by_id.dig("directions", "props", "waypoints").length
+    assert_equal true, by_id.dig("speech", "props", "auto_speak")
+    assert_equal "https://example.test", by_id.dig("browser", "props", "url")
+    assert_equal "wss://example.test/socket", by_id.dig("socket", "props", "url")
+    assert_equal "assets/loader.json", by_id.dig("loader", "props", "source")
+    assert_equal "assets/guide.pdf", by_id.dig("guide", "props", "source")
+  end
 end
