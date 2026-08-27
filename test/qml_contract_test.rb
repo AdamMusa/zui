@@ -154,6 +154,19 @@ class QmlContractTest < Minitest::Test
     refute_includes control_node, "findRenderedItemBelow(descendants[index], targetId)"
   end
 
+  def test_mobile_permission_status_and_access_modes_are_reentrancy_safe
+    bridge = source("Components/Builtins/Support/PermissionBridge.qml")
+    contacts = source("Components/Builtins/ContactsPermission.qml")
+    calendar = source("Components/Builtins/CalendarPermission.qml")
+
+    assert_includes bridge, "property bool publishing: false"
+    assert_includes bridge, "if (publishing) return"
+    assert_includes contacts, 'property string appliedAccessMode: "read_write"'
+    assert_includes calendar, 'property string appliedAccessMode: "read_write"'
+    refute_includes contacts, 'accessMode: String(root.renderer.prop('
+    refute_includes calendar, 'accessMode: String(root.renderer.prop('
+  end
+
   def test_mobile_location_catalog_includes_places_and_geojson
     expected = %w[Category CategoryModel GeoJsonData GeocodeModel Map MapCircle MapCopyrightNotice
                   MapItemGroup MapItemView MapPolygon MapPolyline MapQuickItem MapRectangle MapRoute

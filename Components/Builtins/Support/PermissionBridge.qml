@@ -6,6 +6,7 @@ Item {
   required property var permission
   property int handledRequestRevision: -1
   property int lastPublishedNativeStatus: -1
+  property bool publishing: false
   visible: false
 
   function statusName(value) {
@@ -13,14 +14,20 @@ Item {
     return names[Number(value)] || "unknown"
   }
   function publish() {
+    if (publishing) return
+    publishing = true
     var nativeStatus = Number(permission.status)
-    if (nativeStatus === lastPublishedNativeStatus) return
+    if (nativeStatus === lastPublishedNativeStatus) {
+      publishing = false
+      return
+    }
     lastPublishedNativeStatus = nativeStatus
     var name = statusName(nativeStatus)
     var payload = { status: name, native_status: nativeStatus }
     renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "change", payload)
     if (name === "granted" || name === "denied")
       renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, name, payload)
+    publishing = false
   }
   function synchronizeRequest() {
     var revision = Number(renderer.prop("request_revision", 0))
