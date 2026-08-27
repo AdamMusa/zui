@@ -93,6 +93,34 @@ class MobileTest < Minitest::Test
     end
   end
 
+  def test_mobile_payload_manifest_is_reproducible_across_source_mtimes
+    Dir.mktmpdir do |directory|
+      first = File.join(directory, "first")
+      second = File.join(directory, "second")
+      epoch = 1_700_000_000
+      [first, second].each_with_index do |root, index|
+        FileUtils.mkdir_p(File.join(root, "assets"))
+        asset = File.join(root, "assets", "status.txt")
+        File.write(asset, "ready\n")
+        changed = Time.at(epoch + index + 60).utc
+        File.utime(changed, changed, asset)
+        Zui::Mobile.finalize_payload(
+          root:, platform: :ios, runtime: :lite, source_date_epoch: epoch,
+          metadata: { "bundle_id" => "dev.zui.reproducible" }
+        )
+      end
+
+      first_manifest = JSON.parse(File.read(File.join(first, Zui::Mobile::PAYLOAD_MANIFEST)))
+      second_manifest = JSON.parse(File.read(File.join(second, Zui::Mobile::PAYLOAD_MANIFEST)))
+      assert_equal first_manifest, second_manifest
+      assert_equal Zui::ReproducibleBuild.tree_digest(first), Zui::ReproducibleBuild.tree_digest(second)
+      assert_equal epoch, first_manifest.fetch("source_date_epoch")
+      assert_match(/\A[0-9a-f]{64}\z/, first_manifest.fetch("payload_sha256"))
+      paths = Dir.glob(File.join(first, "**", "*"), File::FNM_DOTMATCH) << first
+      assert paths.all? { |path| File.lstat(path).mtime.to_i == epoch }
+    end
+  end
+
   def test_ios_builder_rejects_non_macos_hosts
     builder = Zui::Mobile::IOSBuilder.new(
       project: ".", host_platform: Zui::Platform.new(os: :linux, arch: :x86_64)

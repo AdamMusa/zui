@@ -9,6 +9,25 @@ require "set"
 module Zui
   module Mobile
     Result = Struct.new(:app, :apk, :bundle_id, :simulator, :device, :pid, keyword_init: true)
+    PAYLOAD_MANIFEST = "zui-mobile.json"
+
+    def self.finalize_payload(root:, platform:, runtime:, source_date_epoch:, metadata: {})
+      root = File.expand_path(root)
+      manifest_path = File.join(root, PAYLOAD_MANIFEST)
+      manifest = {
+        "format" => 1,
+        "framework" => "zui",
+        "version" => VERSION,
+        "platform" => platform.to_s,
+        "ruby_runtime" => runtime.to_s,
+        "source_date_epoch" => ReproducibleBuild.epoch(source_date_epoch)
+      }.merge(metadata.transform_keys(&:to_s))
+      File.write(manifest_path, "#{JSON.pretty_generate(manifest)}\n")
+      manifest["payload_sha256"] = ReproducibleBuild.tree_digest(root, exclude: [manifest_path])
+      File.write(manifest_path, "#{JSON.pretty_generate(manifest)}\n")
+      ReproducibleBuild.normalize_tree(root, epoch: manifest.fetch("source_date_epoch"))
+      manifest
+    end
 
     def self.copy_project_assets(project:, stage:, excluding: [])
       source = File.join(project, "assets")
@@ -71,6 +90,7 @@ module Zui
         @host_platform = host_platform
         @command = command
         @gem_spec_loader = gem_spec_loader || LockedGems.new(environment:).method(:specs)
+        @source_date_epoch = ReproducibleBuild.epoch(environment["SOURCE_DATE_EPOCH"])
         @out = out
       end
 
@@ -90,6 +110,7 @@ module Zui
           build_mruby(sdk, build_name, platform: runtime_target)
           compile_application(stage)
         end
+        finalize_stage(stage, config)
         xcode_project = configure_xcode(config, stage, build_name, sdk:)
         destination = physical_device? ? select_physical_device(xcode_project) : select_simulator(xcode_project)
         build_xcode(xcode_project, destination)
@@ -251,8 +272,21 @@ module Zui
 
       def copy_directory_contents(source, destination)
         FileUtils.mkdir_p(destination)
-        entries = Dir.children(source)
+        entries = Dir.children(source).sort
         FileUtils.cp_r(entries.map { |entry| File.join(source, entry) }, destination) unless entries.empty?
+      end
+
+      def finalize_stage(stage, config)
+        Mobile.finalize_payload(
+          root: stage, platform: :ios, runtime: @runtime_mode,
+          source_date_epoch: @source_date_epoch,
+          metadata: {
+            "architecture" => @architecture,
+            "bundle_id" => config.identifier,
+            "application_version" => config.version,
+            "deployment_target" => @deployment_target
+          }
+        )
       end
 
       def copy_project_gems(stage)

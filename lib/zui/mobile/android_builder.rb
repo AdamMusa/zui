@@ -37,6 +37,7 @@ module Zui
         @requested_device = device
         @device_kind = device_kind&.to_sym
         @framework_root = File.expand_path(framework_root)
+        @source_date_epoch = ReproducibleBuild.epoch(environment["SOURCE_DATE_EPOCH"])
         @host_platform = host_platform
         @command = command
         @out = out
@@ -50,6 +51,7 @@ module Zui
         build_name = "zui-android-#{@abi}-api#{@api}-bytecode"
         build_mruby(build_name)
         compile_application(stage)
+        finalize_stage(stage, config, bundle_id)
         build_directory = configure_native(config, bundle_id, stage, build_name)
         unsigned_apk = build_apk(build_directory)
         apk = sign_apk(unsigned_apk, config)
@@ -223,9 +225,23 @@ module Zui
 
         package = File.join(stage, "android")
         create_android_gradle_extension(package, source)
-        entries = Dir.children(source).reject { |entry| entry == ".DS_Store" }
+        entries = Dir.children(source).sort.reject { |entry| entry == ".DS_Store" }
         FileUtils.cp_r(entries.map { |entry| File.join(source, entry) }, package) unless entries.empty?
         validate_android_manifest!(File.join(package, "AndroidManifest.xml"))
+      end
+
+      def finalize_stage(stage, config, bundle_id)
+        Mobile.finalize_payload(
+          root: stage, platform: :android, runtime: :lite,
+          source_date_epoch: @source_date_epoch,
+          metadata: {
+            "architecture" => @abi,
+            "bundle_id" => bundle_id,
+            "application_version" => config.version,
+            "minimum_api" => @api,
+            "target_api" => @target_api
+          }
+        )
       end
 
       def create_android_gradle_extension(package, source)
