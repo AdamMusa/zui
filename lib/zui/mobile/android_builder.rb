@@ -36,6 +36,7 @@ module Zui
         @abi = abi.to_s
         @api = Integer(api)
         @target_api = Integer(target_api)
+        @home = File.expand_path(environment["HOME"] || Dir.home)
         @output = File.expand_path(output || File.join(@project, "dist", "android-#{@abi}"))
         @requested_device = device
         @device_kind = device_kind&.to_sym
@@ -383,18 +384,18 @@ module Zui
 
       def sign_apk(unsigned_apk, config)
         tools = android_build_tools
-        keystore = File.join(Dir.home, ".android", "debug.keystore")
+        keystore = File.join(@home, ".android", "debug.keystore")
         validate_file!(keystore, "Android debug keystore")
         name = config.name.downcase.gsub(/[^a-z0-9]+/, "-").gsub(/\A-|\z/, "")
         aligned = File.join(@output, "#{name}-aligned.apk")
         signed = File.join(@output, "#{name}-#{@abi}.apk")
-        FileUtils.rm_f([aligned, signed])
+        FileUtils.rm_f([aligned, signed, "#{signed}.idsig"])
         run!([File.join(tools, "zipalign"), "-f", "4", unsigned_apk, aligned],
              label: "aligning the Android APK", timeout: 120)
         run!([
           File.join(tools, "apksigner"), "sign", "--ks", keystore,
           "--ks-key-alias", "androiddebugkey", "--ks-pass", "pass:android",
-          "--key-pass", "pass:android", "--out", signed, aligned
+          "--key-pass", "pass:android", "--v4-signing-enabled", "false", "--out", signed, aligned
         ], label: "signing the Android APK", timeout: 120)
         FileUtils.rm_f(aligned)
         run!([File.join(tools, "apksigner"), "verify", "--verbose", signed],

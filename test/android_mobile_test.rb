@@ -175,6 +175,46 @@ class AndroidMobileTest < Minitest::Test
     end
   end
 
+  def test_android_signing_omits_unused_incremental_signature_sidecar
+    Dir.mktmpdir do |directory|
+      project = File.join(directory, "project")
+      dependencies = create_dependencies(directory)
+      create_project(project)
+      calls = []
+      command = Object.new
+      command.define_singleton_method(:run) do |arguments, **_options|
+        calls << arguments
+        if File.basename(arguments.first) == "zipalign"
+          FileUtils.cp(arguments[-2], arguments[-1])
+        elsif arguments[1] == "sign"
+          output = arguments.fetch(arguments.index("--out") + 1)
+          FileUtils.cp(arguments.last, output)
+        end
+        Zui::CommandResult.new(stdout: "", stderr: "", status: SuccessfulStatus.new(0))
+      end
+      config = Zui::Dist.load(project:, platform: Zui::Mobile::AndroidBuilder::ANDROID_PLATFORM)
+      unsigned = File.join(directory, "unsigned.apk")
+      File.write(unsigned, "package")
+      fake_home = File.join(directory, "home")
+      keystore = File.join(fake_home, ".android", "debug.keystore")
+      FileUtils.mkdir_p(File.dirname(keystore))
+      File.write(keystore, "key")
+      builder = create_builder(
+        project, dependencies, command:, output: File.join(directory, "output"), environment: { "HOME" => fake_home }
+      )
+      stale_sidecar = File.join(directory, "output", "touch-test-arm64-v8a.apk.idsig")
+      FileUtils.mkdir_p(File.dirname(stale_sidecar))
+      File.write(stale_sidecar, "stale")
+
+      signed = builder.send(:sign_apk, unsigned, config)
+
+      sign = calls.find { |arguments| arguments[1] == "sign" }
+      assert_equal "false", sign.fetch(sign.index("--v4-signing-enabled") + 1)
+      refute File.exist?(stale_sidecar)
+      assert File.file?(signed)
+    end
+  end
+
   private
 
   def create_builder(project, dependencies, **options)
