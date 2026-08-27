@@ -87,6 +87,27 @@ class DistributionTest < Minitest::Test
     end
   end
 
+  def test_macos_bundle_removes_duplicate_qml_plugins_from_legacy_clients
+    platform = Zui::Platform.new(os: :macos, arch: :arm64)
+    with_project(platform) do |project, client|
+      contents = File.join(client.root, "zui-host.app", "Contents")
+      qml = File.join(contents, "Resources", "qml", "QtQuick")
+      duplicate = File.join(contents, "PlugIns", "quick", "libqtquick2plugin.dylib")
+      FileUtils.mkdir_p([qml, File.dirname(duplicate)])
+      File.write(File.join(qml, "qmldir"), "module QtQuick\nplugin qtquick2plugin\n")
+      File.binwrite(File.join(qml, "libqtquick2plugin.dylib"), "qml plugin")
+      File.binwrite(duplicate, "qml plugin")
+      destination = File.join(project, "package", "Demo.app")
+
+      lite_distribution(client:, platform:).bundle(project, destination:)
+
+      native = File.join(destination, "Contents", "Resources", "runtime", "native")
+      assert File.file?(File.join(native, "zui-host.app", "Contents", "Resources", "qml",
+                                  "QtQuick", "libqtquick2plugin.dylib"))
+      refute File.exist?(File.join(native, "zui-host.app", "Contents", "PlugIns", "quick"))
+    end
+  end
+
   def test_desktop_bundle_excludes_mobile_build_and_development_files
     platform = Zui::Platform.new(os: :macos, arch: :arm64)
     with_project(platform) do |project, client|
