@@ -12,11 +12,15 @@ module Zui
       BUILD_TOOLS_VERSION = "35.0.1"
       MRUBY_REVISION = "831da26b9021de0369d17b71b5667e2941a1a32d"
       MRUBY_JSON_REVISION = "f99d9428025469f2400f93c53b185f65f963e507"
-      QT_MOBILE_MODULES = %w[
+      QT_COMMON_MODULES = %w[
         qt3d qt5compat qtcharts qtconnectivity qtdatavis3d qtgraphs qtgrpc qtlocation qtlottie
-        qtmultimedia qtnetworkauth qtpdf qtpositioning qtquick3d qtquick3dphysics qtquicktimeline
+        qtmultimedia qtnetworkauth qtpositioning qtquick3d qtquick3dphysics qtquicktimeline
         qtremoteobjects qtscxml qtsensors qtspeech qtvirtualkeyboard qtwebchannel qtwebsockets qtwebview
       ].freeze
+      QT_HOST_MODULES = (QT_COMMON_MODULES + %w[qtpdf]).freeze
+      QT_IOS_MODULES = QT_HOST_MODULES
+      QT_ANDROID_MODULES = QT_COMMON_MODULES
+      QT_MOBILE_MODULES = (QT_IOS_MODULES + QT_ANDROID_MODULES).uniq.freeze
       QT_MODULE_PACKAGES = {
         "qt3d" => "Qt63DCore", "qt5compat" => "Qt6Core5Compat", "qtcharts" => "Qt6Charts",
         "qtconnectivity" => "Qt6Bluetooth", "qtdatavis3d" => "Qt6DataVisualization",
@@ -188,16 +192,25 @@ module Zui
       end
 
       def dependency_ready?(key, value)
-        return qt_sdk_ready?(value) if %w[qt_host qt_ios qt_android].include?(key.to_s)
+        return qt_sdk_ready?(value, modules: qt_modules_for(key)) if %w[qt_host qt_ios qt_android].include?(key.to_s)
 
         present?(value)
       end
 
-      def qt_sdk_ready?(path)
+      def qt_sdk_ready?(path, modules:)
         return false unless present?(path)
 
-        QT_MODULE_PACKAGES.values.all? do |package|
+        modules.all? do |qt_module|
+          package = QT_MODULE_PACKAGES.fetch(qt_module)
           File.directory?(File.join(path, "lib", "cmake", package))
+        end
+      end
+
+      def qt_modules_for(key)
+        case key.to_s
+        when "qt_android" then QT_ANDROID_MODULES
+        when "qt_ios" then QT_IOS_MODULES
+        else QT_HOST_MODULES
         end
       end
 
@@ -244,7 +257,7 @@ module Zui
       def repair_qt!(dependencies)
         missing = %w[qt_host qt_android]
         missing << "qt_ios" if @host_platform.macos?
-        return if missing.all? { |key| qt_sdk_ready?(dependencies[key]) }
+        return if missing.all? { |key| qt_sdk_ready?(dependencies[key], modules: qt_modules_for(key)) }
 
         python = @environment["PYTHON"] || "python3"
         tools = File.join(@root, "tools")
@@ -257,16 +270,16 @@ module Zui
         default_qt_root = File.join(@root, "Qt")
         host = @host_platform.macos? ? %w[mac desktop clang_64] : %w[linux desktop gcc_64]
         host_root = qt_root_for(dependencies["qt_host"]) || default_qt_root
-        run!([aqt, "install-qt", host[0], host[1], QT_VERSION, host[2], "-m", *QT_MOBILE_MODULES, "-O", host_root],
-             label: "installing the complete Qt host mobile catalog", timeout: 3_600) unless qt_sdk_ready?(dependencies["qt_host"])
-        if @host_platform.macos? && !qt_sdk_ready?(dependencies["qt_ios"])
+        run!([aqt, "install-qt", host[0], host[1], QT_VERSION, host[2], "-m", *QT_HOST_MODULES, "-O", host_root],
+             label: "installing the complete Qt host mobile catalog", timeout: 3_600) unless qt_sdk_ready?(dependencies["qt_host"], modules: QT_HOST_MODULES)
+        if @host_platform.macos? && !qt_sdk_ready?(dependencies["qt_ios"], modules: QT_IOS_MODULES)
           ios_root = qt_root_for(dependencies["qt_ios"]) || default_qt_root
-          run!([aqt, "install-qt", "mac", "ios", QT_VERSION, "ios", "-m", *QT_MOBILE_MODULES, "-O", ios_root],
+          run!([aqt, "install-qt", "mac", "ios", QT_VERSION, "ios", "-m", *QT_IOS_MODULES, "-O", ios_root],
                label: "installing the Qt iOS SDK", timeout: 3_600)
         end
-        unless qt_sdk_ready?(dependencies["qt_android"])
+        unless qt_sdk_ready?(dependencies["qt_android"], modules: QT_ANDROID_MODULES)
           android_root = qt_root_for(dependencies["qt_android"]) || default_qt_root
-          run!([aqt, "install-qt", "all_os", "android", QT_VERSION, "android_arm64_v8a", "-m", *QT_MOBILE_MODULES, "-O", android_root],
+          run!([aqt, "install-qt", "all_os", "android", QT_VERSION, "android_arm64_v8a", "-m", *QT_ANDROID_MODULES, "-O", android_root],
                label: "installing the Qt Android SDK", timeout: 3_600)
         end
       end

@@ -102,9 +102,12 @@ class MobileSetupTest < Minitest::Test
       assert_equal paths.fetch(:android_ndk), values.fetch("android_ndk")
       assert_equal "TEAM123456", values.fetch("apple_team")
       assert_equal values, JSON.parse(File.read(config))
-      Zui::Mobile::Setup::QT_MODULE_PACKAGES.each_value do |package|
-        assert File.directory?(File.join(paths.fetch(:qt_ios), "lib", "cmake", package))
-        assert File.directory?(File.join(paths.fetch(:qt_android), "lib", "cmake", package))
+      { qt_ios: Zui::Mobile::Setup::QT_IOS_MODULES,
+        qt_android: Zui::Mobile::Setup::QT_ANDROID_MODULES }.each do |target, modules|
+        modules.each do |qt_module|
+          package = Zui::Mobile::Setup::QT_MODULE_PACKAGES.fetch(qt_module)
+          assert File.directory?(File.join(paths.fetch(target), "lib", "cmake", package))
+        end
       end
     end
   end
@@ -156,6 +159,8 @@ class MobileSetupTest < Minitest::Test
     assert_includes modules, "qtwebview"
     assert_includes modules, "qtmultimedia"
     assert_includes modules, "qtvirtualkeyboard"
+    assert_includes Zui::Mobile::Setup::QT_IOS_MODULES, "qtpdf"
+    refute_includes Zui::Mobile::Setup::QT_ANDROID_MODULES, "qtpdf"
   end
 
   private

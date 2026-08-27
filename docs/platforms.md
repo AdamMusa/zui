@@ -118,6 +118,8 @@ WebView, virtual keyboard, Bluetooth/connectivity, OAuth/network authentication,
 WebChannel, charts/graphs, PDF, 3D, animation, state machines, and remote objects. This is a
 development SDK capability set, not an application payload: the QML import scanner and Zui tree
 shaker link and package only modules used by the selected application components.
+The installer follows Qt's target catalog exactly; for example, Qt 6.8 publishes Qt PDF for iOS
+but not for Android, so `pdf_view` is an iOS/desktop component in this Qt release.
 
 The build commands create lean pinned mobile mruby runtimes,
 precompile the bundled Ruby source to bytecode, and write products below `dist/ios` and
