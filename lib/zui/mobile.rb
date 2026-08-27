@@ -10,6 +10,27 @@ module Zui
   module Mobile
     Result = Struct.new(:app, :apk, :bundle_id, :simulator, :device, :pid, keyword_init: true)
 
+    def self.copy_project_assets(project:, stage:, excluding: [])
+      source = File.join(project, "assets")
+      return unless File.directory?(source)
+
+      excluded = Array(excluding).compact.map { |path| File.realpath(path) }.to_set
+      destination = File.join(stage, "assets")
+      Dir.glob(File.join(source, "**", "*"), File::FNM_DOTMATCH).sort.each do |path|
+        next unless File.file?(path)
+        resolved = File.realpath(path)
+        next if File.basename(path) == ".DS_Store" || excluded.include?(resolved)
+
+        unless resolved.start_with?("#{File.realpath(source)}#{File::SEPARATOR}")
+          raise ArgumentError, "mobile asset symlink escapes the project: #{path}"
+        end
+        relative = path.delete_prefix("#{source}#{File::SEPARATOR}")
+        target = File.join(destination, relative)
+        FileUtils.mkdir_p(File.dirname(target))
+        FileUtils.cp(path, target, preserve: true)
+      end
+    end
+
     class IOSBuilder
       DEFAULT_DEPLOYMENT_TARGET = "16.0"
       DEFAULT_ARCHITECTURE = "x86_64"
@@ -185,20 +206,17 @@ module Zui
         FileUtils.mkdir_p(stage)
         source = LiteSource.new(project: @project, allow_external_requires: full_runtime?).call
         File.binwrite(File.join(stage, "app.rb"), source)
-        copy_assets(stage)
+        copy_assets(stage, config)
         create_icon_catalog(stage, config.icon_path(@project, IOS_PLATFORM))
         create_splash_screen(stage, config.splash_path(@project, IOS_PLATFORM))
         stage
       end
 
-      def copy_assets(stage)
-        source = File.join(@project, "assets")
-        return unless File.directory?(source)
-
-        destination = File.join(stage, "assets")
-        FileUtils.mkdir_p(destination)
-        entries = Dir.children(source)
-        FileUtils.cp_r(entries.map { |entry| File.join(source, entry) }, destination) unless entries.empty?
+      def copy_assets(stage, config)
+        Mobile.copy_project_assets(
+          project: @project, stage:,
+          excluding: [config.icon_path(@project, IOS_PLATFORM), config.splash_path(@project, IOS_PLATFORM)]
+        )
       end
 
       def copy_cruby_support(stage)
@@ -218,6 +236,9 @@ module Zui
         copy_directory_contents(File.join(@cruby_source_root, "lib"), File.join(destination, "source"))
         generated = File.join(destination, "generated")
         copy_directory_contents(File.join(@cruby_build_root, ".ext", "common"), generated)
+        cruby_json_sources.each_key do |relative|
+          FileUtils.rm_f(File.join(generated, "json", relative))
+        end
         FileUtils.cp(File.join(@cruby_build_root, "rbconfig.rb"), File.join(generated, "rbconfig.rb"))
       end
 
@@ -229,7 +250,8 @@ module Zui
 
       def copy_project_gems(stage)
         specs = @gem_spec_loader.call(@project).reject do |spec|
-          BUILTIN_CRUBY_GEMS.include?(spec.name)
+          BUILTIN_CRUBY_GEMS.include?(spec.name) ||
+            (spec.respond_to?(:default_gem?) && spec.default_gem?)
         end
         names = Set.new
         destination = File.join(stage, "cruby", "gems")
@@ -238,8 +260,9 @@ module Zui
         manifest_gems = specs.sort_by(&:full_name).map do |spec|
           validate_mobile_gem!(spec, names)
           target = File.join(destination, spec.full_name)
-          FileUtils.cp_r(spec.full_gem_path, target)
-          File.write(File.join(specifications, "#{spec.full_name}.gemspec"), spec.to_ruby)
+          files = packaged_mobile_gem_files(spec)
+          install_mobile_gem_files(spec, target, files)
+          File.write(File.join(specifications, "#{spec.full_name}.gemspec"), spec.to_ruby(files:))
           require_paths = mobile_gem_require_paths(spec)
           {
             "name" => spec.name,
@@ -296,6 +319,30 @@ module Zui
             raise ArgumentError, "gem #{spec.full_name} has an unsafe require path: #{relative.inspect}"
           end
           relative
+        end
+      end
+
+      def packaged_mobile_gem_files(spec)
+        files = Array(spec.files).map(&:to_s).reject(&:empty?).uniq.sort
+        if files.empty?
+          raise ArgumentError, "gem #{spec.full_name} has no packaged files; set spec.files in its gemspec"
+        end
+        files
+      end
+
+      def install_mobile_gem_files(spec, target, files)
+        root = File.realpath(spec.full_gem_path)
+        files.each do |relative|
+          source = File.expand_path(relative, root)
+          unless source.start_with?("#{root}#{File::SEPARATOR}") && File.file?(source)
+            raise ArgumentError, "gem #{spec.full_name} has an unsafe or missing packaged file: #{relative.inspect}"
+          end
+          unless File.realpath(source).start_with?("#{root}#{File::SEPARATOR}")
+            raise ArgumentError, "gem #{spec.full_name} has a packaged symlink outside its root: #{relative.inspect}"
+          end
+          destination = File.join(target, relative)
+          FileUtils.mkdir_p(File.dirname(destination))
+          FileUtils.cp(source, destination, preserve: true)
         end
       end
 

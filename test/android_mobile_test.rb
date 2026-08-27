@@ -58,8 +58,8 @@ class AndroidMobileTest < Minitest::Test
       assert_includes gradle, "apply from: 'zui.gradle'"
       assert_includes File.read(File.join(stage, "android", "zui.gradle")), "mobile-sdk"
       assert File.file?(File.join(stage, "android", "src", "dev", "zui", "MobileBridge.java"))
-      assert_equal File.binread(File.join(project, "assets", "ruby.png")),
-                   File.binread(File.join(stage, "assets", "ruby.png"))
+      refute File.exist?(File.join(stage, "assets", "ruby.png"))
+      assert_equal "runtime asset", File.read(File.join(stage, "assets", "runtime.txt"))
     end
   end
 
@@ -200,6 +200,7 @@ class AndroidMobileTest < Minitest::Test
     RUBY
     icon = File.join(ROOT, "lib", "zui", "generator_assets", "ruby.png")
     FileUtils.cp(icon, File.join(project, "assets", "ruby.png"))
+    File.write(File.join(project, "assets", "runtime.txt"), "runtime asset")
     File.write(File.join(project, "config.rb"), <<~RUBY)
       Zui::Dist.configure do
         name "Touch Test"

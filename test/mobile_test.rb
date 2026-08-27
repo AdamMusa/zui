@@ -10,11 +10,15 @@ class MobileTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
 
   MobileGemSpec = Struct.new(
-    :name, :version, :full_gem_path, :require_paths, :platform, :extensions,
+    :name, :version, :full_gem_path, :require_paths, :platform, :extensions, :files, :default,
     keyword_init: true
   ) do
     def full_name = "#{name}-#{version}"
-    def to_ruby = "Gem::Specification.new { |spec| spec.name = #{name.dump}; spec.version = #{version.dump} }\n"
+    def default_gem? = default == true
+    def to_ruby(files: self.files)
+      "Gem::Specification.new { |spec| spec.name = #{name.dump}; spec.version = #{version.dump}; " \
+        "spec.files = #{files.inspect} }\n"
+    end
   end
 
   SuccessfulStatus = Struct.new(:exitstatus) do
@@ -79,8 +83,8 @@ class MobileTest < Minitest::Test
       manifest = JSON.parse(File.read(File.join(stage, "Assets.xcassets", "AppIcon.appiconset", "Contents.json")))
       assert_includes application, "class EmbeddedOutput"
       assert_includes application, 'text "Touch ready"'
-      assert_equal File.binread(File.join(project, "assets", "ruby.png")),
-                   File.binread(File.join(stage, "assets", "ruby.png"))
+      refute File.exist?(File.join(stage, "assets", "ruby.png"))
+      assert_equal "runtime asset", File.read(File.join(stage, "assets", "runtime.txt"))
       assert_equal "AppIcon.png", manifest.dig("images", 0, "filename")
       assert File.file?(File.join(stage, "Assets.xcassets", "AppIcon.appiconset", "AppIcon.png"))
       assert File.file?(File.join(stage, "Assets.xcassets", "ZuiSplash.imageset", "ZuiSplash.png"))
@@ -167,9 +171,13 @@ class MobileTest < Minitest::Test
       assert_equal "json state", File.read(File.join(stage, "cruby", "json", "ext", "generator", "state.rb"))
       assert_equal "uri support", File.read(File.join(stage, "cruby", "stdlib", "source", "uri.rb"))
       assert_equal "target rbconfig", File.read(File.join(stage, "cruby", "stdlib", "generated", "rbconfig.rb"))
+      %w[version.rb common.rb ext.rb ext/generator/state.rb].each do |relative|
+        refute File.exist?(File.join(stage, "cruby", "stdlib", "generated", "json", relative))
+      end
       assert_equal "module Paint; def self.label = 'Paint ready'; end\n",
                    File.read(File.join(stage, "cruby", "gems", "paint-1.2.3", "lib", "paint.rb"))
       assert File.file?(File.join(stage, "cruby", "specifications", "paint-1.2.3.gemspec"))
+      refute File.exist?(File.join(stage, "cruby", "gems", "paint-1.2.3", "dist"))
       assert_includes File.read(File.join(stage, "app.rb")), 'require "paint"'
       gem_manifest = JSON.parse(File.read(File.join(stage, "cruby", "gems.json")))
       assert_match(/\A[0-9a-f]{64}\z/, gem_manifest.fetch("digest"))
@@ -307,6 +315,7 @@ class MobileTest < Minitest::Test
     RUBY
     icon = File.join(ROOT, "lib", "zui", "generator_assets", "ruby.png")
     FileUtils.cp(icon, File.join(project, "assets", "ruby.png"))
+    File.write(File.join(project, "assets", "runtime.txt"), "runtime asset")
     File.write(File.join(project, "config.rb"), <<~RUBY)
       Zui::Dist.configure do
         name "Touch Test"
@@ -354,12 +363,13 @@ class MobileTest < Minitest::Test
 
   def create_mobile_gem(directory, name, version, extensions: [])
     root = File.join(directory, "installed-gems", "#{name}-#{version}")
-    FileUtils.mkdir_p(File.join(root, "lib"))
+    FileUtils.mkdir_p([File.join(root, "lib"), File.join(root, "dist")])
     File.write(File.join(root, "lib", "#{name.tr('-', '_')}.rb"),
                "module Paint; def self.label = 'Paint ready'; end\n")
+    File.write(File.join(root, "dist", "development.bin"), "must not ship")
     MobileGemSpec.new(
       name:, version:, full_gem_path: root, require_paths: ["lib"],
-      platform: "ruby", extensions:
+      platform: "ruby", extensions:, files: ["lib/#{name.tr('-', '_')}.rb"]
     )
   end
 end

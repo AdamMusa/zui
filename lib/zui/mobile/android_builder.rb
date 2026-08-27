@@ -123,7 +123,7 @@ module Zui
         FileUtils.rm_rf(stage)
         FileUtils.mkdir_p(stage)
         File.binwrite(File.join(stage, "app.rb"), LiteSource.new(project: @project).call)
-        copy_assets(stage)
+        copy_assets(stage, config)
         create_android_package(
           stage, config, config.icon_path(@project, ANDROID_PLATFORM),
           config.splash_path(@project, ANDROID_PLATFORM)
@@ -132,14 +132,13 @@ module Zui
         stage
       end
 
-      def copy_assets(stage)
-        source = File.join(@project, "assets")
-        return unless File.directory?(source)
-
-        destination = File.join(stage, "assets")
-        FileUtils.mkdir_p(destination)
-        entries = Dir.children(source)
-        FileUtils.cp_r(entries.map { |entry| File.join(source, entry) }, destination) unless entries.empty?
+      def copy_assets(stage, config)
+        Mobile.copy_project_assets(
+          project: @project, stage:,
+          excluding: [
+            config.icon_path(@project, ANDROID_PLATFORM), config.splash_path(@project, ANDROID_PLATFORM)
+          ]
+        )
       end
 
       def create_android_package(stage, config, icon, splash)
