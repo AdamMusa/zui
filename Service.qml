@@ -104,39 +104,26 @@ Item {
   }
 
   function validateComponents(components) {
-    if (!plainObject(components)) {
-      console.warn("zui registry: payload is not an object")
-      return false
-    }
+    if (!plainObject(components)) return reject("component registry payload is not an object")
     var names = Object.keys(components)
-    if (names.length === 0 || names.length > maxComponentDefinitions) {
-      console.warn("zui registry: invalid component count", names.length)
-      return false
-    }
+    if (names.length === 0 || names.length > maxComponentDefinitions)
+      return reject("component registry count rejected: " + names.length)
     var validated = ({})
     for (var i = 0; i < names.length; i++) {
       var name = names[i]
       var definition = components[name]
-      if (!/^[a-z][a-z0-9_]*$/.test(name) || !plainObject(definition)) {
-        console.warn("zui registry: invalid definition", name)
-        return false
-      }
-      if (!/^[A-Z][A-Za-z0-9]*\.qml$/.test(String(definition.qml || ""))) {
-        console.warn("zui registry: invalid adapter", name, definition.qml)
-        return false
-      }
+      if (!/^[a-z][a-z0-9_]*$/.test(name) || !plainObject(definition))
+        return reject("component registry definition rejected: " + name)
+      if (!/^[A-Z][A-Za-z0-9]*\.qml$/.test(String(definition.qml || "")))
+        return reject("component registry adapter rejected: " + name + "/" + String(definition.qml || ""))
       if (!Array.isArray(definition.properties) || !Array.isArray(definition.events)
-          || !plainObject(definition.property_map || {}) || !plainObject(definition.event_map || {})) {
-        console.warn("zui registry: invalid schema", name)
-        return false
-      }
+          || !plainObject(definition.property_map || {}) || !plainObject(definition.event_map || {}))
+        return reject("component registry schema rejected: " + name)
       var propertyMap = ({})
       for (var p = 0; p < definition.properties.length; p++) {
         var propertyName = String(definition.properties[p])
-        if (!/^[a-z][a-z0-9_]*$/.test(propertyName)) {
-          console.warn("zui registry: invalid property", name, propertyName)
-          return false
-        }
+        if (!/^[a-z][a-z0-9_]*$/.test(propertyName))
+          return reject("component registry property rejected: " + name + "." + propertyName)
         propertyMap[propertyName] = true
       }
       validated[name] = {
@@ -157,7 +144,7 @@ Item {
     if (!plainObject(message.surfaces)) return reject("render surfaces must be an object")
     if (message.surface_options !== undefined && !validateSurfaceOptions(message.surface_options))
       return reject("invalid surface options")
-    if (!validateComponents(message.components)) return reject("invalid component registry")
+    if (!validateComponents(message.components)) return false
     var dynamicTypes = ({})
     var dynamicProperties = ({})
     for (var componentName in componentDefinitions) {

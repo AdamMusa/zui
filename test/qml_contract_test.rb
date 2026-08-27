@@ -104,7 +104,7 @@ class QmlContractTest < Minitest::Test
     assert_operator Zui::COMPONENTS.length, :>, 256
     assert_includes service, "readonly property int maxComponentDefinitions: 1024"
     assert_includes service, "names.length > maxComponentDefinitions"
-    assert_includes service, 'console.warn("zui registry: invalid schema", name)'
+    assert_includes service, 'reject("component registry schema rejected: " + name)'
   end
 
   def test_service_uses_one_injected_bidirectional_transport
