@@ -30,6 +30,7 @@ module Zui
     RUBY
     EXTENSION_BUILD_FILES = %w[.DS_Store Makefile gem_make.out mkmf.log].freeze
     EXTENSION_BUILD_EXTENSIONS = %w[.a .exp .ilk .lib .o .obj .pdb].freeze
+    NON_RUNTIME_DIRECTORIES = %w[.dSYM].freeze
 
     attr_reader :platform
 
@@ -53,7 +54,9 @@ module Zui
       library_paths = install_standard_library(destination)
       install_runtime_libraries(destination)
       gems = install_project_gems(project, destination)
+      prune_non_runtime_artifacts(destination)
       install_native_dependencies(destination)
+      optimize_native_binaries(destination)
       environment = {
         "RUBYLIB" => library_paths,
         "GEM_HOME" => ["gems"],
@@ -83,8 +86,6 @@ module Zui
       FileUtils.mkdir_p(File.dirname(target))
       FileUtils.cp(@ruby, target)
       FileUtils.chmod(0o755, target) unless platform.windows?
-      strip_binary(target)
-      sign_binary(target)
       File.join("bin", name).tr(File::SEPARATOR, "/")
     end
 
@@ -160,6 +161,35 @@ module Zui
           FileUtils.cp(source, target)
           binaries << target
         end
+      end
+    end
+
+    def prune_non_runtime_artifacts(destination)
+      paths = Dir.glob(File.join(destination, "**", "*"), File::FNM_DOTMATCH).sort_by do |path|
+        -path.count(File::SEPARATOR)
+      end
+      paths.each do |path|
+        name = File.basename(path)
+        if File.directory?(path) && NON_RUNTIME_DIRECTORIES.any? { |suffix| name.end_with?(suffix) }
+          FileUtils.remove_entry(path)
+        elsif File.file?(path) && EXTENSION_BUILD_FILES.include?(name)
+          FileUtils.rm_f(path)
+        elsif File.file?(path) && EXTENSION_BUILD_EXTENSIONS.include?(File.extname(name).downcase)
+          FileUtils.rm_f(path)
+        end
+      end
+    end
+
+    def optimize_native_binaries(destination)
+      patterns = platform.windows? ? %w[*.dll *.exe] : %w[*.bundle *.dylib *.so]
+      binaries = patterns.flat_map { |pattern| Dir.glob(File.join(destination, "**", pattern)) }
+      executable = File.join(destination, "bin", platform.windows? ? "ruby.exe" : "ruby")
+      binaries << executable if File.file?(executable)
+      binaries.uniq.sort.each do |path|
+        next if File.symlink?(path) || !native_binary?(path)
+
+        strip_binary(path)
+        sign_binary(path)
       end
     end
 
@@ -293,15 +323,17 @@ module Zui
     end
 
     def strip_binary(path)
-      magic = File.binread(path, 4)
-      mach_o = ["\xCF\xFA\xED\xFE".b, "\xFE\xED\xFA\xCF".b, "\xCA\xFE\xBA\xBE".b]
-      return unless magic.start_with?("\x7FELF".b, "MZ".b) || mach_o.include?(magic)
-
       strip = find_command(platform.macos? ? %w[strip] : %w[strip llvm-strip])
       return unless strip
 
       arguments = platform.macos? ? [strip, "-x", path] : [strip, "--strip-unneeded", path]
       system(*arguments, out: File::NULL, err: File::NULL)
+    end
+
+    def native_binary?(path)
+      magic = File.binread(path, 4)
+      mach_o = ["\xCF\xFA\xED\xFE".b, "\xFE\xED\xFA\xCF".b, "\xCA\xFE\xBA\xBE".b]
+      magic.start_with?("\x7FELF".b, "MZ".b) || mach_o.include?(magic)
     end
 
     def sign_binary(path)

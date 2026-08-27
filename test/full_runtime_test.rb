@@ -29,6 +29,9 @@ class FullRuntimeTest < Minitest::Test
       FileUtils.chmod(0o755, ruby)
       File.write(File.join(standard_library, "json.rb"), "module JSON; end\n")
       File.binwrite(File.join(architecture_library, "json.so"), "native-fixture")
+      debug_symbols = File.join(architecture_library, "json.so.dSYM", "Contents", "Resources", "DWARF")
+      FileUtils.mkdir_p(debug_symbols)
+      File.binwrite(File.join(debug_symbols, "json.so"), "debug-symbol-fixture")
       File.binwrite(File.join(prefix, "lib", "libruby.so"), "library-fixture")
 
       project = File.join(directory, "project")
@@ -85,6 +88,7 @@ class FullRuntimeTest < Minitest::Test
       assert File.file?(File.join(destination, "bin", "ruby"))
       assert File.file?(File.join(destination, "lib", "ruby", "3.3.0", "json.rb"))
       assert File.file?(File.join(destination, "lib", "ruby", "3.3.0", "x86_64-linux", "json.so"))
+      refute File.exist?(File.join(destination, "lib", "ruby", "3.3.0", "x86_64-linux", "json.so.dSYM"))
       assert File.file?(File.join(destination, "lib", "libruby.so"))
       assert File.file?(File.join(destination, "gems", "gems", "paint-1.2.3", "lib", "paint.rb"))
       refute File.exist?(File.join(destination, "gems", "gems", "paint-1.2.3", "dist"))
@@ -192,6 +196,7 @@ class FullRuntimeTest < Minitest::Test
       end
 
       executable = runtime.send(:install_executable, destination)
+      runtime.send(:optimize_native_binaries, destination)
 
       assert_equal "bin/ruby", executable
       assert_equal ["/usr/bin/strip", "-x", File.join(destination, "bin", "ruby")], commands[0][0]
