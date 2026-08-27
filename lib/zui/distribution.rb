@@ -8,12 +8,13 @@ module Zui
   class Distribution
     RUNTIME_MODES = %i[lite full].freeze
     DESKTOP_APPLICATION_EXCLUDES = %w[
-      .bundle .git .github .ruby-lsp android coverage dist ios log spec test tmp
+      .bundle .cache .git .github .idea .ruby-lsp .vscode android build coverage dist ios log
+      node_modules pkg spec test tmp
     ].freeze
     DESKTOP_APPLICATION_FILES = %w[
       .DS_Store .gitattributes .gitignore Gemfile Gemfile.lock README.md Rakefile config.rb
     ].freeze
-    DESKTOP_APPLICATION_PATHS = %w[vendor/bundle].freeze
+    DESKTOP_APPLICATION_PATHS = %w[vendor/bundle vendor/cache].freeze
 
     attr_reader :platform, :tree_shake_report, :runtime_tree_shake_report, :runtime_mode
 
@@ -157,6 +158,7 @@ module Zui
         elsif File.directory?(source_path)
           FileUtils.mkdir_p(destination_path)
           copy_desktop_application(source_path, destination_path, project, bundle)
+          Dir.rmdir(destination_path) if Dir.empty?(destination_path)
         elsif File.file?(source_path)
           FileUtils.cp(source_path, destination_path)
         else
@@ -179,7 +181,8 @@ module Zui
       return false unless parts.length == 1
 
       DESKTOP_APPLICATION_EXCLUDES.include?(parts.first) ||
-        DESKTOP_APPLICATION_FILES.include?(parts.first) || parts.first.end_with?(".gemspec")
+        parts.first.start_with?("cmake-build-") || DESKTOP_APPLICATION_FILES.include?(parts.first) ||
+        parts.first.end_with?(".gemspec")
     end
 
     def install_runtime(destination)

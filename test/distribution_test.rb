@@ -118,7 +118,8 @@ class DistributionTest < Minitest::Test
   def test_desktop_bundle_excludes_mobile_build_and_development_files
     platform = Zui::Platform.new(os: :macos, arch: :arm64)
     with_project(platform) do |project, client|
-      excluded = %w[android ios test spec .ruby-lsp dist]
+      excluded = %w[android ios test spec .ruby-lsp .cache .idea .vscode build cmake-build-debug
+                    dist node_modules pkg]
       excluded.each do |entry|
         FileUtils.mkdir_p(File.join(project, entry))
         File.write(File.join(project, entry, "not-for-desktop.txt"), entry)
@@ -134,6 +135,8 @@ class DistributionTest < Minitest::Test
       File.write(File.join(project, "README.md"), "development documentation")
       FileUtils.mkdir_p(File.join(project, "vendor", "bundle"))
       File.write(File.join(project, "vendor", "bundle", "cached-gem.rb"), "dependency cache")
+      FileUtils.mkdir_p(File.join(project, "vendor", "cache"))
+      File.write(File.join(project, "vendor", "cache", "paint-1.0.0.gem"), "gem archive")
       File.write(File.join(project, "config.rb"), <<~RUBY)
         Zui::Dist.configure do
           name "Desktop"
@@ -159,7 +162,7 @@ class DistributionTest < Minitest::Test
       end
       refute File.exist?(File.join(application, "assets", ".DS_Store"))
       refute File.exist?(File.join(application, "README.md"))
-      refute File.exist?(File.join(application, "vendor", "bundle"))
+      refute File.exist?(File.join(application, "vendor"))
       %w[icon.icns icon.ico icon.png].each do |entry|
         refute File.exist?(File.join(application, "assets", entry))
       end
