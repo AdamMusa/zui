@@ -162,6 +162,14 @@ class QmlContractTest < Minitest::Test
     end
   end
 
+  def test_capture_session_can_defer_protected_microphone_access
+    capture = source("Components/Builtins/CaptureSession.qml")
+
+    assert_includes Zui::COMPONENTS.fetch(:capture_session).fetch(0), :audio_input_enabled
+    assert_includes capture, 'renderer.prop("audio_input_enabled",true)!==false'
+    assert_includes capture, "audioInput:sessionRoot.audioInputEnabled()&&"
+  end
+
   def test_mobile_text_to_speech_uses_typed_locale_and_qualified_signals
     speech = source("Components/Builtins/TextToSpeech.qml")
 

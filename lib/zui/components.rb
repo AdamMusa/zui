@@ -214,7 +214,7 @@ module Zui
     video_output: [%i[source fill_mode orientation mirrored end_of_stream_policy width height visible], %i[source_change frame], false],
     sound_effect: [%i[source loops volume muted playback command command_revision visible], %i[play stop status error loops_remaining], false],
     camera: [%i[active camera_device focus_mode flash_mode torch_mode exposure_mode exposure_compensation iso shutter_speed white_balance_mode color_temperature zoom_factor command command_revision visible], %i[start stop active_change error focus exposure], false],
-    capture_session: [%i[camera_active audio_input_device audio_output_device video_output_enabled width height visible], %i[ready error], true],
+    capture_session: [%i[camera_active audio_input_enabled audio_input_device audio_output_device video_output_enabled width height visible], %i[ready error], true],
     image_capture: [%i[session quality format command path command_revision visible], %i[captured saved error ready_change], false],
     media_recorder: [%i[session output_location quality resolution frame_rate video_codec audio_codec media_format audio_bit_rate video_bit_rate command command_revision visible], %i[record pause stop status duration error location], false],
     audio_input: [%i[device muted volume visible], %i[device_change muted_change volume_change error], false],
