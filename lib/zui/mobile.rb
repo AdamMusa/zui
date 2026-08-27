@@ -57,6 +57,28 @@ module Zui
       end
     end
 
+    def self.prepare_framework(project:, output:, framework_root:, platform:, runtime:, source_date_epoch:)
+      destination = File.join(output, "framework")
+      FileUtils.rm_rf(destination)
+      Runtime.install_qml(destination, framework_root:)
+      report = TreeShaker.new(
+        project:, framework: destination, native: nil,
+        platform: platform.to_sym == :ios ? IOSBuilder::IOS_PLATFORM : AndroidBuilder::ANDROID_PLATFORM
+      ).shake!
+      manifest = finalize_payload(
+        root: destination, platform:, runtime:, source_date_epoch:,
+        metadata: {
+          "payload" => "zui-qml",
+          "components" => report.components.map(&:to_s).sort,
+          "qml_modules" => report.qml_modules,
+          "before_bytes" => report.before_bytes,
+          "after_bytes" => report.after_bytes,
+          "saved_bytes" => report.saved_bytes
+        }
+      )
+      [destination, report, manifest]
+    end
+
     class IOSBuilder
       DEFAULT_DEPLOYMENT_TARGET = "16.0"
       DEFAULT_ARCHITECTURE = "x86_64"
@@ -110,8 +132,11 @@ module Zui
           build_mruby(sdk, build_name, platform: runtime_target)
           compile_application(stage)
         end
-        finalize_stage(stage, config)
-        xcode_project = configure_xcode(config, stage, build_name, sdk:)
+        framework, framework_report, framework_manifest = prepare_framework
+        finalize_stage(stage, config, framework_manifest:)
+        @out.puts("Tree-shaken mobile Zui runtime: #{framework_report.components.size} components, " \
+                  "#{(framework_report.saved_bytes / 1_000_000.0).round(1)} MB removed")
+        xcode_project = configure_xcode(config, stage, build_name, sdk:, framework:)
         destination = physical_device? ? select_physical_device(xcode_project) : select_simulator(xcode_project)
         build_xcode(xcode_project, destination)
         products = physical_device? ? "Release-iphoneos" : "Release-iphonesimulator"
@@ -276,7 +301,14 @@ module Zui
         FileUtils.cp_r(entries.map { |entry| File.join(source, entry) }, destination) unless entries.empty?
       end
 
-      def finalize_stage(stage, config)
+      def prepare_framework
+        Mobile.prepare_framework(
+          project: @project, output: @output, framework_root: @framework_root,
+          platform: :ios, runtime: @runtime_mode, source_date_epoch: @source_date_epoch
+        )
+      end
+
+      def finalize_stage(stage, config, framework_manifest:)
         Mobile.finalize_payload(
           root: stage, platform: :ios, runtime: @runtime_mode,
           source_date_epoch: @source_date_epoch,
@@ -284,7 +316,8 @@ module Zui
             "architecture" => @architecture,
             "bundle_id" => config.identifier,
             "application_version" => config.version,
-            "deployment_target" => @deployment_target
+            "deployment_target" => @deployment_target,
+            "zui_payload_sha256" => framework_manifest.fetch("payload_sha256")
           }
         )
       end
@@ -499,7 +532,7 @@ module Zui
         raise ArgumentError, "mrbc did not produce #{bytecode}" unless File.file?(bytecode)
       end
 
-      def configure_xcode(config, stage, build_name, sdk:)
+      def configure_xcode(config, stage, build_name, sdk:, framework: nil)
         build = File.join(@output, "xcode")
         FileUtils.rm_rf(build)
         FileUtils.mkdir_p(build)
@@ -509,6 +542,7 @@ module Zui
           "-B", build, "-G", "Xcode", "-DQT_HOST_PATH=#{@qt_host}",
           "-DCMAKE_OSX_SYSROOT=#{sdk}", "-DCMAKE_OSX_ARCHITECTURES=#{@architecture}",
           "-DCMAKE_OSX_DEPLOYMENT_TARGET=#{@deployment_target}", "-DZUI_EMBEDDED_RUNTIME=ON",
+          "-DZUI_FRAMEWORK_ROOT=#{framework || @framework_root}",
           "-DZUI_MOBILE_APP_DIR=#{stage}", "-DZUI_MOBILE_APP_NAME=#{config.name}",
           "-DZUI_MOBILE_BUNDLE_ID=#{config.identifier}", "-DZUI_MOBILE_APP_VERSION=#{config.version}",
           "-DZUI_MOBILE_BUILD_VERSION=1"

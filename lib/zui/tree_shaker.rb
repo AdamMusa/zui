@@ -8,7 +8,7 @@ require "set"
 module Zui
   class TreeShaker
     CONFIG_FILE = QtBundleConfiguration::CONFIG_FILE
-    EXCLUDED_SOURCE_DIRECTORIES = %w[.git dist node_modules spec test tmp vendor].freeze
+    EXCLUDED_SOURCE_DIRECTORIES = %w[.git android dist ios node_modules spec test tmp vendor].freeze
     EXCLUDED_SOURCE_FILES = %w[config.rb].freeze
     BASE_COMPONENTS = %i[container].freeze
     RUBY_ONLY_DSL_METHODS = %w[animation state].freeze
@@ -55,24 +55,29 @@ module Zui
     def initialize(project:, framework:, native:, platform: Platform.current)
       @project = File.expand_path(project)
       @framework = File.expand_path(framework)
-      @native = File.expand_path(native)
+      @native = File.expand_path(native) if native
       @platform = platform.assert_supported!
       @configuration = QtBundleConfiguration.load(@project)
       @warnings = []
     end
 
     def shake!
-      before_bytes = tree_bytes(@framework) + tree_bytes(@native)
+      before_bytes = tree_bytes(@framework) + (@native ? tree_bytes(@native) : 0)
       components, adapters = analyze_components
       @qt_features = detected_qt_features
       prune_framework(adapters)
       imports = qml_imports(Dir[File.join(@framework, "**", "*.qml")])
-      qml_modules = prune_native_qml(imports)
-      prune_native_plugins(components, qml_modules)
-      prune_translations
-      prune_native_libraries
-      update_client_manifest(components, qml_modules)
-      after_bytes = tree_bytes(@framework) + tree_bytes(@native)
+      qml_modules = if @native
+                      modules = prune_native_qml(imports)
+                      prune_native_plugins(components, modules)
+                      prune_translations
+                      prune_native_libraries
+                      update_client_manifest(components, modules)
+                      modules
+                    else
+                      imports.to_a
+                    end
+      after_bytes = tree_bytes(@framework) + (@native ? tree_bytes(@native) : 0)
       Report.new(components: components.sort, qml_modules: qml_modules.sort,
                  qt_style: @configuration.style, qt_features: @qt_features.to_a.sort,
                  qt_plugins: retained_native_plugins,
@@ -317,6 +322,8 @@ module Zui
     end
 
     def native_path_for(environment_name)
+      return nil unless @native
+
       manifest_path = File.join(@native, "client.json")
       return nil unless File.file?(manifest_path)
 
@@ -439,6 +446,8 @@ module Zui
     end
 
     def retained_native_plugins
+      return [] unless @native
+
       root = native_path_for("QT_PLUGIN_PATH")
       return [] unless root && File.directory?(root)
 

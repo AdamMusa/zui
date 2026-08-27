@@ -121,6 +121,27 @@ class MobileTest < Minitest::Test
     end
   end
 
+  def test_mobile_framework_payload_is_pruned_and_reproducible
+    Dir.mktmpdir do |directory|
+      project = File.join(directory, "project")
+      create_project(project)
+      results = %w[first second].map do |name|
+        Zui::Mobile.prepare_framework(
+          project:, output: File.join(directory, name), framework_root: ROOT,
+          platform: :ios, runtime: :lite, source_date_epoch: 1_700_000_000
+        )
+      end
+      first, second = results
+
+      assert_equal first.fetch(2), second.fetch(2)
+      assert_equal Zui::ReproducibleBuild.tree_digest(first.fetch(0)),
+                   Zui::ReproducibleBuild.tree_digest(second.fetch(0))
+      assert File.file?(File.join(first.fetch(0), "Components", "Builtins", "Text.qml"))
+      refute File.exist?(File.join(first.fetch(0), "Components", "Builtins", "Camera.qml"))
+      assert_operator first.fetch(1).saved_bytes, :>, 0
+    end
+  end
+
   def test_ios_builder_rejects_non_macos_hosts
     builder = Zui::Mobile::IOSBuilder.new(
       project: ".", host_platform: Zui::Platform.new(os: :linux, arch: :x86_64)
@@ -155,7 +176,9 @@ class MobileTest < Minitest::Test
       )
       config = Zui::Dist.load(project:, platform: Zui::Mobile::IOSBuilder::IOS_PLATFORM)
 
-      builder.send(:configure_xcode, config, File.join(output, "stage"), "runtime", sdk: "/Simulator.sdk")
+      framework = File.join(output, "framework")
+      builder.send(:configure_xcode, config, File.join(output, "stage"), "runtime",
+                   sdk: "/Simulator.sdk", framework:)
 
       arguments = command.calls.fetch(0).fetch(0)
       refute File.exist?(stale)
@@ -163,6 +186,7 @@ class MobileTest < Minitest::Test
                    command.calls.fetch(0).fetch(1).dig(:env, "SOURCE_DATE_EPOCH")
       assert_includes arguments, "-DCMAKE_OSX_SYSROOT=/Simulator.sdk"
       assert_includes arguments, "-DCMAKE_OSX_ARCHITECTURES=x86_64"
+      assert_includes arguments, "-DZUI_FRAMEWORK_ROOT=#{framework}"
       assert_includes arguments, "-DZUI_IOS_INFO_PLIST=#{File.join(project, 'ios', 'Info.plist.in')}"
       assert_includes arguments, "-DZUI_IOS_ENTITLEMENTS=#{File.join(project, 'ios', 'Zui.entitlements')}"
       assert_includes arguments, "-DZUI_IOS_PROJECT_DIR=#{File.join(project, 'ios')}"

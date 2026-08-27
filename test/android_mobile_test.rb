@@ -135,13 +135,16 @@ class AndroidMobileTest < Minitest::Test
       File.write(stale, "stale build state")
       config = Zui::Dist.load(project:, platform: Zui::Mobile::AndroidBuilder::ANDROID_PLATFORM)
 
-      builder.send(:configure_native, config, "dev.zui.touch_test", File.join(directory, "stage"), "runtime")
+      framework = File.join(directory, "framework")
+      builder.send(:configure_native, config, "dev.zui.touch_test", File.join(directory, "stage"), "runtime",
+                   framework:)
 
       arguments = calls.fetch(0).fetch(0)
       refute File.exist?(stale)
       assert_equal Zui::ReproducibleBuild::DEFAULT_EPOCH.to_s,
                    calls.fetch(0).fetch(1).dig(:env, "SOURCE_DATE_EPOCH")
       assert_includes arguments, "-DZUI_ANDROID_PROJECT_DIR=#{File.join(project, 'android')}"
+      assert_includes arguments, "-DZUI_FRAMEWORK_ROOT=#{framework}"
     end
   end
 

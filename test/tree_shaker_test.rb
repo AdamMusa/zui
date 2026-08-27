@@ -229,6 +229,18 @@ class TreeShakerTest < Minitest::Test
     end
   end
 
+  def test_tree_shakes_a_mobile_framework_without_a_desktop_native_client
+    with_payload("Zui.app { app { text 'mobile' } }\n") do |project, framework, _native, platform|
+      report = Zui::TreeShaker.new(project:, framework:, native: nil, platform:).shake!
+
+      assert_includes report.components, :text
+      assert File.file?(File.join(framework, "Components", "Builtins", "Text.qml"))
+      refute File.exist?(File.join(framework, "Components", "Builtins", "Camera.qml"))
+      assert_empty report.qt_plugins
+      assert_operator report.saved_bytes, :>, 0
+    end
+  end
+
   private
 
   def with_payload(source)

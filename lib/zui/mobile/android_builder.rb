@@ -53,8 +53,11 @@ module Zui
         build_name = "zui-android-#{@abi}-api#{@api}-bytecode"
         build_mruby(build_name)
         compile_application(stage)
-        finalize_stage(stage, config, bundle_id)
-        build_directory = configure_native(config, bundle_id, stage, build_name)
+        framework, framework_report, framework_manifest = prepare_framework
+        finalize_stage(stage, config, bundle_id, framework_manifest:)
+        @out.puts("Tree-shaken mobile Zui runtime: #{framework_report.components.size} components, " \
+                  "#{(framework_report.saved_bytes / 1_000_000.0).round(1)} MB removed")
+        build_directory = configure_native(config, bundle_id, stage, build_name, framework:)
         unsigned_apk = build_apk(build_directory)
         apk = sign_apk(unsigned_apk, config)
         result = Result.new(apk:, bundle_id:)
@@ -230,7 +233,14 @@ module Zui
         validate_android_manifest!(File.join(package, "AndroidManifest.xml"))
       end
 
-      def finalize_stage(stage, config, bundle_id)
+      def prepare_framework
+        Mobile.prepare_framework(
+          project: @project, output: @output, framework_root: @framework_root,
+          platform: :android, runtime: :lite, source_date_epoch: @source_date_epoch
+        )
+      end
+
+      def finalize_stage(stage, config, bundle_id, framework_manifest:)
         Mobile.finalize_payload(
           root: stage, platform: :android, runtime: :lite,
           source_date_epoch: @source_date_epoch,
@@ -239,7 +249,8 @@ module Zui
             "bundle_id" => bundle_id,
             "application_version" => config.version,
             "minimum_api" => @api,
-            "target_api" => @target_api
+            "target_api" => @target_api,
+            "zui_payload_sha256" => framework_manifest.fetch("payload_sha256")
           }
         )
       end
@@ -315,7 +326,7 @@ module Zui
         raise ArgumentError, "mrbc did not produce #{bytecode}" unless File.file?(bytecode)
       end
 
-      def configure_native(config, bundle_id, stage, build_name)
+      def configure_native(config, bundle_id, stage, build_name, framework: nil)
         build = File.join(@output, "build")
         FileUtils.rm_rf(build)
         FileUtils.mkdir_p(build)
@@ -327,6 +338,7 @@ module Zui
           "-DANDROID_SDK_ROOT=#{@android_sdk}", "-DANDROID_NDK_ROOT=#{@android_ndk}",
           "-DANDROID_ABI=#{@abi}", "-DANDROID_PLATFORM=android-#{@api}",
           "-DZUI_EMBEDDED_RUNTIME=ON", "-DZUI_MRUBY_ROOT=#{@mruby_root}",
+          "-DZUI_FRAMEWORK_ROOT=#{framework || @framework_root}",
           "-DZUI_MRUBY_BUILD=#{build_name}", "-DZUI_MOBILE_APP_DIR=#{stage}",
           "-DZUI_MOBILE_APP_NAME=#{config.name}", "-DZUI_MOBILE_BUNDLE_ID=#{bundle_id}",
           "-DZUI_MOBILE_APP_VERSION=#{config.version}", "-DZUI_MOBILE_BUILD_VERSION=1",

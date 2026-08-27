@@ -36,6 +36,8 @@ set(ZUI_MOBILE_APP_NAME "Zui Mobile" CACHE STRING "Mobile application display na
 set(ZUI_MOBILE_BUNDLE_ID "dev.zui.mobile" CACHE STRING "Mobile application bundle identifier")
 set(ZUI_MOBILE_APP_VERSION "0.1.0" CACHE STRING "Mobile application release version")
 set(ZUI_MOBILE_BUILD_VERSION "1" CACHE STRING "Mobile application build version")
+get_filename_component(ZUI_DEFAULT_FRAMEWORK_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/.." ABSOLUTE)
+set(ZUI_FRAMEWORK_ROOT "${ZUI_DEFAULT_FRAMEWORK_ROOT}" CACHE PATH "Zui QML framework resource root")
 set(ZUI_IOS_LAUNCH_SCREEN "${CMAKE_CURRENT_SOURCE_DIR}/LaunchScreen.storyboard" CACHE FILEPATH "iOS launch storyboard")
 set(ZUI_IOS_INFO_PLIST "" CACHE FILEPATH "Custom iOS Info.plist template")
 set(ZUI_IOS_ENTITLEMENTS "" CACHE FILEPATH "Custom iOS code-signing entitlements")
@@ -217,7 +219,6 @@ if(ZUI_EMBEDDED_RUNTIME)
     endif()
   endif()
 
-  get_filename_component(ZUI_FRAMEWORK_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/.." ABSOLUTE)
   file(GLOB zui_qml_entrypoints CONFIGURE_DEPENDS "${ZUI_FRAMEWORK_ROOT}/*.qml")
   file(GLOB_RECURSE zui_qml_resources CONFIGURE_DEPENDS
     "${ZUI_FRAMEWORK_ROOT}/Components/*.qml"
