@@ -33,6 +33,7 @@ class MobileKitchenSinkTest < Minitest::Test
     end
     assert_equal "responsive_view", nodes.find { |node| node["id"] == "kitchen_feed" }.fetch("type")
     assert_equal "capture_session", nodes.find { |node| node["id"] == "studio_session" }.fetch("type")
+    assert_equal false, nodes.find { |node| node["id"] == "speech_service" }.dig("props", "auto_speak")
   end
 
   def test_modern_navigation_pickers_and_overlays_are_reactive

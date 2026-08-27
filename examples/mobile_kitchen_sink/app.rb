@@ -314,6 +314,7 @@ module MobileKitchenSink
         column spacing: 12 do
           section_title :globe, "Speech + web + system", "Native services and persistence"
           speech = text_to_speech "Zui mobile services are running natively.", id: :speech_service,
+                                  auto_speak: false,
                                   command: state.speech_command,
                                   command_revision: state.speech_revision
           bind_command(speech, :speech_command, :speech_revision)
