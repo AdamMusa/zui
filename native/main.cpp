@@ -100,6 +100,9 @@ int main(int argc, char *argv[]) {
   // bundle version and execute an older framework resource.
   qputenv("QML_DISABLE_DISK_CACHE", QByteArrayLiteral("1"));
 #endif
+#if defined(ZUI_USES_VIRTUAL_KEYBOARD)
+  qputenv("QT_IM_MODULE", QByteArrayLiteral("qtvirtualkeyboard"));
+#endif
   QGuiApplication application(argc, argv);
 #if defined(ZUI_USES_WEBVIEW)
   QtWebView::initialize();

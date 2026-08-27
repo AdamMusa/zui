@@ -313,6 +313,14 @@ transitions, and animation groups receive Ruby APIs even though they are not vis
 - [x] location_permission
 - [x] microphone_permission
 
+## Mobile virtual keyboard
+
+- [x] virtual_keyboard
+- [x] handwriting_input
+- [x] keyboard_context
+- [x] keyboard_settings
+- [x] keyboard_text_field
+
 ## Mobile sensors
 
 - [x] accelerometer

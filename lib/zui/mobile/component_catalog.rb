@@ -57,6 +57,15 @@ module Zui
         "NetworkInformation" => :network_status
       }.freeze
 
+      VIRTUAL_KEYBOARD = {
+        "InputPanel" => :virtual_keyboard,
+        "HandwritingInputPanel" => :handwriting_input,
+        "InputContext" => :keyboard_context,
+        "VirtualKeyboardSettings" => :keyboard_settings,
+        "EnterKeyAction" => :keyboard_text_field,
+        "VirtualKeyboard" => :keyboard_context
+      }.freeze
+
       SENSORS = {
         "Accelerometer" => :accelerometer,
         "AmbientLightSensor" => :ambient_light_sensor,
@@ -115,7 +124,8 @@ module Zui
       }.freeze
 
       CORE = QUICK_CONTROLS.merge(QUICK_DIALOGS).merge(QUICK_LAYOUTS).freeze
-      ALL = CORE.merge(PERMISSIONS).merge(DEVICE_INFORMATION).merge(SENSORS).merge(POSITIONING).merge(LOCATION)
+      ALL = CORE.merge(PERMISSIONS).merge(DEVICE_INFORMATION).merge(VIRTUAL_KEYBOARD)
+                .merge(SENSORS).merge(POSITIONING).merge(LOCATION)
                 .merge(TEXT_TO_SPEECH).merge(WEB).merge(WEB_SOCKETS).merge(LOTTIE)
                 .merge(PDF).merge(TOUCH_INTERACTION).freeze
     end

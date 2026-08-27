@@ -618,6 +618,32 @@ module Zui
       @application.register_handler(node.id, :change, handler) if handler
       node
     end
+    def virtual_keyboard(id: nil, **props, &handler)
+      node = component(:virtual_keyboard, id:, **props)
+      @application.register_handler(node.id, :active_change, handler) if handler
+      node
+    end
+    def handwriting_input(input_panel = nil, id: nil, **props, &handler)
+      props = props.merge(input_panel: node_id(input_panel)) unless input_panel.nil?
+      node = component(:handwriting_input, id:, **props)
+      @application.register_handler(node.id, :active_change, handler) if handler
+      node
+    end
+    def keyboard_context(id: nil, **props, &handler)
+      node = component(:keyboard_context, id:, **props)
+      @application.register_handler(node.id, :change, handler) if handler
+      node
+    end
+    def keyboard_settings(id: nil, **props, &handler)
+      node = component(:keyboard_settings, id:, **props)
+      @application.register_handler(node.id, :change, handler) if handler
+      node
+    end
+    def keyboard_text_field(value = "", id: nil, **props, &handler)
+      node = component(:keyboard_text_field, id:, text: value.to_s, **props)
+      @application.register_handler(node.id, :change, handler) if handler
+      node
+    end
     def clipboard(text = UNSET, id: nil, **props)
       props = props.merge(text:) unless text.equal?(UNSET)
       component(:clipboard, id:, **props)

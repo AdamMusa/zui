@@ -144,6 +144,17 @@ class QmlContractTest < Minitest::Test
     refute_includes source("Components/Builtins/GeoJsonData.qml"), 'sourceUrl: {'
   end
 
+  def test_mobile_virtual_keyboard_catalog_is_opt_in_and_complete
+    expected = %w[EnterKeyAction HandwritingInputPanel InputContext InputPanel VirtualKeyboard VirtualKeyboardSettings]
+
+    assert_empty expected - Zui::Mobile::ComponentCatalog::VIRTUAL_KEYBOARD.keys
+    assert_includes source("Components/Builtins/VirtualKeyboard.qml"), "InputPanel {"
+    assert_includes source("Components/Builtins/HandwritingInput.qml"), "HandwritingInputPanel {"
+    assert_includes source("Components/Builtins/KeyboardContext.qml"), "InputContext.commit"
+    assert_includes source("Components/Builtins/KeyboardSettings.qml"), "VirtualKeyboardSettings.activeLocales"
+    assert_includes source("Components/Builtins/KeyboardTextField.qml"), "EnterKeyAction.actionId"
+  end
+
   def test_mobile_text_to_speech_uses_typed_locale_and_qualified_signals
     speech = source("Components/Builtins/TextToSpeech.qml")
 

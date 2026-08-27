@@ -122,6 +122,16 @@ class FrameworkBoundaryTest < Minitest::Test
     assert_includes host, "QDir(qmlCache).removeRecursively();"
   end
 
+  def test_mobile_virtual_keyboard_is_linked_and_activated_only_when_tree_shaking_keeps_it
+    cmake = File.read(File.join(ROOT, "native", "CMakeLists.txt"))
+    host = File.read(File.join(ROOT, "native", "main.cpp"))
+
+    assert_includes cmake, 'EXISTS "${ZUI_FRAMEWORK_ROOT}/Components/Builtins/VirtualKeyboard.qml"'
+    assert_includes cmake, "target_link_libraries(zui-host PRIVATE Qt6::VirtualKeyboard)"
+    assert_includes host, "ZUI_USES_VIRTUAL_KEYBOARD"
+    assert_includes host, 'qputenv("QT_IM_MODULE", QByteArrayLiteral("qtvirtualkeyboard"));'
+  end
+
   def test_component_and_resource_failures_use_the_framework_error_channel
     router = File.read(File.join(ROOT, "ControlNode.qml"))
     service = File.read(File.join(ROOT, "Service.qml"))

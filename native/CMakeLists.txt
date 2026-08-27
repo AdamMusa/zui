@@ -53,6 +53,12 @@ if(ZUI_EMBEDDED_RUNTIME AND EXISTS "${ZUI_FRAMEWORK_ROOT}/Components/Builtins/We
   set(ZUI_USES_WEBVIEW ON)
 endif()
 
+set(ZUI_USES_VIRTUAL_KEYBOARD OFF)
+if(ZUI_EMBEDDED_RUNTIME AND EXISTS "${ZUI_FRAMEWORK_ROOT}/Components/Builtins/VirtualKeyboard.qml")
+  find_package(Qt6 6.8 REQUIRED COMPONENTS VirtualKeyboard)
+  set(ZUI_USES_VIRTUAL_KEYBOARD ON)
+endif()
+
 set(zui_host_sources
   main.cpp
   ZuiClipboard.cpp
@@ -160,6 +166,11 @@ target_link_libraries(zui-host PRIVATE
 if(ZUI_USES_WEBVIEW)
   target_link_libraries(zui-host PRIVATE Qt6::WebView)
   target_compile_definitions(zui-host PRIVATE ZUI_USES_WEBVIEW=1)
+endif()
+
+if(ZUI_USES_VIRTUAL_KEYBOARD)
+  target_link_libraries(zui-host PRIVATE Qt6::VirtualKeyboard)
+  target_compile_definitions(zui-host PRIVATE ZUI_USES_VIRTUAL_KEYBOARD=1)
 endif()
 
 if(ZUI_EMBEDDED_RUNTIME)
