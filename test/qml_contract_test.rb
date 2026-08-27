@@ -112,6 +112,13 @@ class QmlContractTest < Minitest::Test
     assert_includes service, 'reject("component registry schema rejected: " + name)'
   end
 
+  def test_mobile_position_source_tolerates_an_uninitialized_timestamp
+    positioning = source("Components/Builtins/PositionSource.qml")
+
+    assert_includes positioning, '!isNaN(timestamp.getTime()) ? timestamp.toISOString() : ""'
+    refute_includes positioning, "position.timestamp.toISOString()"
+  end
+
   def test_service_uses_one_injected_bidirectional_transport
     qml = source("Service.qml")
     native = source("native/ZuiProcess.cpp")

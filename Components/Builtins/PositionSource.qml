@@ -16,10 +16,13 @@ Item {
     return { latitude: coordinate.latitude, longitude: coordinate.longitude,
       altitude: coordinate.altitude, valid: coordinate.isValid }
   }
+  function timestampPayload(timestamp) {
+    return timestamp && !isNaN(timestamp.getTime()) ? timestamp.toISOString() : ""
+  }
   function publish() {
     var position = nativeSource.position
     renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "position", {
-      coordinate: coordinatePayload(position.coordinate), timestamp: position.timestamp.toISOString(),
+      coordinate: coordinatePayload(position.coordinate), timestamp: timestampPayload(position.timestamp),
       latitude: position.coordinate.latitude, longitude: position.coordinate.longitude,
       altitude: position.coordinate.altitude, horizontal_accuracy: position.horizontalAccuracy,
       vertical_accuracy: position.verticalAccuracy, direction: position.direction,
