@@ -663,6 +663,17 @@ module Zui
       @application.register_handler(node.id, :click, handler) if handler
       node
     end
+    def map_copyright(id: nil, **props, &handler)
+      node = component(:map_copyright, id:, **props)
+      @application.register_handler(node.id, :link, handler) if handler
+      node
+    end
+    def geo_json_data(source = nil, id: nil, **props, &handler)
+      props = props.merge(source:) unless source.nil?
+      node = component(:geo_json_data, id:, **props)
+      @application.register_handler(node.id, :change, handler) if handler
+      node
+    end
     def geocode_model(query = nil, id: nil, **props, &handler)
       props = props.merge(query:) unless query.nil?
       node = component(:geocode_model, id:, **props)
@@ -672,6 +683,33 @@ module Zui
     def route_model(waypoints = [], id: nil, **props, &handler)
       node = component(:route_model, id:, waypoints: Array(waypoints), **props)
       @application.register_handler(node.id, :routes, handler) if handler
+      node
+    end
+    def place_search(term = "", id: nil, **props, &handler)
+      node = component(:place_search, id:, term: term.to_s, **props)
+      @application.register_handler(node.id, :results, handler) if handler
+      node
+    end
+    def place_suggestions(term = "", id: nil, **props, &handler)
+      node = component(:place_suggestions, id:, term: term.to_s, **props)
+      @application.register_handler(node.id, :suggestions, handler) if handler
+      node
+    end
+    def place_categories(id: nil, **props, &handler)
+      node = component(:place_categories, id:, **props)
+      @application.register_handler(node.id, :categories, handler) if handler
+      node
+    end
+    def place_details(place_id = nil, id: nil, **props, &handler)
+      props = props.merge(place_id:) unless place_id.nil?
+      node = component(:place_details, id:, **props)
+      @application.register_handler(node.id, :details, handler) if handler
+      node
+    end
+    def place_category(category_id = nil, id: nil, **props, &handler)
+      props = props.merge(category_id:) unless category_id.nil?
+      node = component(:place_category, id:, **props)
+      @application.register_handler(node.id, :details, handler) if handler
       node
     end
 

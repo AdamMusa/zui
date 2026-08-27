@@ -131,6 +131,19 @@ class QmlContractTest < Minitest::Test
     assert_includes network, 'function onReachabilityChanged()'
   end
 
+  def test_mobile_location_catalog_includes_places_and_geojson
+    expected = %w[Category CategoryModel GeoJsonData GeocodeModel Map MapCircle MapCopyrightNotice
+                  MapItemGroup MapItemView MapPolygon MapPolyline MapQuickItem MapRectangle MapRoute
+                  MapView Place PlaceSearchModel PlaceSearchSuggestionModel Plugin PluginParameter
+                  RouteModel RouteQuery]
+
+    assert_empty expected - Zui::Mobile::ComponentCatalog::LOCATION.keys
+    assert_includes source("Components/Builtins/PlaceSearch.qml"), "PlaceSearchModel {"
+    assert_includes source("Components/Builtins/PlaceSuggestions.qml"), "PlaceSearchSuggestionModel {"
+    assert_includes source("Components/Builtins/PlaceCategories.qml"), "property bool queryRequested: false"
+    refute_includes source("Components/Builtins/GeoJsonData.qml"), 'sourceUrl: {'
+  end
+
   def test_mobile_text_to_speech_uses_typed_locale_and_qualified_signals
     speech = source("Components/Builtins/TextToSpeech.qml")
 

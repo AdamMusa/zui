@@ -88,7 +88,12 @@ module Zui
         "MapQuickItem" => :map_marker, "MapItemGroup" => :map_item_group,
         "MapItemView" => :map_item_view, "Plugin" => :map,
         "PluginParameter" => :map, "GeocodeModel" => :geocode_model,
-        "RouteModel" => :route_model, "RouteQuery" => :route_model
+        "RouteModel" => :route_model, "RouteQuery" => :route_model,
+        "MapCopyrightNotice" => :map_copyright, "GeoJsonData" => :geo_json_data,
+        "PlaceSearchModel" => :place_search,
+        "PlaceSearchSuggestionModel" => :place_suggestions,
+        "CategoryModel" => :place_categories, "Place" => :place_details,
+        "Category" => :place_category
       }.freeze
 
       TEXT_TO_SPEECH = {

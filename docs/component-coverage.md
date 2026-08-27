@@ -348,8 +348,15 @@ transitions, and animation groups receive Ruby APIs even though they are not vis
 - [x] map_marker
 - [x] map_item_group
 - [x] map_item_view
+- [x] map_copyright
+- [x] geo_json_data
 - [x] geocode_model
 - [x] route_model
+- [x] place_search
+- [x] place_suggestions
+- [x] place_categories
+- [x] place_details
+- [x] place_category
 
 ## Mobile speech
 
