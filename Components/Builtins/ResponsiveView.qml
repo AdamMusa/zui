@@ -25,6 +25,7 @@ Item {
   readonly property int columns: Math.max(1, Math.min(maximumColumns,
     Math.floor((availableWidth + cardSpacing) / (cardWidth + cardSpacing))))
   readonly property real cellWidth: (availableWidth - cardSpacing * (columns - 1)) / columns
+  readonly property int eagerCardCount: Math.max(1, columns)
   readonly property int requestedIndex: Math.max(0, Number(renderer.prop("scroll_index", 0)))
 
   function revealRequestedCard() {
@@ -69,6 +70,7 @@ Item {
           ? viewport.renderer.node.children : []
         delegate: Item {
           id: cardWrapper
+          required property int index
           required property var modelData
           width: viewport.cellWidth
           readonly property real contentScale: Math.min(1, width / viewport.cardWidth)
@@ -81,6 +83,7 @@ Item {
             width: viewport.cardWidth
             scale: cardWrapper.contentScale
             transformOrigin: Item.TopLeft
+            asynchronous: cardWrapper.index >= viewport.eagerCardCount
             source: Qt.resolvedUrl("../../ControlNode.qml")
             onLoaded: {
               item.renderDepth = viewport.renderer.renderDepth + 1
