@@ -52,8 +52,24 @@ module Zui
         "MicrophonePermission" => :microphone_permission
       }.freeze
 
+      SENSORS = {
+        "Accelerometer" => :accelerometer,
+        "AmbientLightSensor" => :ambient_light_sensor,
+        "AmbientTemperatureSensor" => :ambient_temperature_sensor,
+        "Compass" => :compass,
+        "Gyroscope" => :gyroscope,
+        "HumiditySensor" => :humidity_sensor,
+        "LightSensor" => :light_sensor,
+        "Magnetometer" => :magnetometer,
+        "OrientationSensor" => :orientation_sensor,
+        "PressureSensor" => :pressure_sensor,
+        "ProximitySensor" => :proximity_sensor,
+        "RotationSensor" => :rotation_sensor,
+        "TiltSensor" => :tilt_sensor
+      }.freeze
+
       CORE = QUICK_CONTROLS.merge(QUICK_DIALOGS).merge(QUICK_LAYOUTS).freeze
-      ALL = CORE.merge(PERMISSIONS).freeze
+      ALL = CORE.merge(PERMISSIONS).merge(SENSORS).freeze
     end
   end
 end

@@ -620,6 +620,15 @@ module Zui
       end
     end
 
+    %i[accelerometer ambient_light_sensor ambient_temperature_sensor compass gyroscope humidity_sensor
+       light_sensor magnetometer orientation_sensor pressure_sensor proximity_sensor rotation_sensor tilt_sensor].each do |type|
+      define_method(type) do |id: nil, **props, &handler|
+        node = component(type, id:, **props)
+        @application.register_handler(node.id, :reading, handler) if handler
+        node
+      end
+    end
+
     def animate(node, properties, duration: 200, easing: :in_out_quad, delay: 0)
       transition = Animation.new(duration:, easing:, delay:)
       @application.animate(node, properties, transition)

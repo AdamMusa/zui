@@ -303,3 +303,19 @@ transitions, and animation groups receive Ruby APIs even though they are not vis
 - [x] contacts_permission
 - [x] location_permission
 - [x] microphone_permission
+
+## Mobile sensors
+
+- [x] accelerometer
+- [x] ambient_light_sensor
+- [x] ambient_temperature_sensor
+- [x] compass
+- [x] gyroscope
+- [x] humidity_sensor
+- [x] light_sensor
+- [x] magnetometer
+- [x] orientation_sensor
+- [x] pressure_sensor
+- [x] proximity_sensor
+- [x] rotation_sensor
+- [x] tilt_sensor
