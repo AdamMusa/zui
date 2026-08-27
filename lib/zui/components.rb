@@ -269,6 +269,7 @@ module Zui
     web_view: [%i[url html base_url http_user_agent local_storage javascript allow_file_access local_content_file_access command command_revision script cookie_domain cookie_name cookie_value width height visible], %i[load progress title url_change navigation javascript cookie error], false],
     web_socket: [%i[url active message command command_revision visible], %i[message binary status active_change error], false],
     web_socket_server: [%i[host port name listen accept visible], %i[client message binary listen_change url_change error], false],
+    lottie_animation: [%i[source frame_rate quality auto_play loops direction command command_revision frame marker width height visible], %i[status finished error], false],
     dropdown: [%i[label value options foreground background popup_border accent font_family row_height popup_row_height show_label cursor], %i[change hover], false],
     searchable_dropdown: [%i[label value options placeholder empty_text trigger_label foreground background popup_border accent font_family row_height popup_row_height popup_min_height show_label cursor], %i[change hover], false],
     multi_select: [%i[label values options options_command options_command_cwd placeholder empty_text no_selection_text trigger_label show_label foreground background popup_border accent font_family row_height popup_row_height popup_min_height cursor], %i[change hover], false],

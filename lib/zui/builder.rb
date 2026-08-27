@@ -690,6 +690,11 @@ module Zui
       @application.register_handler(node.id, :message, handler) if handler
       node
     end
+    def lottie_animation(source, id: nil, **props, &handler)
+      node = component(:lottie_animation, id:, source: source.to_s, **props)
+      @application.register_handler(node.id, :finished, handler) if handler
+      node
+    end
 
     def animate(node, properties, duration: 200, easing: :in_out_quad, delay: 0)
       transition = Animation.new(duration:, easing:, delay:)
