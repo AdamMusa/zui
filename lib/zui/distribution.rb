@@ -7,6 +7,12 @@ require "rbconfig"
 module Zui
   class Distribution
     RUNTIME_MODES = %i[lite full].freeze
+    DESKTOP_APPLICATION_EXCLUDES = %w[
+      .bundle .git .github .ruby-lsp android coverage dist ios log spec test tmp
+    ].freeze
+    DESKTOP_APPLICATION_FILES = %w[
+      .DS_Store .gitattributes .gitignore Gemfile Gemfile.lock Rakefile config.rb
+    ].freeze
 
     attr_reader :platform, :tree_shake_report, :runtime_mode
 
@@ -113,12 +119,42 @@ module Zui
     end
 
     def install_application(source, destination)
-      entries = Dir.children(source).reject do |entry|
-        entry_path = File.join(source, entry)
-        %w[.git dist config.rb].include?(entry) ||
-          destination.start_with?("#{entry_path}#{File::SEPARATOR}")
+      FileUtils.mkdir_p(destination)
+      copy_desktop_application(source, destination, source, destination)
+    end
+
+    def copy_desktop_application(source, destination, project, bundle)
+      Dir.children(source).sort.each do |entry|
+        source_path = File.join(source, entry)
+        relative = source_path.delete_prefix("#{project}#{File::SEPARATOR}")
+        next if desktop_application_excluded?(relative)
+        next if bundle == source_path || bundle.start_with?("#{source_path}#{File::SEPARATOR}")
+
+        destination_path = File.join(destination, entry)
+        if File.symlink?(source_path)
+          resolved = File.realpath(source_path)
+          unless resolved == project || resolved.start_with?("#{project}#{File::SEPARATOR}")
+            raise ArgumentError, "application symlink escapes the project: #{relative}"
+          end
+          File.symlink(File.readlink(source_path), destination_path)
+        elsif File.directory?(source_path)
+          FileUtils.mkdir_p(destination_path)
+          copy_desktop_application(source_path, destination_path, project, bundle)
+        elsif File.file?(source_path)
+          FileUtils.cp(source_path, destination_path)
+        else
+          raise ArgumentError, "unsupported application file: #{relative}"
+        end
       end
-      FileUtils.cp_r(entries.map { |entry| File.join(source, entry) }, destination) unless entries.empty?
+    end
+
+    def desktop_application_excluded?(relative)
+      parts = relative.split(File::SEPARATOR)
+      return true if parts.include?(".DS_Store")
+      return false unless parts.length == 1
+
+      DESKTOP_APPLICATION_EXCLUDES.include?(parts.first) ||
+        DESKTOP_APPLICATION_FILES.include?(parts.first) || parts.first.end_with?(".gemspec")
     end
 
     def install_runtime(destination)

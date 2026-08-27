@@ -84,6 +84,34 @@ class DistributionTest < Minitest::Test
     end
   end
 
+  def test_desktop_bundle_excludes_mobile_build_and_development_files
+    platform = Zui::Platform.new(os: :macos, arch: :arm64)
+    with_project(platform) do |project, client|
+      excluded = %w[android ios test spec .ruby-lsp dist]
+      excluded.each do |entry|
+        FileUtils.mkdir_p(File.join(project, entry))
+        File.write(File.join(project, entry, "not-for-desktop.txt"), entry)
+      end
+      %w[Gemfile Gemfile.lock demo.gemspec .DS_Store].each do |entry|
+        File.write(File.join(project, entry), "not for desktop")
+      end
+      FileUtils.mkdir_p(File.join(project, "assets"))
+      File.write(File.join(project, "assets", ".DS_Store"), "metadata")
+      destination = File.join(File.dirname(project), "Desktop.app")
+
+      lite_distribution(client:, platform:).bundle(project, destination:)
+
+      application = File.join(destination, "Contents", "Resources", "app")
+      assert File.file?(File.join(application, "main.rb"))
+      assert File.file?(File.join(application, "asset.txt"))
+      excluded.each { |entry| refute File.exist?(File.join(application, entry)) }
+      %w[Gemfile Gemfile.lock demo.gemspec .DS_Store].each do |entry|
+        refute File.exist?(File.join(application, entry))
+      end
+      refute File.exist?(File.join(application, "assets", ".DS_Store"))
+    end
+  end
+
   def test_windows_bundle_has_native_runtime_and_safe_launchers
     platform = Zui::Platform.new(os: :windows, arch: :x86_64)
     with_project(platform) do |project, client|
