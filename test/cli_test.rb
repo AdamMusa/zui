@@ -435,6 +435,27 @@ class CLITest < Minitest::Test
     assert_equal :full, options.fetch(:runtime_mode)
   end
 
+  def test_bundle_reports_full_cruby_tree_shaking
+    runtime_report = Zui::RubyRuntimeShaker::Report.new(
+      features: %w[json json/ext], files: 5, before_bytes: 10_000_000, after_bytes: 4_000_000,
+      warnings: [], fallback: nil
+    )
+    distribution = Object.new
+    distribution.define_singleton_method(:bundle) { |_source, **_arguments| "/tmp/Demo.app" }
+    distribution.define_singleton_method(:tree_shake_report) { nil }
+    distribution.define_singleton_method(:runtime_tree_shake_report) { runtime_report }
+    output = StringIO.new
+
+    status = Zui::Distribution.stub(:new, distribution) do
+      Zui::CLI.run(["bundle", "--full", File.join(__dir__, "fixtures")],
+                   out: output, err: StringIO.new)
+    end
+
+    assert_equal 0, status
+    assert_includes output.string, "Tree-shaken CRuby: 2 standard-library features"
+    assert_includes output.string, "5.7 MB removed"
+  end
+
   def test_bundle_rejects_lite_and_full_together
     error = StringIO.new
 

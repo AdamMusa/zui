@@ -14,7 +14,7 @@ module Zui
       .DS_Store .gitattributes .gitignore Gemfile Gemfile.lock README.md Rakefile config.rb
     ].freeze
 
-    attr_reader :platform, :tree_shake_report, :runtime_mode
+    attr_reader :platform, :tree_shake_report, :runtime_tree_shake_report, :runtime_mode
 
     def initialize(client: nil, platform: Platform.current, framework_root: FRAMEWORK_ROOT,
                    ruby: RbConfig.ruby, tree_shake: true, release_config: nil, runtime_mode: :lite,
@@ -29,6 +29,7 @@ module Zui
         raise ArgumentError, "unsupported application runtime: #{runtime_mode}"
       end
       @tree_shake_report = nil
+      @runtime_tree_shake_report = nil
       @release_config = release_config
       @runtime_builder = runtime_builder
       @application_runtime = nil
@@ -189,6 +190,7 @@ module Zui
                                       LiteRuntime.new(platform:)
                                     end
       @application_runtime = builder.install(project:, destination: File.join(destination, "ruby"))
+      @runtime_tree_shake_report = builder.tree_shake_report if builder.respond_to?(:tree_shake_report)
     end
 
     def write_linux_launcher(destination, app_name)

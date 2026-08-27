@@ -7,7 +7,7 @@ require "tmpdir"
 
 module Zui
   class DistPackager
-    attr_reader :platform, :config, :tree_shake_report, :runtime_mode
+    attr_reader :platform, :config, :tree_shake_report, :runtime_tree_shake_report, :runtime_mode
 
     def initialize(client: nil, platform: Platform.current, framework_root: FRAMEWORK_ROOT,
                    ruby: RbConfig.ruby, tree_shake: true, environment: ENV, runtime_mode: :lite,
@@ -26,6 +26,7 @@ module Zui
       @source_date_epoch = ReproducibleBuild.epoch(@environment["SOURCE_DATE_EPOCH"])
       @config = nil
       @tree_shake_report = nil
+      @runtime_tree_shake_report = nil
     end
 
     def package(source, output: nil)
@@ -72,6 +73,7 @@ module Zui
       )
       distribution.bundle(project, name: config.name, destination:)
       @tree_shake_report = distribution.tree_shake_report
+      @runtime_tree_shake_report = distribution.runtime_tree_shake_report
       destination
     end
 

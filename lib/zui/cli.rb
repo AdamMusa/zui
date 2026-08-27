@@ -320,14 +320,20 @@ module Zui
         packager = DistPackager.new(tree_shake: options[:tree_shake], runtime_mode:)
         paths = packager.package(source, output: options[:destination])
         paths.each { |path| @out.puts("Created distribution artifact #{path}") }
-        report_tree_shaking(packager.tree_shake_report)
+        report_tree_shaking(
+          packager.tree_shake_report,
+          packager.respond_to?(:runtime_tree_shake_report) ? packager.runtime_tree_shake_report : nil
+        )
         return 0
       end
 
       distribution = Distribution.new(tree_shake: options[:tree_shake], runtime_mode:)
       path = distribution.bundle(source, name: options[:name], destination: options[:destination])
       @out.puts("Bundled #{Platform.current.os} application in #{path}")
-      report_tree_shaking(distribution.tree_shake_report)
+      report_tree_shaking(
+        distribution.tree_shake_report,
+        distribution.respond_to?(:runtime_tree_shake_report) ? distribution.runtime_tree_shake_report : nil
+      )
       0
     end
 
@@ -580,10 +586,20 @@ module Zui
       0
     end
 
-    def report_tree_shaking(report)
-      return unless report
+    def report_tree_shaking(report, runtime_report = nil)
+      if report
+        @out.puts("Tree-shaken runtime: #{report.components.length} components, #{format_bytes(report.saved_bytes)} removed")
+      end
+      return unless runtime_report
 
-      @out.puts("Tree-shaken runtime: #{report.components.length} components, #{format_bytes(report.saved_bytes)} removed")
+      if runtime_report.tree_shaken?
+        @out.puts(
+          "Tree-shaken CRuby: #{runtime_report.features.length} standard-library features, " \
+          "#{format_bytes(runtime_report.saved_bytes)} removed"
+        )
+      else
+        @out.puts("CRuby tree-shaking fallback: #{runtime_report.fallback}")
+      end
     end
 
     def doctor(arguments)
