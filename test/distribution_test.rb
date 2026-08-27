@@ -212,6 +212,8 @@ class DistributionTest < Minitest::Test
         first_manifest = JSON.parse(File.read(File.join(first, manifest)))
         second_manifest = JSON.parse(File.read(File.join(second, manifest)))
         assert_equal first_manifest.fetch("payload_sha256"), second_manifest.fetch("payload_sha256")
+        assert_equal epoch, first_manifest.fetch("source_date_epoch")
+        assert_equal epoch, second_manifest.fetch("source_date_epoch")
         paths = Dir.glob(File.join(first, "**", "*"), File::FNM_DOTMATCH) << first
         assert paths.all? { |path| File.lstat(path).mtime.to_i == epoch }
       end

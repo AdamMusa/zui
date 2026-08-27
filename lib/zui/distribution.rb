@@ -366,7 +366,8 @@ module Zui
         "format" => 1, "framework" => "zui", "version" => VERSION,
         "platform" => platform.os.to_s, "architecture" => platform.arch.to_s,
         "name" => app_name, "client_version" => @client.manifest.fetch("client_version"),
-        "tree_shaken" => !@tree_shake_report.nil?, "ruby_runtime" => runtime_mode.to_s
+        "tree_shaken" => !@tree_shake_report.nil?, "ruby_runtime" => runtime_mode.to_s,
+        "source_date_epoch" => @source_date_epoch
       }
       if @tree_shake_report
         report = @tree_shake_report.to_h
