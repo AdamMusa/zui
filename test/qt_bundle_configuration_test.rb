@@ -48,4 +48,14 @@ class QtBundleConfigurationTest < Minitest::Test
       assert_includes error.message, "qt.plugins"
     end
   end
+
+  def test_rejects_unknown_feature_names_instead_of_silently_bloating_the_runtime
+    Dir.mktmpdir do |project|
+      File.write(File.join(project, Zui::QtBundleConfiguration::CONFIG_FILE),
+                 '{"qt":{"features":["everything"]}}')
+
+      error = assert_raises(ArgumentError) { Zui::QtBundleConfiguration.load(project) }
+      assert_includes error.message, "unknown Qt features"
+    end
+  end
 end

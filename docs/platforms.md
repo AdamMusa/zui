@@ -145,9 +145,12 @@ Release builds scan a clean copy of the Zui runtime and package only catalog mod
 Qt dependencies; they never copy the host machine's complete Qt installation.
 Application bundling then performs a second, project-specific tree-shaking pass. It analyzes
 production Ruby sources, lazily routes component adapters, resolves transitive QML imports, and
-retains the native binary dependency closure for the components that application can create.
-Computed component names can be declared in `.zui-bundle.json`; `--no-tree-shake` is the explicit
-fallback for applications whose metaprogramming cannot be bounded.
+retains the native binary dependency closure for the components that application can create. Image
+codec and TLS plugins are selected from literal production asset/URL strings. `.zui-bundle.json`
+can declare computed component names plus a Qt Controls `style`, dynamic `features`, additional
+`qml_modules`, and exact `plugins`. Requested native capabilities are validated against the client
+before pruning; `--no-tree-shake` is the explicit fallback for applications whose metaprogramming
+cannot be bounded.
 `zui bundle --dist` adds a native installer layer around this bundle. Release identity and artwork
 come from the required project-root `config.rb`. Linux emits DEB and RPM packages, macOS emits a
 DMG, and Windows emits an Inno Setup executable. Packaging is native to the target operating system,

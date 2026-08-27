@@ -65,6 +65,61 @@ class TreeShakerTest < Minitest::Test
     end
   end
 
+  def test_derives_image_and_tls_plugins_from_project_source_literals
+    with_payload(<<~RUBY) do |project, framework, native, platform|
+      Zui.app do
+        app do
+          image "assets/photo.jpg"
+          image "assets/diagram.svg"
+          image "https://example.test/avatar.png"
+        end
+      end
+    RUBY
+      report = Zui::TreeShaker.new(project:, framework:, native:, platform:).shake!
+      plugins = File.join(native, "plugins")
+
+      assert_equal %w[jpeg svg tls], report.qt_features
+      assert File.file?(File.join(plugins, "imageformats", "libqjpeg.so"))
+      assert File.file?(File.join(plugins, "imageformats", "libqsvg.so"))
+      refute File.exist?(File.join(plugins, "imageformats", "libqgif.so"))
+      assert File.file?(File.join(plugins, "tls", "libqopensslbackend.so"))
+      refute File.exist?(File.join(plugins, "tls", "libqcertonlybackend.so"))
+      refute File.exist?(File.join(plugins, "networkinformation"))
+      refute File.exist?(File.join(plugins, "iconengines"))
+    end
+  end
+
+  def test_explicit_plugin_features_cover_runtime_computed_sources
+    with_payload("Zui.app { app { image ENV.fetch('IMAGE_SOURCE') } }\n") do |project, framework, native, platform|
+      File.write(File.join(project, Zui::TreeShaker::CONFIG_FILE), JSON.generate(
+        "qt" => {
+          "features" => %w[gif network-reachability svg-icons],
+          "plugins" => ["imageformats/qico"]
+        }
+      ))
+
+      report = Zui::TreeShaker.new(project:, framework:, native:, platform:).shake!
+      plugins = File.join(native, "plugins")
+
+      assert_equal %w[gif network-reachability svg-icons], report.qt_features
+      assert File.file?(File.join(plugins, "imageformats", "libqgif.so"))
+      assert File.file?(File.join(plugins, "imageformats", "libqico.so"))
+      assert File.file?(File.join(plugins, "iconengines", "libqsvgicon.so"))
+      assert File.file?(File.join(plugins, "networkinformation", "libqnetworklistmanager.so"))
+      refute File.exist?(File.join(plugins, "tls"))
+    end
+  end
+
+  def test_png_only_images_need_no_optional_qt_codec_plugin
+    with_payload("Zui.app { app { image 'assets/local.png' } }\n") do |project, framework, native, platform|
+      report = Zui::TreeShaker.new(project:, framework:, native:, platform:).shake!
+
+      assert_empty report.qt_features
+      refute File.exist?(File.join(native, "plugins", "imageformats"))
+      refute File.exist?(File.join(native, "plugins", "tls"))
+    end
+  end
+
   def test_detects_keyword_dynamic_components
     with_payload("Zui.app { app { dynamic type: :grid, id: :results } }\n") do |project, framework, native, platform|
       report = Zui::TreeShaker.new(project:, framework:, native:, platform:).shake!
@@ -210,6 +265,15 @@ class TreeShakerTest < Minitest::Test
       directory = File.join(native, "plugins", name)
       FileUtils.mkdir_p(directory)
       File.write(File.join(directory, ".fixture"), name)
+    end
+    {
+      "imageformats" => %w[libqgif.so libqico.so libqjpeg.so libqsvg.so libqwebp.so],
+      "iconengines" => %w[libqsvgicon.so],
+      "networkinformation" => %w[libqnetworklistmanager.so],
+      "tls" => %w[libqcertonlybackend.so libqopensslbackend.so],
+      "sqldrivers" => %w[libqmysql.so libqsqlite.so]
+    }.each do |directory, plugins|
+      plugins.each { |plugin| File.write(File.join(native, "plugins", directory, plugin), plugin) }
     end
   end
 end

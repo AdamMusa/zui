@@ -6,6 +6,9 @@ module Zui
   class QtBundleConfiguration
     CONFIG_FILE = ".zui-bundle.json"
     DEFAULT_STYLE = "Fusion"
+    FEATURES = %w[
+      gif ico jpeg network-reachability svg svg-icons tls webp
+    ].freeze
     QT_NAME = /\A[A-Za-z][A-Za-z0-9_.+-]*\z/
     PLUGIN_NAME = /\A[A-Za-z0-9][A-Za-z0-9_.+-]*\/[A-Za-z0-9][A-Za-z0-9_.+-]*\z/
 
@@ -27,6 +30,10 @@ module Zui
         raise ArgumentError, "#{CONFIG_FILE} qt.style must be a Qt Quick Controls style name"
       end
       @features = string_array(qt.fetch("features", []), "qt.features", pattern: QT_NAME)
+      unknown_features = @features - FEATURES
+      unless unknown_features.empty?
+        raise ArgumentError, "#{CONFIG_FILE} has unknown Qt features: #{unknown_features.join(', ')}"
+      end
       @qml_modules = string_array(qt.fetch("qml_modules", []), "qt.qml_modules", pattern: QT_NAME)
       @plugins = string_array(qt.fetch("plugins", []), "qt.plugins", pattern: PLUGIN_NAME)
     end

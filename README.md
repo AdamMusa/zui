@@ -414,6 +414,28 @@ metaprogramming must declare those possible types in `.zui-bundle.json`:
 }
 ```
 
+The same manifest bounds native Qt features that are selected dynamically. Zui detects literal
+GIF, ICO, JPEG, SVG, WebP, HTTPS, and WSS sources in production Ruby files and retains only the
+matching image codec or TLS backend. PNG support is built into Qt and needs no image plugin.
+Declare sources assembled entirely at runtime, custom QML imports, or native plugins explicitly:
+
+```json
+{
+  "components": ["image"],
+  "qt": {
+    "style": "Fusion",
+    "features": ["jpeg", "tls"],
+    "qml_modules": ["QtLocation", "QtPositioning"],
+    "plugins": ["position/qtposition_positionpoll"]
+  }
+}
+```
+
+Supported feature names are `gif`, `ico`, `jpeg`, `network-reachability`, `svg`, `svg-icons`,
+`tls`, and `webp`. Plugin names omit platform-specific `lib`, `.so`, `.dylib`, and `.dll` affixes.
+An explicitly requested module or plugin must exist in the configured native client; otherwise the
+bundle fails with its exact missing dependency instead of producing an incomplete application.
+
 Use `--no-tree-shake` only when the possible component set cannot be declared.
 
 ### Native installers
