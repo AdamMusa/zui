@@ -181,9 +181,10 @@ class QmlContractTest < Minitest::Test
     control_node = source("ControlNode.qml")
 
     assert_includes control_node, 'property: "width"'
-    assert_includes control_node, 'value: Number(root.node.props.width)'
+    assert_includes control_node, '? Number(root.node.props.width) : 0'
     assert_includes control_node, 'property: "height"'
-    assert_includes control_node, 'value: Number(root.node.props.height)'
+    assert_includes control_node, '? Number(root.node.props.height) : 0'
+    assert_equal 2, control_node.scan("when: !!(root.node && root.node.props").length
     assert_equal 2, control_node.scan("restoreMode: Binding.RestoreBindingOrValue").length
   end
 

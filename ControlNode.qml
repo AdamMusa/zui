@@ -283,15 +283,17 @@ Loader {
   Binding {
     target: root
     property: "width"
-    value: Number(root.node.props.width)
-    when: root.node && root.node.props && root.node.props.width !== undefined && root.node.props.width !== null
+    value: root.node && root.node.props && root.node.props.width !== undefined
+      ? Number(root.node.props.width) : 0
+    when: !!(root.node && root.node.props && root.node.props.width !== undefined && root.node.props.width !== null)
     restoreMode: Binding.RestoreBindingOrValue
   }
   Binding {
     target: root
     property: "height"
-    value: Number(root.node.props.height)
-    when: root.node && root.node.props && root.node.props.height !== undefined && root.node.props.height !== null
+    value: root.node && root.node.props && root.node.props.height !== undefined
+      ? Number(root.node.props.height) : 0
+    when: !!(root.node && root.node.props && root.node.props.height !== undefined && root.node.props.height !== null)
     restoreMode: Binding.RestoreBindingOrValue
   }
   sourceComponent: null
