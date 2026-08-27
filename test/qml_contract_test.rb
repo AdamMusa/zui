@@ -188,6 +188,17 @@ class QmlContractTest < Minitest::Test
     assert_equal 2, control_node.scan("restoreMode: Binding.RestoreBindingOrValue").length
   end
 
+  def test_mobile_button_uses_pointer_handlers_and_a_touch_minimum
+    button = source("Components/Builtins/Button.qml")
+
+    assert_includes button, "implicitHeight: Math.max(44,"
+    assert_includes button, "TapHandler {"
+    assert_includes button, "HoverHandler {"
+    assert_includes button, "Qt.LeftButton | Qt.RightButton"
+    refute_includes button, "ZuiControls.Button"
+    refute_includes button, "MouseArea"
+  end
+
   def test_mobile_location_catalog_includes_places_and_geojson
     expected = %w[Category CategoryModel GeoJsonData GeocodeModel Map MapCircle MapCopyrightNotice
                   MapItemGroup MapItemView MapPolygon MapPolyline MapQuickItem MapRectangle MapRoute
