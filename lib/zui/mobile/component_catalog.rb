@@ -52,6 +52,11 @@ module Zui
         "MicrophonePermission" => :microphone_permission
       }.freeze
 
+      DEVICE_INFORMATION = {
+        "SystemInformation" => :system_info,
+        "NetworkInformation" => :network_status
+      }.freeze
+
       SENSORS = {
         "Accelerometer" => :accelerometer,
         "AmbientLightSensor" => :ambient_light_sensor,
@@ -105,7 +110,7 @@ module Zui
       }.freeze
 
       CORE = QUICK_CONTROLS.merge(QUICK_DIALOGS).merge(QUICK_LAYOUTS).freeze
-      ALL = CORE.merge(PERMISSIONS).merge(SENSORS).merge(POSITIONING).merge(LOCATION)
+      ALL = CORE.merge(PERMISSIONS).merge(DEVICE_INFORMATION).merge(SENSORS).merge(POSITIONING).merge(LOCATION)
                 .merge(TEXT_TO_SPEECH).merge(WEB).merge(WEB_SOCKETS).merge(LOTTIE)
                 .merge(PDF).merge(TOUCH_INTERACTION).freeze
     end

@@ -229,6 +229,8 @@ module Zui
     folder_list_model: [%i[folder root_folder name_filters show_files show_dirs show_dirs_first show_dot_and_dot_dot show_hidden show_only_readable sort_field sort_reversed case_sensitive revision visible], %i[count_change folder_change status error change], false],
     settings: [%i[category file_name values sync_revision visible], %i[loaded change synced error], false],
     standard_paths: [%i[location locate_file executable refresh_revision visible], %i[resolved error], false],
+    system_info: [%i[refresh_revision visible], %i[information error], false],
+    network_status: [%i[refresh_revision watch visible], %i[information change error], false],
     clipboard: [%i[text watch revision visible], %i[change copied], false],
     bluetooth_permission: [%i[communication_modes auto_request request_revision visible], %i[change granted denied], false],
     calendar_permission: [%i[access_mode auto_request request_revision visible], %i[change granted denied], false],

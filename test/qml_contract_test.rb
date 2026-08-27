@@ -119,6 +119,18 @@ class QmlContractTest < Minitest::Test
     refute_includes positioning, "position.timestamp.toISOString()"
   end
 
+  def test_mobile_device_information_uses_qt_singletons
+    system = source("Components/Builtins/SystemInfo.qml")
+    network = source("Components/Builtins/NetworkStatus.qml")
+
+    assert_includes system, "import QtCore"
+    assert_includes system, "SystemInformation.prettyProductName"
+    assert_includes system, '"information"'
+    assert_includes network, "import QtNetwork"
+    assert_includes network, "NetworkInformation.reachability"
+    assert_includes network, 'function onReachabilityChanged()'
+  end
+
   def test_mobile_text_to_speech_uses_typed_locale_and_qualified_signals
     speech = source("Components/Builtins/TextToSpeech.qml")
 

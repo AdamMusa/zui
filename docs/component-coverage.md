@@ -300,6 +300,8 @@ transitions, and animation groups receive Ruby APIs even though they are not vis
 - [x] folder_list_model
 - [x] settings
 - [x] standard_paths
+- [x] system_info
+- [x] network_status
 - [x] clipboard
 
 ## Mobile permissions
