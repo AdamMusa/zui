@@ -30,6 +30,8 @@ class TreeShakerTest < Minitest::Test
       refute File.exist?(File.join(native, "qml", "QtQuick3D"))
       assert File.directory?(File.join(native, "plugins", "multimedia"))
       refute File.exist?(File.join(native, "plugins", "assetimporters"))
+      refute File.exist?(File.join(native, "plugins", "sqldrivers"))
+      refute File.exist?(File.join(native, "plugins", "styles"))
     end
   end
 
@@ -87,6 +89,23 @@ class TreeShakerTest < Minitest::Test
       assert File.file?(File.join(support, "OptionalModuleState.js"))
       assert_includes report.qml_modules, "QtQuick3D"
       assert File.directory?(File.join(native, "qml", "QtQuick3D"))
+    end
+  end
+
+  def test_keeps_only_sqlite_driver_for_qml_local_storage
+    with_payload("Zui.app { app { text 'stored' } }\n") do |project, framework, native, platform|
+      text_adapter = File.join(framework, "Components", "Builtins", "Text.qml")
+      File.write(text_adapter, "import QtQuick.LocalStorage\n#{File.read(text_adapter)}")
+      drivers = File.join(native, "plugins", "sqldrivers")
+      File.write(File.join(drivers, "libqsqlite.so"), "sqlite")
+      File.write(File.join(drivers, "libqmysql.so"), "mysql")
+
+      report = Zui::TreeShaker.new(project:, framework:, native:, platform:).shake!
+
+      assert_includes report.qml_modules, "QtQuick.LocalStorage"
+      assert File.file?(File.join(drivers, "libqsqlite.so"))
+      refute File.exist?(File.join(drivers, "libqmysql.so"))
+      refute File.exist?(File.join(drivers, ".fixture"))
     end
   end
 
@@ -159,6 +178,7 @@ class TreeShakerTest < Minitest::Test
   def install_native_modules(native)
     {
       "QtQuick" => "module QtQuick\n",
+      "QtQuick/LocalStorage" => "module QtQuick.LocalStorage\ndepends QtQuick auto\n",
       "QtMultimedia" => "module QtMultimedia\ndepends QtQuick auto\n",
       "QtQuick3D" => "module QtQuick3D\ndepends QtQuick auto\n",
       "Qt/labs/qmlmodels" => "module Qt.labs.qmlmodels\ndepends QtQml.Models auto\n"
@@ -167,7 +187,7 @@ class TreeShakerTest < Minitest::Test
       FileUtils.mkdir_p(directory)
       File.write(File.join(directory, "qmldir"), qmldir)
     end
-    %w[multimedia assetimporters imageformats iconengines networkinformation tls].each do |name|
+    %w[multimedia assetimporters imageformats iconengines networkinformation sqldrivers styles tls].each do |name|
       directory = File.join(native, "plugins", name)
       FileUtils.mkdir_p(directory)
       File.write(File.join(directory, ".fixture"), name)

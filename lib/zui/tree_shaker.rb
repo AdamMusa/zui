@@ -342,11 +342,26 @@ module Zui
       remove_tree(File.join(root, "iconengines")) unless has_images
       remove_tree(File.join(root, "networkinformation")) unless has_network
       remove_tree(File.join(root, "tls")) unless has_network
+      remove_tree(File.join(root, "styles"))
+      if qml_modules.include?("QtQuick.LocalStorage")
+        prune_sql_driver_plugins(File.join(root, "sqldrivers"))
+      else
+        remove_tree(File.join(root, "sqldrivers"))
+      end
       remove_tree(File.join(root, "platformthemes")) if @platform.linux?
       remove_tree(File.join(root, "platforminputcontexts")) if @platform.linux? && !has_text_input
       remove_tree(File.join(root, "generic")) if @platform.linux?
       FileUtils.rm_f(File.join(root, "wayland-decoration-client", "libadwaita.so")) if @platform.linux?
       prune_linux_platform_plugins(root) if @platform.linux?
+    end
+
+    def prune_sql_driver_plugins(root)
+      return unless File.directory?(root)
+
+      Dir.children(root).each do |name|
+        path = File.join(root, name)
+        FileUtils.rm_f(path) if File.file?(path) && !name.downcase.include?("sqlite")
+      end
     end
 
     def prune_linux_platform_plugins(plugin_root)
