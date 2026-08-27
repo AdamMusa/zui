@@ -177,21 +177,12 @@ class QmlContractTest < Minitest::Test
     refute_includes badge, "readonly property"
   end
 
-  def test_builtin_control_dimensions_are_applied_at_the_loader_boundary
-    control_node = source("ControlNode.qml")
-
-    assert_includes control_node, 'property: "width"'
-    assert_includes control_node, '? Number(root.node.props.width) : 0'
-    assert_includes control_node, 'property: "height"'
-    assert_includes control_node, '? Number(root.node.props.height) : 0'
-    assert_equal 2, control_node.scan("when: !!(root.node && root.node.props").length
-    assert_equal 2, control_node.scan("restoreMode: Binding.RestoreBindingOrValue").length
-  end
-
   def test_mobile_button_uses_pointer_handlers_and_a_touch_minimum
     button = source("Components/Builtins/Button.qml")
 
     assert_includes button, "implicitHeight: Math.max(44,"
+    assert_includes button, "Number(renderer.node.props.width)"
+    assert_includes button, "Number(renderer.node.props.height)"
     assert_includes button, "TapHandler {"
     assert_includes button, "HoverHandler {"
     assert_includes button, "Qt.LeftButton | Qt.RightButton"

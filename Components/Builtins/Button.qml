@@ -17,6 +17,10 @@ Rectangle {
   activeFocusOnTab: renderer.prop("focusable", true) !== false
   implicitWidth: content.implicitWidth + horizontalPad * 2
   implicitHeight: Math.max(44, content.implicitHeight + verticalPad * 2)
+  width: renderer.node && renderer.node.props && renderer.node.props.width !== undefined
+    ? Number(renderer.node.props.width) : implicitWidth
+  height: renderer.node && renderer.node.props && renderer.node.props.height !== undefined
+    ? Number(renderer.node.props.height) : implicitHeight
   radius: Style.cornerRadius
   color: selected || active ? accentColor : renderer.prop("background", "transparent")
   border.width: renderer.prop("bordered", true) !== false ? Style.normalBorderWidth : 0
