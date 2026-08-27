@@ -4,7 +4,7 @@ module Zui
   class Builder
     UNSET = Object.new.freeze
     CONTAINERS = %i[
-      row column container grid row_layout column_layout grid_layout flow center card
+      abstract_button control row column container grid row_layout column_layout grid_layout flow center card
       stack scroll rectangle responsive_view aspect_ratio constrained_box fitted_box wrap split_view stack_layout loader flickable focus_scope flipable border_image key_catcher
       page pane frame group_box tabs stack_view swipe_view drawer expansion_panel accordion tool_bar popup dialog
       shader_effect shader_effect_source multi_effect rectangular_shadow opacity_mask blur drop_shadow colorize glow
@@ -145,6 +145,9 @@ module Zui
     end
     def group_box(title = "", id: nil, **props, &block)
       component(:group_box, id:, title: title.to_s, **props, &block)
+    end
+    def menu_bar_item(label = "", id: nil, **props, &handler)
+      action_component(:menu_bar_item, :text, label, id:, props:, handler:)
     end
     def tabs(labels = [], id: nil, **props, &block)
       component(:tabs, id:, labels: Array(labels), **props, &block)
@@ -344,6 +347,7 @@ module Zui
       calendar_props[:date] = date.to_s unless date.nil?
       component(:calendar, id:, **calendar_props)
     end
+    def calendar_model(id: nil, **props) = component(:calendar_model, id:, **props)
     def month_grid(id: nil, **props) = component(:month_grid, id:, **props)
     def week_number_column(id: nil, **props) = component(:week_number_column, id:, **props)
     def day_of_week_row(id: nil, **props) = component(:day_of_week_row, id:, **props)

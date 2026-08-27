@@ -17,6 +17,7 @@ transitions, and animation groups receive Ruby APIs even though they are not vis
 
 ## Foundation and layout
 
+- [x] control
 - [x] container
 - [x] row
 - [x] column
@@ -75,6 +76,7 @@ transitions, and animation groups receive Ruby APIs even though they are not vis
 
 ## Buttons and input
 
+- [x] abstract_button
 - [x] button
 - [x] action_button
 - [x] bar_icon_button
@@ -143,6 +145,7 @@ transitions, and animation groups receive Ruby APIs even though they are not vis
 - [x] menu_item
 - [x] menu_separator
 - [x] menu_bar
+- [x] menu_bar_item
 - [x] context_menu
 - [x] popup
 - [x] dialog
@@ -177,6 +180,7 @@ transitions, and animation groups receive Ruby APIs even though they are not vis
 - [x] reorderable_list
 - [x] carousel
 - [x] calendar
+- [x] calendar_model
 - [x] month_grid
 - [x] week_number_column
 - [x] day_of_week_row

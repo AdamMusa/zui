@@ -89,6 +89,15 @@ class QmlContractTest < Minitest::Test
     refute_match(/^- \[ \] /, coverage)
   end
 
+  def test_qt_mobile_control_catalog_maps_every_public_type_to_a_native_adapter
+    Zui::Mobile::ComponentCatalog::CORE.each do |qt_type, component|
+      assert Zui::COMPONENTS.key?(component), "#{qt_type} maps to missing #{component}"
+      adapter = component.to_s.split("_").map(&:capitalize).join + ".qml"
+      assert File.file?(File.join(ROOT, "Components", "Builtins", adapter)),
+             "#{qt_type} maps to missing #{adapter}"
+    end
+  end
+
   def test_service_uses_one_injected_bidirectional_transport
     qml = source("Service.qml")
     native = source("native/ZuiProcess.cpp")

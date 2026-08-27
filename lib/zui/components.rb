@@ -10,6 +10,8 @@ module Zui
   ].freeze
 
   COMPONENTS = {
+    abstract_button: [%i[text checked checkable enabled auto_exclusive auto_repeat auto_repeat_delay auto_repeat_interval width height padding foreground background border_color radius font_family font_size visible], %i[click double_click press release cancel press_and_hold change], true],
+    control: [%i[width height padding left_padding top_padding right_padding bottom_padding enabled focus hover_enabled clip background border_color border_width radius visible], %i[click focus blur hover], true],
     container: [%i[spacing padding bordered visible], %i[click], true],
     row: [%i[spacing alignment visible], %i[click], true],
     column: [%i[spacing alignment visible], %i[click], true],
@@ -111,6 +113,7 @@ module Zui
     menu_item: [%i[text value icon icon_source icon_color shortcut enabled checkable checked highlighted width height background highlighted_background foreground highlighted_foreground muted accent border_color radius font_family font_size visible], %i[trigger toggle change press release hover highlight focus blur], false],
     menu_separator: [%i[thickness width height padding color opacity enabled visible], %i[show hide], false],
     menu_bar: [%i[menus width height spacing padding enabled background foreground muted accent border_color radius font_family font_size visible], %i[trigger toggle highlight menu_open menu_close show hide focus blur], false],
+    menu_bar_item: [%i[text highlighted enabled width height padding foreground background highlighted_background font_family font_size visible], %i[click press release hover highlight], false],
     context_menu: [%i[items target opened x y activation_width activation_height width modal close_policy enabled background foreground muted accent border_color radius font_family font_size visible], %i[request trigger toggle highlight open close about_to_show about_to_hide], false],
     popup: [%i[opened x y width height modal dim focus close_policy layout spacing padding animated duration easing enabled background foreground border_color radius visible], %i[open close about_to_show about_to_hide show hide focus blur position_change], true],
     dialog: [%i[title opened centered x y width height modal dim focus close_policy standard_buttons layout spacing padding enabled background foreground border_color radius font_family font_size visible], %i[accept reject apply reset discard help open close about_to_show about_to_hide show hide focus blur], true],
@@ -142,6 +145,7 @@ module Zui
     reorderable_list: [%i[items key_field label_field description_field selected orientation spacing padding item_padding item_height width height handle_position drag_enabled drag_scale drag_opacity drag_transition_duration empty_text background item_background selected_background foreground selected_foreground muted border_color radius font_family font_size visible], %i[reorder activate change drag_start drag_move drag_end], false],
     carousel: [%i[items key_field label_field description_field image_field current_index path_radius item_width item_height width height interactive highlight_range snap_mode background foreground muted accent font_family font_size visible], %i[input change activate movement_start movement_end error], false],
     calendar: [%i[date minimum maximum month year locale show_week_numbers show_navigation width height background header_background selected_background today_background foreground muted accent border_color radius font_family font_size visible], %i[input change navigate], false],
+    calendar_model: [%i[from to visible], %i[change], false],
     month_grid: [%i[month year locale selected_date minimum maximum width height background selected_background today_background foreground muted accent font_family font_size visible], %i[click press release change], false],
     week_number_column: [%i[month year locale width height background foreground muted font_family font_size visible], %i[week_click], false],
     day_of_week_row: [%i[locale width height background foreground muted font_family font_size visible], %i[day_click], false],

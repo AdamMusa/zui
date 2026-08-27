@@ -1,0 +1,49 @@
+# frozen_string_literal: true
+
+module Zui
+  module Mobile
+    module ComponentCatalog
+      QUICK_CONTROLS = {
+        "AbstractButton" => :abstract_button, "Action" => :action, "ActionGroup" => :action_group,
+        "ApplicationWindow" => :application_window, "BusyIndicator" => :busy_indicator,
+        "Button" => :button, "ButtonGroup" => :button_group, "CheckBox" => :checkbox,
+        "CheckDelegate" => :check_delegate, "ComboBox" => :dropdown, "Container" => :container,
+        "Control" => :control, "DelayButton" => :delay_button, "Dial" => :dial,
+        "Dialog" => :dialog, "DialogButtonBox" => :dialog_button_box, "Drawer" => :drawer,
+        "Frame" => :frame, "GroupBox" => :group_box, "HorizontalHeaderView" => :horizontal_header,
+        "ItemDelegate" => :item_delegate, "Label" => :label, "Menu" => :menu,
+        "MenuBar" => :menu_bar, "MenuBarItem" => :menu_bar_item, "MenuItem" => :menu_item,
+        "MenuSeparator" => :menu_separator, "Page" => :page, "PageIndicator" => :page_indicator,
+        "Pane" => :pane, "Popup" => :popup, "ProgressBar" => :progress,
+        "RadioButton" => :radio_button, "RadioDelegate" => :radio_delegate,
+        "RangeSlider" => :range_slider, "RoundButton" => :round_button,
+        "ScrollBar" => :scroll_bar, "ScrollIndicator" => :scroll_indicator,
+        "ScrollView" => :scroll, "SelectionRectangle" => :selection_rectangle,
+        "Slider" => :slider, "SpinBox" => :spin_box, "SplitView" => :split_view,
+        "StackView" => :stack_view, "SwipeDelegate" => :swipe_delegate,
+        "Switch" => :toggle_switch, "SwitchDelegate" => :switch_delegate,
+        "SwipeView" => :swipe_view, "TabBar" => :tab_bar, "TabButton" => :tab_button,
+        "TextArea" => :text_area, "TextField" => :text_field, "ToolBar" => :tool_bar,
+        "ToolButton" => :tool_button, "ToolSeparator" => :tool_separator,
+        "ToolTip" => :tooltip, "Tumbler" => :tumbler,
+        "VerticalHeaderView" => :vertical_header, "CalendarModel" => :calendar_model,
+        "DayOfWeekRow" => :day_of_week_row, "MonthGrid" => :month_grid,
+        "WeekNumberColumn" => :week_number_column, "TreeViewDelegate" => :tree_view_delegate
+      }.freeze
+
+      QUICK_DIALOGS = {
+        "ColorDialog" => :color_picker, "FileDialog" => :file_picker,
+        "FolderDialog" => :folder_picker, "FontDialog" => :font_picker,
+        "MessageDialog" => :message_dialog
+      }.freeze
+
+      QUICK_LAYOUTS = {
+        "RowLayout" => :row_layout, "ColumnLayout" => :column_layout,
+        "GridLayout" => :grid_layout, "StackLayout" => :stack_layout,
+        "LayoutItemProxy" => :layout_item_proxy
+      }.freeze
+
+      CORE = QUICK_CONTROLS.merge(QUICK_DIALOGS).merge(QUICK_LAYOUTS).freeze
+    end
+  end
+end

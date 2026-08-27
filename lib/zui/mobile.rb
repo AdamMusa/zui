@@ -826,5 +826,6 @@ module Zui
 end
 
 require_relative "mobile/reproducibility"
+require_relative "mobile/component_catalog"
 require_relative "mobile/setup"
 require_relative "mobile/android_builder"
