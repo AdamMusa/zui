@@ -4,6 +4,7 @@ import QtCore
 Item {
   id: root
   required property var renderer
+  property int handledRefreshRevision: -1
   visible: false
 
   function publish() {
@@ -24,6 +25,13 @@ Item {
     })
   }
 
-  Component.onCompleted: publish()
-  Connections { target: renderer; function onNodeChanged() { root.publish() } }
+  function refresh() {
+    var revision = Number(renderer.prop("refresh_revision", 0))
+    if (revision === handledRefreshRevision) return
+    handledRefreshRevision = revision
+    publish()
+  }
+
+  Component.onCompleted: refresh()
+  Connections { target: renderer; function onNodeChanged() { root.refresh() } }
 }

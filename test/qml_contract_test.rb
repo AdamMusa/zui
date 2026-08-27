@@ -126,9 +126,23 @@ class QmlContractTest < Minitest::Test
     assert_includes system, "import QtCore"
     assert_includes system, "SystemInformation.prettyProductName"
     assert_includes system, '"information"'
+    assert_includes system, "handledRefreshRevision"
     assert_includes network, "import QtNetwork"
     assert_includes network, "NetworkInformation.reachability"
     assert_includes network, 'function onReachabilityChanged()'
+    assert_includes network, "handledRefreshRevision"
+  end
+
+  def test_read_only_mobile_services_do_not_republish_on_unrelated_ui_revisions
+    system = source("Components/Builtins/SystemInfo.qml")
+    network = source("Components/Builtins/NetworkStatus.qml")
+    paths = source("Components/Builtins/StandardPaths.qml")
+
+    assert_includes system, "if (revision === handledRefreshRevision) return"
+    assert_includes network, "if (revision === handledRefreshRevision) return"
+    assert_includes paths, "if (key === handledRequestKey) return"
+    refute_includes system, "onNodeChanged() { root.publish() }"
+    refute_includes network, 'onNodeChanged() { root.publish("information") }'
   end
 
   def test_mobile_location_catalog_includes_places_and_geojson

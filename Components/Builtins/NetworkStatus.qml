@@ -4,6 +4,7 @@ import QtNetwork
 Item {
   id: root
   required property var renderer
+  property int handledRefreshRevision: -1
   visible: false
 
   function reachabilityName(value) {
@@ -29,8 +30,15 @@ Item {
     renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, eventName, payload())
   }
 
-  Component.onCompleted: publish("information")
-  Connections { target: renderer; function onNodeChanged() { root.publish("information") } }
+  function refresh() {
+    var revision = Number(renderer.prop("refresh_revision", 0))
+    if (revision === handledRefreshRevision) return
+    handledRefreshRevision = revision
+    publish("information")
+  }
+
+  Component.onCompleted: refresh()
+  Connections { target: renderer; function onNodeChanged() { root.refresh() } }
   Connections {
     target: NetworkInformation
     enabled: root.renderer.prop("watch", true) !== false
