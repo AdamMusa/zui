@@ -263,6 +263,8 @@ module Zui
     map_marker: [%i[latitude longitude altitude anchor_x anchor_y zoom_level auto_fade_in width height visible], %i[click drag], true],
     map_item_group: [%i[visible], %i[click], true],
     map_item_view: [%i[items latitude_field longitude_field label_field marker_width marker_height marker_color visible], %i[click], false],
+    geocode_model: [%i[plugin plugin_parameters query limit offset auto_update command command_revision visible], %i[results status error], false],
+    route_model: [%i[plugin plugin_parameters waypoints travel_mode optimization alternatives departure_time auto_update command command_revision visible], %i[routes status error], false],
     text_to_speech: [%i[text engine engine_parameters volume rate pitch locale voice voice_gender voice_age command command_revision auto_speak visible], %i[state word voice_change engines error], false],
     web_view: [%i[url html base_url http_user_agent local_storage javascript allow_file_access local_content_file_access command command_revision script cookie_domain cookie_name cookie_value width height visible], %i[load progress title url_change navigation javascript cookie error], false],
     dropdown: [%i[label value options foreground background popup_border accent font_family row_height popup_row_height show_label cursor], %i[change hover], false],

@@ -82,7 +82,8 @@ module Zui
         "MapPolyline" => :map_polyline, "MapRoute" => :map_route,
         "MapQuickItem" => :map_marker, "MapItemGroup" => :map_item_group,
         "MapItemView" => :map_item_view, "Plugin" => :map,
-        "PluginParameter" => :map
+        "PluginParameter" => :map, "GeocodeModel" => :geocode_model,
+        "RouteModel" => :route_model, "RouteQuery" => :route_model
       }.freeze
 
       TEXT_TO_SPEECH = {

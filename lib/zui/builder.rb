@@ -653,6 +653,17 @@ module Zui
       @application.register_handler(node.id, :click, handler) if handler
       node
     end
+    def geocode_model(query = nil, id: nil, **props, &handler)
+      props = props.merge(query:) unless query.nil?
+      node = component(:geocode_model, id:, **props)
+      @application.register_handler(node.id, :results, handler) if handler
+      node
+    end
+    def route_model(waypoints = [], id: nil, **props, &handler)
+      node = component(:route_model, id:, waypoints: Array(waypoints), **props)
+      @application.register_handler(node.id, :routes, handler) if handler
+      node
+    end
 
     def text_to_speech(text = UNSET, id: nil, **props, &handler)
       unless text.equal?(UNSET)
