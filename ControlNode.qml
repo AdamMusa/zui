@@ -280,6 +280,20 @@ Loader {
   scale: Number(prop("scale", 1))
   rotation: Number(prop("rotation", 0))
   z: Number(prop("z", 0))
+  Binding {
+    target: root
+    property: "width"
+    value: Number(root.node.props.width)
+    when: root.node && root.node.props && root.node.props.width !== undefined && root.node.props.width !== null
+    restoreMode: Binding.RestoreBindingOrValue
+  }
+  Binding {
+    target: root
+    property: "height"
+    value: Number(root.node.props.height)
+    when: root.node && root.node.props && root.node.props.height !== undefined && root.node.props.height !== null
+    restoreMode: Binding.RestoreBindingOrValue
+  }
   sourceComponent: null
   source: ""
   readonly property string adapterSource: !node || !nativeSchema ? ""
