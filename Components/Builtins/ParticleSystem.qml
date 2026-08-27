@@ -8,8 +8,11 @@ Item {
   readonly property real turbulenceWidth: Math.max(0, Number(renderer.prop("turbulence_width", width)))
   readonly property real turbulenceHeight: Math.max(0, Number(renderer.prop("turbulence_height", height)))
   readonly property real turbulenceGridLimit: Number(renderer.prop("turbulence_grid_size", 256))
-  readonly property real turbulenceGridWidth: turbulenceGridLimit > 0 ? Math.min(turbulenceWidth, Math.max(32, turbulenceGridLimit)) : turbulenceWidth
-  readonly property real turbulenceGridHeight: turbulenceGridLimit > 0 ? Math.min(turbulenceHeight, Math.max(32, turbulenceGridLimit)) : turbulenceHeight
+  readonly property real effectiveTurbulenceGridLimit: turbulenceGridLimit > 0 ? Math.max(32, turbulenceGridLimit) : Math.max(turbulenceWidth, turbulenceHeight)
+  readonly property int turbulenceColumns: Math.max(1, Math.ceil(turbulenceWidth / effectiveTurbulenceGridLimit))
+  readonly property int turbulenceRows: Math.max(1, Math.ceil(turbulenceHeight / effectiveTurbulenceGridLimit))
+  readonly property real turbulenceTileWidth: turbulenceWidth / turbulenceColumns
+  readonly property real turbulenceTileHeight: turbulenceHeight / turbulenceRows
   implicitWidth: Number(renderer.prop("width", 320))
   implicitHeight: Number(renderer.prop("height", 200))
 
@@ -72,17 +75,21 @@ Item {
       system: nativeSystem
       magnitude: Number(renderer.prop("gravity", 0)); angle: Number(renderer.prop("gravity_angle", 90))
     }
-    Turbulence {
-      id: turbulenceField
-      system: nativeSystem
-      enabled: Number(renderer.prop("turbulence", 0)) !== 0
-      strength: Number(renderer.prop("turbulence", 0))
-      x: Number(renderer.prop("turbulence_x", 0)); y: Number(renderer.prop("turbulence_y", 0))
-      width: particleRoot.turbulenceGridWidth; height: particleRoot.turbulenceGridHeight
-      transformOrigin: Item.TopLeft
-      transform: Scale {
-        xScale: turbulenceField.width > 0 ? particleRoot.turbulenceWidth / turbulenceField.width : 1
-        yScale: turbulenceField.height > 0 ? particleRoot.turbulenceHeight / turbulenceField.height : 1
+    Repeater {
+      model: particleRoot.turbulenceColumns * particleRoot.turbulenceRows
+
+      delegate: Turbulence {
+        required property int index
+        readonly property int column: index % particleRoot.turbulenceColumns
+        readonly property int row: Math.floor(index / particleRoot.turbulenceColumns)
+
+        system: nativeSystem
+        enabled: Number(renderer.prop("turbulence", 0)) !== 0
+        strength: Number(renderer.prop("turbulence", 0))
+        x: Number(renderer.prop("turbulence_x", 0)) + column * particleRoot.turbulenceTileWidth
+        y: Number(renderer.prop("turbulence_y", 0)) + row * particleRoot.turbulenceTileHeight
+        width: particleRoot.turbulenceTileWidth
+        height: particleRoot.turbulenceTileHeight
       }
     }
   }
