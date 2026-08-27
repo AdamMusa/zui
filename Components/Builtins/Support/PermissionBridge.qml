@@ -14,13 +14,10 @@ Item {
     return names[Number(value)] || "unknown"
   }
   function publish() {
+    var nativeStatus = Number(permission.status)
+    if (nativeStatus === lastPublishedNativeStatus) return
     if (publishing) return
     publishing = true
-    var nativeStatus = Number(permission.status)
-    if (nativeStatus === lastPublishedNativeStatus) {
-      publishing = false
-      return
-    }
     lastPublishedNativeStatus = nativeStatus
     var name = statusName(nativeStatus)
     var payload = { status: name, native_status: nativeStatus }
