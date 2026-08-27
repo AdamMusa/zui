@@ -7,7 +7,7 @@ require "set"
 
 module Zui
   class TreeShaker
-    CONFIG_FILE = ".zui-bundle.json"
+    CONFIG_FILE = QtBundleConfiguration::CONFIG_FILE
     EXCLUDED_SOURCE_DIRECTORIES = %w[.git dist node_modules spec test tmp vendor].freeze
     EXCLUDED_SOURCE_FILES = %w[config.rb].freeze
     BASE_COMPONENTS = %i[container].freeze
@@ -15,9 +15,7 @@ module Zui
     COMPONENT_DISPATCH_METHODS = %w[component dynamic qml_component send public_send widget].freeze
     BASE_QML_MODULES = %w[
       QML QtCore QtQml QtQml.Models QtQml.WorkerScript QtQuick QtQuick.Window
-      QtQuick.Controls QtQuick.Controls.impl QtQuick.Controls.Basic
-      QtQuick.Controls.Basic.impl QtQuick.Controls.Fusion QtQuick.Controls.Fusion.impl
-      QtQuick.Layouts QtQuick.Templates
+      QtQuick.Controls QtQuick.Controls.impl QtQuick.Layouts QtQuick.Templates
     ].freeze
     IMAGE_COMPONENTS = %i[
       alert_dialog animated_image avatar border_image carousel image menu navigation_rail
@@ -29,7 +27,8 @@ module Zui
       password_field search_field spin_box text_area text_field time_picker
     ].freeze
 
-    Report = Struct.new(:components, :qml_modules, :before_bytes, :after_bytes, :warnings,
+    Report = Struct.new(:components, :qml_modules, :qt_style, :qt_features, :qt_plugins,
+                        :before_bytes, :after_bytes, :warnings,
                         keyword_init: true) do
       def saved_bytes = before_bytes - after_bytes
 
@@ -37,6 +36,11 @@ module Zui
         {
           "components" => components.map(&:to_s),
           "qml_modules" => qml_modules,
+          "qt" => {
+            "style" => qt_style,
+            "features" => qt_features,
+            "plugins" => qt_plugins
+          },
           "before_bytes" => before_bytes,
           "after_bytes" => after_bytes,
           "saved_bytes" => saved_bytes,
@@ -50,6 +54,7 @@ module Zui
       @framework = File.expand_path(framework)
       @native = File.expand_path(native)
       @platform = platform.assert_supported!
+      @configuration = QtBundleConfiguration.load(@project)
       @warnings = []
     end
 
@@ -65,6 +70,8 @@ module Zui
       update_client_manifest(components, qml_modules)
       after_bytes = tree_bytes(@framework) + tree_bytes(@native)
       Report.new(components: components.sort, qml_modules: qml_modules.sort,
+                 qt_style: @configuration.style, qt_features: @configuration.features,
+                 qt_plugins: retained_native_plugins,
                  before_bytes:, after_bytes:, warnings: @warnings.dup.freeze)
     end
 
@@ -79,7 +86,7 @@ module Zui
 
         component_references(syntax, known).each { |component| selected << component }
       end
-      configured_components.each do |name|
+      @configuration.components.each do |name|
         selected << known.fetch(name) do
           raise ArgumentError, "unknown component in #{CONFIG_FILE}: #{name}"
         end
@@ -172,21 +179,6 @@ module Zui
       end.sort
     end
 
-    def configured_components
-      path = File.join(@project, CONFIG_FILE)
-      return [] unless File.file?(path)
-
-      document = JSON.parse(File.read(path))
-      raise ArgumentError, "#{CONFIG_FILE} must contain a JSON object" unless document.is_a?(Hash)
-      components = document.fetch("components", [])
-      unless components.is_a?(Array) && components.all? { |name| name.is_a?(String) && !name.empty? }
-        raise ArgumentError, "#{CONFIG_FILE} components must be an array of component names"
-      end
-      components
-    rescue JSON::ParserError => error
-      raise ArgumentError, "invalid #{CONFIG_FILE}: #{error.message}"
-    end
-
     def adapter_name(name)
       "#{name.to_s.split('_').map(&:capitalize).join}.qml"
     end
@@ -266,7 +258,18 @@ module Zui
       return [] unless root && File.directory?(root)
 
       modules = module_directories(root)
-      required = Set.new((BASE_QML_MODULES + framework_imports.to_a).select { |name| modules.key?(name) })
+      style_module = "QtQuick.Controls.#{@configuration.style}"
+      missing = @configuration.qml_modules.reject { |name| modules.key?(name) }
+      if @configuration.style_explicit? && !modules.key?(style_module)
+        missing << style_module
+      end
+      unless missing.empty?
+        raise ArgumentError, "configured Qt QML module is unavailable: #{missing.sort.join(', ')}"
+      end
+      explicitly_required = @configuration.qml_modules.dup
+      explicitly_required << style_module if modules.key?(style_module)
+      required = Set.new((BASE_QML_MODULES + framework_imports.to_a + explicitly_required)
+                           .select { |name| modules.key?(name) })
       queue = required.to_a
       until queue.empty?
         name = queue.shift
@@ -362,6 +365,15 @@ module Zui
         path = File.join(root, name)
         FileUtils.rm_f(path) if File.file?(path) && !name.downcase.include?("sqlite")
       end
+    end
+
+    def retained_native_plugins
+      root = native_path_for("QT_PLUGIN_PATH")
+      return [] unless root && File.directory?(root)
+
+      Dir[File.join(root, "*", "*")].select { |path| File.file?(path) }.map do |path|
+        path.delete_prefix("#{root}#{File::SEPARATOR}").tr(File::SEPARATOR, "/")
+      end.sort
     end
 
     def prune_linux_platform_plugins(plugin_root)
@@ -569,6 +581,9 @@ module Zui
       manifest["tree_shaken"] = true
       manifest["components"] = components.map(&:to_s).sort
       manifest["qml_modules"] = qml_modules.sort
+      manifest["qt_style"] = @configuration.style
+      manifest["qt_features"] = @configuration.features
+      manifest["qt_plugins"] = retained_native_plugins
       File.write(path, "#{JSON.pretty_generate(manifest)}\n")
     end
 

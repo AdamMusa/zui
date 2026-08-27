@@ -47,6 +47,7 @@ module Zui
         raise ArgumentError, "Zui is not configured for #{platform.id}; run `zui doctor --fix` before bundling"
       end
       @bundle_config = @release_config || load_project_config(project)
+      @qt_configuration = QtBundleConfiguration.load(project)
       @release_asset_paths = configured_release_assets(project)
       app_name = name || titleize(File.basename(project))
       destination ||= default_destination(project, app_name)
@@ -195,6 +196,7 @@ module Zui
         set -eu
         bundle_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
         native_dir="$bundle_dir/runtime/native"
+        export ZUI_QT_STYLE=#{shell_quote(@qt_configuration.style)}
         #{posix_client_environment}
         #{posix_ruby_command}
         exec "$native_dir/#{@client.executable_relative_path}" \
@@ -215,6 +217,7 @@ module Zui
         contents=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
         resources="$contents/Resources"
         native_dir="$resources/runtime/native"
+        export ZUI_QT_STYLE=#{shell_quote(@qt_configuration.style)}
         #{posix_client_environment}
         #{posix_ruby_command}
         exec "$native_dir/#{@client.executable_relative_path}" \
@@ -235,7 +238,7 @@ module Zui
 
         bundle_dir = File.expand_path(__dir__)
         native_dir = File.join(bundle_dir, "runtime", "native")
-        environment = {}
+        environment = { "ZUI_QT_STYLE" => #{@qt_configuration.style.dump} }
         #{windows_environment_builder}
         arguments = [
           File.join(native_dir, #{@client.executable_relative_path.dump}),
@@ -280,6 +283,7 @@ module Zui
         setlocal
         set "bundle_dir=%~dp0"
         set "ruby_root=%bundle_dir%runtime\\ruby"
+        set "ZUI_QT_STYLE=#{@qt_configuration.style}"
         #{environment.join("\n")}
         "%bundle_dir%runtime\\native\\#{host}" ^
           --qml-root "%bundle_dir%runtime\\qml" ^

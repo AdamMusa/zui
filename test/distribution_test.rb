@@ -60,6 +60,7 @@ class DistributionTest < Minitest::Test
       assert_includes desktop, "Exec=./run"
       refute_includes desktop, destination
       launcher = File.read(File.join(destination, "run"))
+      assert_includes launcher, "export ZUI_QT_STYLE='Fusion'"
       assert_includes launcher, 'ruby_command="$ruby_root/bin/mruby"'
       assert_includes launcher, '--program "$bundle_dir/runtime/ruby/app.rb"'
       assert_includes launcher, '--load-path ""'
@@ -82,6 +83,7 @@ class DistributionTest < Minitest::Test
       assert File.file?(File.join(contents, "Resources", "runtime", "qml", "Desktop.qml"))
       assert_includes File.read(File.join(contents, "Info.plist")), "CFBundlePackageType"
       launcher = File.read(File.join(contents, "MacOS", "run"))
+      assert_includes launcher, "export ZUI_QT_STYLE='Fusion'"
       assert_includes launcher, 'ruby_command="$ruby_root/bin/mruby"'
       assert_includes launcher, '--program "$resources/runtime/ruby/app.rb"'
     end
@@ -197,6 +199,7 @@ class DistributionTest < Minitest::Test
       assert File.file?(File.join(destination, "runtime", "qml", "Desktop.qml"))
       assert_equal "windows", JSON.parse(File.read(File.join(destination, "zui-bundle.json"))).fetch("platform")
       launcher = File.read(File.join(destination, "run.cmd"))
+      assert_includes launcher, 'set "ZUI_QT_STYLE=Fusion"'
       assert_includes launcher, "%ruby_root%\\bin\\mruby.exe"
       assert_includes launcher, "%ruby_root%\\app.rb"
       refute_includes launcher, "Omarchy"

@@ -100,6 +100,7 @@ class QmlContractTest < Minitest::Test
     assert_includes host, "QFontDatabase::addApplicationFont"
     assert_includes host, 'QFont::insertSubstitution(QStringLiteral("RobotoMono"), result.textFamily)'
     assert_includes host, 'QStringLiteral("zuiBundledFontsReady")'
+    assert_includes host, 'qgetenv("ZUI_QT_STYLE")'
     refute_includes qml, "Quickshell"
     refute_includes qml, "Process {"
   end

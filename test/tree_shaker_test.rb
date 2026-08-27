@@ -49,6 +49,22 @@ class TreeShakerTest < Minitest::Test
     end
   end
 
+  def test_configured_controls_style_and_qml_modules_define_the_native_module_closure
+    with_payload("Zui.app { app { text 'hello' } }\n") do |project, framework, native, platform|
+      File.write(File.join(project, Zui::TreeShaker::CONFIG_FILE), JSON.generate(
+        "qt" => { "style" => "Basic", "qml_modules" => ["QtPositioning"] }
+      ))
+
+      report = Zui::TreeShaker.new(project:, framework:, native:, platform:).shake!
+
+      assert_equal "Basic", report.qt_style
+      assert_includes report.qml_modules, "QtQuick.Controls.Basic"
+      assert_includes report.qml_modules, "QtPositioning"
+      refute_includes report.qml_modules, "QtQuick.Controls.Fusion"
+      refute File.exist?(File.join(native, "qml", "QtQuick", "Controls", "Fusion"))
+    end
+  end
+
   def test_detects_keyword_dynamic_components
     with_payload("Zui.app { app { dynamic type: :grid, id: :results } }\n") do |project, framework, native, platform|
       report = Zui::TreeShaker.new(project:, framework:, native:, platform:).shake!
@@ -181,6 +197,9 @@ class TreeShakerTest < Minitest::Test
       "QtQuick/LocalStorage" => "module QtQuick.LocalStorage\ndepends QtQuick auto\n",
       "QtMultimedia" => "module QtMultimedia\ndepends QtQuick auto\n",
       "QtQuick3D" => "module QtQuick3D\ndepends QtQuick auto\n",
+      "QtQuick/Controls/Basic" => "module QtQuick.Controls.Basic\ndepends QtQuick auto\n",
+      "QtQuick/Controls/Fusion" => "module QtQuick.Controls.Fusion\nimport QtQuick.Controls.Basic auto\n",
+      "QtPositioning" => "module QtPositioning\ndepends QtCore auto\n",
       "Qt/labs/qmlmodels" => "module Qt.labs.qmlmodels\ndepends QtQml.Models auto\n"
     }.each do |relative, qmldir|
       directory = File.join(native, "qml", relative)

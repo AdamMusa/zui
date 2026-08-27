@@ -79,7 +79,10 @@ int main(int argc, char *argv[]) {
   QGuiApplication application(argc, argv);
   QCoreApplication::setApplicationName(QStringLiteral("Zui"));
   QCoreApplication::setOrganizationName(QStringLiteral("Zui"));
-  QQuickStyle::setStyle(QStringLiteral("Fusion"));
+  const QByteArray configuredStyle = qgetenv("ZUI_QT_STYLE");
+  QQuickStyle::setStyle(configuredStyle.isEmpty()
+                           ? QStringLiteral("Fusion")
+                           : QString::fromUtf8(configuredStyle));
 
 #if defined(ZUI_EMBEDDED_RUNTIME)
   const QString qmlRoot = QStringLiteral(":/zui");
