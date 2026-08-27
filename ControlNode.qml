@@ -32,6 +32,7 @@ Loader {
   readonly property bool structuralContainer: nativeSchema ? nativeSchema.container === true : false
   property string loadedAdapterKey: ""
   property string lastComponentErrorKey: ""
+  property bool adapterLoadPending: false
 
   function synchronizeNode() {
     var nextNode = bridge ? bridge.nodeFor(controlId) : null
@@ -199,6 +200,15 @@ Loader {
     else source = adapterSource
   }
 
+  function scheduleAdapterLoad() {
+    if (adapterLoadPending) return
+    adapterLoadPending = true
+    Qt.callLater(function() {
+      root.adapterLoadPending = false
+      root.ensureAdapterLoaded()
+    })
+  }
+
   function nativeDefinition() {
     return nativeSchema
   }
@@ -292,7 +302,7 @@ Loader {
   source: ""
   readonly property string adapterSource: !node || !nativeSchema ? ""
     : (builtIn ? builtInSource(node.type) : bridge.componentSource(node.type))
-  onAdapterSourceChanged: ensureAdapterLoaded()
+  onAdapterSourceChanged: scheduleAdapterLoad()
   onBridgeChanged: synchronizeNode()
   onControlIdChanged: synchronizeNode()
   onLoaded: {
@@ -322,7 +332,7 @@ Loader {
   }
   Component.onCompleted: {
     root.synchronizeNode()
-    root.ensureAdapterLoaded()
+    root.scheduleAdapterLoad()
   }
 
   Connections {

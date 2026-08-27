@@ -40,7 +40,9 @@ class QmlContractTest < Minitest::Test
     assert_includes router, "builtInSource(node.type)"
     assert_includes router, "nativeSchema.builtIn === true"
     refute_includes router, 'readonly property bool builtIn: ['
-    assert_includes router, "onAdapterSourceChanged: ensureAdapterLoaded()"
+    assert_includes router, "onAdapterSourceChanged: scheduleAdapterLoad()"
+    assert_includes router, "function scheduleAdapterLoad()"
+    assert_includes router, "root.ensureAdapterLoaded()"
     refute_includes router, "Qt.callLater(ensureAdapterLoaded)"
 
     Zui::COMPONENTS.each_key do |component_name|
@@ -327,6 +329,17 @@ class QmlContractTest < Minitest::Test
     assert_includes renderer, 'if (loadedAdapterKey === adapterKey && item) return'
     refute_includes renderer, 'sourceComponent !== null'
     refute_includes renderer, 'onSourceComponentChanged:'
+  end
+
+  def test_renderer_breaks_recursive_mobile_adapter_construction_across_event_turns
+    renderer = source("ControlNode.qml")
+
+    assert_includes renderer, "property bool adapterLoadPending: false"
+    assert_includes renderer, "if (adapterLoadPending) return"
+    assert_includes renderer, "Qt.callLater(function()"
+    assert_includes renderer, "root.adapterLoadPending = false"
+    assert_includes renderer, "root.ensureAdapterLoaded()"
+    assert_includes renderer, "root.scheduleAdapterLoad()"
   end
 
   def test_renderer_snapshots_nodes_once_per_published_bridge_revision
