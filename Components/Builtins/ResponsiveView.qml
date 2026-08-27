@@ -83,6 +83,7 @@ Item {
             transformOrigin: Item.TopLeft
             source: Qt.resolvedUrl("../../ControlNode.qml")
             onLoaded: {
+              item.renderDepth = viewport.renderer.renderDepth + 1
               item.bridge = viewport.renderer.bridge
               item.surfaceName = viewport.renderer.surfaceName
               item.controlId = String(cardWrapper.modelData.id)

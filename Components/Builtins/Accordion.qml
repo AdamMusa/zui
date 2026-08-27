@@ -183,6 +183,7 @@ QQC.Control {
           opacity: sectionRoot.expanded ? 1 : 0
           source: Qt.resolvedUrl("../../ControlNode.qml")
           onLoaded: {
+            item.renderDepth = renderer.renderDepth + 1
             item.bridge = renderer.bridge
             item.surfaceName = renderer.surfaceName
             item.controlId = String(renderer.node.children[sectionRoot.index].id)

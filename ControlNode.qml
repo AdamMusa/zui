@@ -10,6 +10,7 @@ Loader {
   property var bridge: null
   property string surfaceName: ""
   property string controlId: ""
+  property int renderDepth: 0
   property color foreground: Color.foreground
   property string fontFamily: Style.font.family
   readonly property string iconFontFamily: Fonts.iconFamily
@@ -33,6 +34,7 @@ Loader {
   property string loadedAdapterKey: ""
   property string lastComponentErrorKey: ""
   property bool adapterLoadPending: false
+  readonly property int synchronousAdapterSpan: 4
 
   function synchronizeNode() {
     var nextNode = bridge ? bridge.nodeFor(controlId) : null
@@ -158,6 +160,7 @@ Loader {
 
   function configureFace(face, childNode) {
     if (!face || !childNode) return
+    if (face.hasOwnProperty("renderDepth")) face.renderDepth = renderDepth + 1
     face.bridge = bridge
     face.surfaceName = surfaceName
     face.controlId = String(childNode.id)
@@ -207,6 +210,16 @@ Loader {
       root.adapterLoadPending = false
       root.ensureAdapterLoaded()
     })
+  }
+
+  function requestAdapterLoad() {
+    // Break recursive QML construction only at bounded depth intervals.
+    // This protects Qt's iOS stack without delaying every individual node.
+    if (renderDepth > 0 && renderDepth % synchronousAdapterSpan !== 0) {
+      ensureAdapterLoaded()
+      return
+    }
+    root.scheduleAdapterLoad()
   }
 
   function nativeDefinition() {
@@ -302,7 +315,7 @@ Loader {
   source: ""
   readonly property string adapterSource: !node || !nativeSchema ? ""
     : (builtIn ? builtInSource(node.type) : bridge.componentSource(node.type))
-  onAdapterSourceChanged: scheduleAdapterLoad()
+  onAdapterSourceChanged: requestAdapterLoad()
   onBridgeChanged: synchronizeNode()
   onControlIdChanged: synchronizeNode()
   onLoaded: {
@@ -332,7 +345,7 @@ Loader {
   }
   Component.onCompleted: {
     root.synchronizeNode()
-    root.scheduleAdapterLoad()
+    root.requestAdapterLoad()
   }
 
   Connections {
@@ -385,6 +398,7 @@ Loader {
       QQC.SplitView.fillHeight: modelData.props && modelData.props.fill_height === true
       source: Qt.resolvedUrl("ControlNode.qml")
       onLoaded: {
+        item.renderDepth = root.renderDepth + 1
         item.bridge = root.bridge
         item.surfaceName = root.surfaceName
         item.controlId = String(modelData.id)
@@ -400,6 +414,7 @@ Loader {
       required property var modelData
       source: Qt.resolvedUrl("ControlNode.qml")
       onLoaded: {
+        item.renderDepth = root.renderDepth + 1
         item.bridge = root.bridge
         item.surfaceName = root.surfaceName
         item.controlId = String(modelData.id)
@@ -419,6 +434,7 @@ Loader {
       anchors.bottom: crossAlignment === "end" || crossAlignment === "bottom" ? parent.bottom : undefined
       source: Qt.resolvedUrl("ControlNode.qml")
       onLoaded: {
+        item.renderDepth = root.renderDepth + 1
         item.bridge = root.bridge
         item.surfaceName = root.surfaceName
         item.controlId = String(modelData.id)
@@ -444,6 +460,7 @@ Loader {
       Layout.alignment: root.layoutAlignment(layoutProps.layout_alignment, root.prop("alignment", "center"))
       source: Qt.resolvedUrl("ControlNode.qml")
       onLoaded: {
+        item.renderDepth = root.renderDepth + 1
         item.bridge = root.bridge
         item.surfaceName = root.surfaceName
         item.controlId = String(modelData.id)
@@ -463,6 +480,7 @@ Loader {
       anchors.right: crossAlignment === "end" || crossAlignment === "right" ? parent.right : undefined
       source: Qt.resolvedUrl("ControlNode.qml")
       onLoaded: {
+        item.renderDepth = root.renderDepth + 1
         item.bridge = root.bridge
         item.surfaceName = root.surfaceName
         item.controlId = String(modelData.id)

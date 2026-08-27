@@ -14,6 +14,7 @@ Loader {
       width: Number(renderer.prop("width", item ? item.implicitWidth : 0))
       height: Number(renderer.prop("height", item ? item.implicitHeight : 0))
       onLoaded: {
+        item.renderDepth = renderer.renderDepth + 1
         item.bridge = renderer.bridge
         item.surfaceName = renderer.surfaceName
         item.controlId = String(childNode.id)

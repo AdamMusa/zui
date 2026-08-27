@@ -40,7 +40,7 @@ class QmlContractTest < Minitest::Test
     assert_includes router, "builtInSource(node.type)"
     assert_includes router, "nativeSchema.builtIn === true"
     refute_includes router, 'readonly property bool builtIn: ['
-    assert_includes router, "onAdapterSourceChanged: scheduleAdapterLoad()"
+    assert_includes router, "onAdapterSourceChanged: requestAdapterLoad()"
     assert_includes router, "function scheduleAdapterLoad()"
     assert_includes router, "root.ensureAdapterLoaded()"
     refute_includes router, "Qt.callLater(ensureAdapterLoaded)"
@@ -340,6 +340,18 @@ class QmlContractTest < Minitest::Test
     assert_includes renderer, "root.adapterLoadPending = false"
     assert_includes renderer, "root.ensureAdapterLoaded()"
     assert_includes renderer, "root.scheduleAdapterLoad()"
+  end
+
+  def test_renderer_batches_nested_adapters_between_safe_depth_boundaries
+    renderer = source("ControlNode.qml")
+    responsive = source("Components/Builtins/ResponsiveView.qml")
+
+    assert_includes renderer, "property int renderDepth: 0"
+    assert_includes renderer, "readonly property int synchronousAdapterSpan: 4"
+    assert_includes renderer, "function requestAdapterLoad()"
+    assert_includes renderer, "renderDepth % synchronousAdapterSpan !== 0"
+    assert_includes renderer, "item.renderDepth = root.renderDepth + 1"
+    assert_includes responsive, "item.renderDepth = viewport.renderer.renderDepth + 1"
   end
 
   def test_renderer_snapshots_nodes_once_per_published_bridge_revision
