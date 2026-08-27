@@ -63,6 +63,18 @@ class RubyRuntimeShakerTest < Minitest::Test
     end
   end
 
+  def test_falls_back_for_computed_autoloads
+    with_runtime do |project, runtime, load_paths|
+      write_project(project, "feature = 'json'\nautoload :JSON, feature")
+
+      report = shaker(project, runtime, load_paths).shake!
+
+      refute report.tree_shaken?
+      assert_includes report.fallback, "dynamic require"
+      assert File.file?(File.join(load_paths.first, "unused.rb"))
+    end
+  end
+
   def test_rejects_unavailable_configured_features
     with_runtime do |project, runtime, load_paths|
       write_project(project, 'require "zui"')

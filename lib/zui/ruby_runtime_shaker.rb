@@ -145,7 +145,7 @@ module Zui
     def walk_syntax(node, analysis)
       return unless node.is_a?(Array)
 
-      analysis.rubygems = true if node.first == :@const && node[1] == "Gem"
+      analysis.rubygems = true if node.first == :@const && %w[Bundler Gem].include?(node[1])
       call = call_parts(node)
       if call
         name, arguments, line = call
@@ -162,7 +162,11 @@ module Zui
           end
         elsif name == "autoload"
           feature = static_string(arguments[1])
-          analysis.requirements << Requirement.new(type: :require, feature:) if feature
+          if feature
+            analysis.requirements << Requirement.new(type: :require, feature:)
+          else
+            analysis.dynamic_requires << line
+          end
         elsif name == "gem"
           analysis.rubygems = true
         end
