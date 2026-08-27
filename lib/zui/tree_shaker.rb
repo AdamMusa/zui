@@ -284,7 +284,6 @@ module Zui
         end
       end
 
-      module_paths = modules.values
       modules.sort_by { |_name, path| -path.count(File::SEPARATOR) }.each do |name, path|
         next if required.include?(name)
         next if required.any? { |kept| descendant?(modules.fetch(kept), path) }
