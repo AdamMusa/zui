@@ -19,6 +19,7 @@ module Zui
     MAX_ENTRIES = 100_000
     REDIRECT_LIMIT = 5
     RUNTIME_CONTRACT_FILES = %w[
+      native/CMakeLists.txt
       native/main.cpp
       native/ZuiClipboard.cpp
       native/ZuiClipboard.h

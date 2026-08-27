@@ -6,6 +6,10 @@ require_relative "../lib/zui"
 require_relative "support/client_fixture"
 
 class ClientTest < Minitest::Test
+  def test_native_build_recipe_is_part_of_the_runtime_contract
+    assert_includes Zui::Client::RUNTIME_CONTRACT_FILES, "native/CMakeLists.txt"
+  end
+
   def test_uses_native_user_cache_roots_on_each_platform
     Dir.mktmpdir do |home|
       linux = Zui::Client.new(
