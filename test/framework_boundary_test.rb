@@ -140,6 +140,14 @@ class FrameworkBoundaryTest < Minitest::Test
                     host.index("installBundledFonts(qmlRoot)")
   end
 
+  def test_ios_simulator_capabilities_are_exposed_to_fragile_native_adapters
+    host = File.read(File.join(ROOT, "native", "main.cpp"))
+
+    assert_includes host, "#include <TargetConditionals.h>"
+    assert_includes host, 'QStringLiteral("zuiIosSimulator")'
+    assert_includes host, "TARGET_OS_SIMULATOR"
+  end
+
   def test_mobile_virtual_keyboard_is_linked_and_activated_only_when_tree_shaking_keeps_it
     cmake = File.read(File.join(ROOT, "native", "CMakeLists.txt"))
     host = File.read(File.join(ROOT, "native", "main.cpp"))

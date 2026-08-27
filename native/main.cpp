@@ -36,6 +36,10 @@ using ZuiRuntimeTransport = ZuiProcess;
 #include <malloc/malloc.h>
 #endif
 
+#if defined(Q_OS_IOS)
+#include <TargetConditionals.h>
+#endif
+
 namespace {
 struct BundledFonts {
   QString textFamily;
@@ -189,6 +193,13 @@ int main(int argc, char *argv[]) {
   engine.rootContext()->setContextProperty(QStringLiteral("zuiBundledTextFont"), bundledFonts.textFamily);
   engine.rootContext()->setContextProperty(QStringLiteral("zuiBundledIconFont"), bundledFonts.iconFamily);
   engine.rootContext()->setContextProperty(QStringLiteral("zuiBundledBrandIconFont"), bundledFonts.brandIconFamily);
+  engine.rootContext()->setContextProperty(QStringLiteral("zuiIosSimulator"),
+#if defined(Q_OS_IOS) && TARGET_OS_SIMULATOR
+                                            true
+#else
+                                            false
+#endif
+  );
   engine.rootContext()->setContextProperty(QStringLiteral("zuiMobile"),
 #if defined(ZUI_EMBEDDED_RUNTIME)
                                             true

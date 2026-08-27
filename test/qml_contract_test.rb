@@ -373,6 +373,16 @@ class QmlContractTest < Minitest::Test
     refute_includes renderer, "var currentRevision = bridge ? bridge.revision : 0"
   end
 
+  def test_text_to_speech_initializes_only_after_a_real_command
+    speech = source("Components/Builtins/TextToSpeech.qml")
+
+    assert_includes speech, "property bool nativeRequested: false"
+    assert_includes speech, "active: root.nativeRequested && !zuiIosSimulator"
+    assert_includes speech, "asynchronous: true"
+    assert_includes speech, "onLoaded: root.runPendingCommand()"
+    assert_includes speech, "text_to_speech_simulator_unavailable"
+  end
+
   def test_explicit_native_text_sizes_do_not_evaluate_implicit_size_fallbacks
     renderer = source("ControlNode.qml")
     adapters = %w[Text Label RichText Markdown SelectableText LayoutItemProxy].map do |name|
