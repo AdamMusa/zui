@@ -30,8 +30,8 @@ module Zui
       executable = install_executable(destination)
       library_paths = install_standard_library(destination)
       install_runtime_libraries(destination)
-      install_native_dependencies(destination)
       gems = install_project_gems(project, destination)
+      install_native_dependencies(destination)
       environment = {
         "RUBYLIB" => library_paths,
         "GEM_HOME" => ["gems"],
@@ -109,7 +109,7 @@ module Zui
       library_root = File.join(destination, "lib")
       FileUtils.mkdir_p(library_root)
       binaries = [File.join(destination, "bin", "ruby")]
-      binaries.concat(Dir[File.join(destination, "**", "*.{so,dylib}")])
+      binaries.concat(Dir[File.join(destination, "**", "*.{bundle,so,dylib}")])
       inspected = Set.new
       until binaries.empty?
         binary = binaries.shift

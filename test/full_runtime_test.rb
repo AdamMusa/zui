@@ -30,6 +30,14 @@ class FullRuntimeTest < Minitest::Test
       File.write(File.join(project, "Gemfile"), "source 'https://rubygems.org'\n")
       File.write(File.join(project, "Gemfile.lock"), "GEM\n  specs:\n")
       app_spec = fake_spec(directory, "paint", "1.2.3")
+      native_extension = File.join(
+        directory, "installed-gems", "extensions", "x86_64-linux", "3.3.0", app_spec.full_name
+      )
+      native_dependency = File.join(prefix, "lib", "libpaint.so")
+      FileUtils.mkdir_p(native_extension)
+      File.binwrite(File.join(native_extension, "paint.bundle"), "native-gem-fixture")
+      File.binwrite(native_dependency, "native-dependency-fixture")
+      app_spec.extension_dir = native_extension
       zui_spec = fake_spec(directory, "zui", Zui::VERSION)
       default_spec = fake_spec(directory, "json", "2.0.0", default: true)
       destination = File.join(directory, "runtime")
@@ -46,6 +54,9 @@ class FullRuntimeTest < Minitest::Test
         },
         spec_loader: ->(_project) { [app_spec, zui_spec, default_spec] }
       )
+      runtime.define_singleton_method(:dependencies) do |binary|
+        File.basename(binary) == "paint.bundle" ? [native_dependency] : []
+      end
 
       descriptor = runtime.install(project:, destination:)
 
@@ -58,6 +69,7 @@ class FullRuntimeTest < Minitest::Test
       assert File.file?(File.join(destination, "lib", "libruby.so"))
       assert File.file?(File.join(destination, "gems", "gems", "paint-1.2.3", "lib", "paint.rb"))
       assert File.file?(File.join(destination, "gems", "specifications", "paint-1.2.3.gemspec"))
+      assert File.file?(File.join(destination, "lib", "libpaint.so"))
       refute File.exist?(File.join(destination, "gems", "gems", "zui-#{Zui::VERSION}"))
       refute File.exist?(File.join(destination, "gems", "gems", "json-2.0.0"))
       manifest = JSON.parse(File.read(File.join(destination, "runtime.json")))
