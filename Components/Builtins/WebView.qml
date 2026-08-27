@@ -14,6 +14,14 @@ WebView {
     // Qt's Darwin WebView creates its native settings object during component
     // completion. Eager bindings can call into it while its WKWebView is still
     // null, so preserve platform defaults and defer only explicit overrides.
+    if (Qt.platform.os === "ios") {
+      var changesPlatformDefaults = props.local_storage === false || props.javascript === false
+        || props.allow_file_access === true || props.local_content_file_access === true
+      if (changesPlatformDefaults)
+        renderer.componentError("web_view_settings_unsupported",
+          "Qt 6.8 cannot safely override native WebView settings on iOS", {})
+      return
+    }
     if (props.local_storage !== undefined) settings.localStorageEnabled = props.local_storage !== false
     if (props.javascript !== undefined) settings.javaScriptEnabled = props.javascript !== false
     if (props.allow_file_access !== undefined) settings.allowFileAccess = props.allow_file_access === true

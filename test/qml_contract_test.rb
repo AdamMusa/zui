@@ -185,6 +185,8 @@ class QmlContractTest < Minitest::Test
     assert_includes webview, "function scheduleSynchronize() { Qt.callLater(synchronize) }"
     assert_includes webview, "if (props.local_storage !== undefined)"
     assert_includes webview, "settings.localStorageEnabled = props.local_storage !== false"
+    assert_includes webview, 'if (Qt.platform.os === "ios") {'
+    assert_includes webview, 'renderer.componentError("web_view_settings_unsupported"'
     refute_includes webview, 'settings.localStorageEnabled: renderer.prop('
   end
 
