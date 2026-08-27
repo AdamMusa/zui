@@ -46,15 +46,18 @@ Item {
     volume: Number(root.renderer.prop("volume", 1))
     rate: Number(root.renderer.prop("rate", 0))
     pitch: Number(root.renderer.prop("pitch", 0))
-    locale: String(root.renderer.prop("locale", ""))
+    locale: {
+      var localeName = String(root.renderer.prop("locale", ""))
+      return localeName === "" ? Qt.locale() : Qt.locale(localeName)
+    }
     VoiceSelector.name: String(root.renderer.prop("voice", ""))
     VoiceSelector.gender: root.genderValue()
     VoiceSelector.age: root.ageValue()
-    onStateChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "state", { value: root.stateName(state), native_state: Number(state) })
-    onSayingWord: function(word, id, start, length) { renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "word", { word: word, utterance_id: Number(id), start: Number(start), length: Number(length) }) }
-    onVoiceChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "voice_change", { name: voice.name, gender: Number(voice.gender), age: Number(voice.age), locale: String(voice.locale) })
-    onEngineChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "engines", { current: engine, available: availableEngines() })
-    onErrorOccurred: function(reason, message) { renderer.componentError("text_to_speech_failed", message, { native_code: Number(reason) }) }
+    onStateChanged: root.renderer.bridge.sendEvent(root.renderer.surfaceName, root.renderer.controlId, "state", { value: root.stateName(nativeSpeech.state), native_state: Number(nativeSpeech.state) })
+    onSayingWord: function(word, id, start, length) { root.renderer.bridge.sendEvent(root.renderer.surfaceName, root.renderer.controlId, "word", { word: word, utterance_id: Number(id), start: Number(start), length: Number(length) }) }
+    onVoiceChanged: root.renderer.bridge.sendEvent(root.renderer.surfaceName, root.renderer.controlId, "voice_change", { name: nativeSpeech.voice.name, gender: Number(nativeSpeech.voice.gender), age: Number(nativeSpeech.voice.age), locale: String(nativeSpeech.voice.locale) })
+    onEngineChanged: root.renderer.bridge.sendEvent(root.renderer.surfaceName, root.renderer.controlId, "engines", { current: nativeSpeech.engine, available: nativeSpeech.availableEngines() })
+    onErrorOccurred: function(reason, message) { root.renderer.componentError("text_to_speech_failed", message, { native_code: Number(reason) }) }
   }
   Component.onCompleted: processCommand()
   Connections { target: renderer; function onNodeChanged() { root.processCommand() } }

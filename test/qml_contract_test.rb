@@ -119,6 +119,15 @@ class QmlContractTest < Minitest::Test
     refute_includes positioning, "position.timestamp.toISOString()"
   end
 
+  def test_mobile_text_to_speech_uses_typed_locale_and_qualified_signals
+    speech = source("Components/Builtins/TextToSpeech.qml")
+
+    assert_includes speech, 'localeName === "" ? Qt.locale() : Qt.locale(localeName)'
+    assert_includes speech, "root.stateName(nativeSpeech.state)"
+    assert_includes speech, "nativeSpeech.voice.name"
+    refute_includes speech, 'locale: String(root.renderer.prop("locale", ""))'
+  end
+
   def test_service_uses_one_injected_bidirectional_transport
     qml = source("Service.qml")
     native = source("native/ZuiProcess.cpp")
