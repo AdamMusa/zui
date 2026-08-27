@@ -167,6 +167,30 @@ class FullRuntimeTest < Minitest::Test
     end
   end
 
+  def test_preserves_runtime_library_symlinks_without_duplicate_payloads
+    Dir.mktmpdir do |directory|
+      source = File.join(directory, "source")
+      library = File.join(source, "lib", "libruby.so.3.3")
+      alias_path = File.join(source, "lib", "libruby.so")
+      destination = File.join(directory, "runtime")
+      FileUtils.mkdir_p(File.dirname(library))
+      File.binwrite(library, "ruby-library")
+      File.symlink(File.basename(library), alias_path)
+      runtime = Zui::FullRuntime.new(
+        platform: Zui::Platform.new(os: :linux, arch: :x86_64),
+        rbconfig: { "libdir" => File.dirname(library) }
+      )
+
+      runtime.send(:install_runtime_libraries, destination)
+
+      installed_library = File.join(destination, "lib", File.basename(library))
+      installed_alias = File.join(destination, "lib", File.basename(alias_path))
+      assert_equal "ruby-library", File.binread(installed_library)
+      assert File.symlink?(installed_alias)
+      assert_equal File.basename(library), File.readlink(installed_alias)
+    end
+  end
+
   private
 
   def fake_spec(root, name, version, default: false)

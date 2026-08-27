@@ -99,7 +99,12 @@ module Zui
       patterns.flat_map { |pattern| Dir[pattern] }.uniq.each do |source|
         next unless File.file?(source)
 
-        FileUtils.cp(source, File.join(target, File.basename(source)))
+        installed = File.join(target, File.basename(source))
+        if File.symlink?(source)
+          FileUtils.ln_s(File.readlink(source), installed)
+        else
+          FileUtils.cp(source, installed)
+        end
       end
     end
 
