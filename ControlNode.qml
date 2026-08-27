@@ -112,12 +112,17 @@ Loader {
 
   function findRenderedItemBelow(object, targetId) {
     if (!object || targetId === "") return null
-    if (object !== root && object.controlId !== undefined && String(object.controlId) === targetId)
-      return object.item || object
-    var descendants = object.children || []
-    for (var index = 0; index < descendants.length; index++) {
-      var result = findRenderedItemBelow(descendants[index], targetId)
-      if (result) return result
+    var pending = [object]
+    var visited = []
+    while (pending.length > 0) {
+      var current = pending.pop()
+      if (!current || visited.indexOf(current) >= 0) continue
+      visited.push(current)
+      if (current !== root && current.controlId !== undefined && String(current.controlId) === targetId)
+        return current.item || current
+      var descendants = current.children || []
+      for (var index = descendants.length - 1; index >= 0; index--)
+        pending.push(descendants[index])
     }
     return null
   }

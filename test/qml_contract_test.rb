@@ -145,6 +145,15 @@ class QmlContractTest < Minitest::Test
     refute_includes network, 'onNodeChanged() { root.publish("information") }'
   end
 
+  def test_rendered_item_lookup_is_cycle_safe_on_native_object_trees
+    control_node = source("ControlNode.qml")
+
+    assert_includes control_node, "var pending = [object]"
+    assert_includes control_node, "visited.indexOf(current) >= 0"
+    assert_includes control_node, "pending.push(descendants[index])"
+    refute_includes control_node, "findRenderedItemBelow(descendants[index], targetId)"
+  end
+
   def test_mobile_location_catalog_includes_places_and_geojson
     expected = %w[Category CategoryModel GeoJsonData GeocodeModel Map MapCircle MapCopyrightNotice
                   MapItemGroup MapItemView MapPolygon MapPolyline MapQuickItem MapRectangle MapRoute
