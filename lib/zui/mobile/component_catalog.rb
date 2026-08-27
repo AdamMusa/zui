@@ -92,9 +92,16 @@ module Zui
 
       WEB = { "WebView" => :web_view }.freeze
 
+      TOUCH_INTERACTION = {
+        "TapHandler" => :tap_area, "PointHandler" => :point_handler,
+        "MultiPointTouchArea" => :multi_touch_area, "WheelHandler" => :wheel_area,
+        "DragHandler" => :drag_area, "PinchHandler" => :pinch_area,
+        "HoverHandler" => :hover_area, "DropArea" => :drop_area
+      }.freeze
+
       CORE = QUICK_CONTROLS.merge(QUICK_DIALOGS).merge(QUICK_LAYOUTS).freeze
       ALL = CORE.merge(PERMISSIONS).merge(SENSORS).merge(POSITIONING).merge(LOCATION)
-                .merge(TEXT_TO_SPEECH).merge(WEB).freeze
+                .merge(TEXT_TO_SPEECH).merge(WEB).merge(TOUCH_INTERACTION).freeze
     end
   end
 end

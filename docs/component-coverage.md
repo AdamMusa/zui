@@ -220,6 +220,11 @@ transitions, and animation groups receive Ruby APIs even though they are not vis
 - [x] drop_area
 - [x] pinch_area
 - [x] hover_area
+- [x] tap_area
+- [x] point_handler
+- [x] multi_touch_area
+- [x] wheel_area
+- [x] safe_area
 - [x] selection_rectangle
 - [x] scroll_bar
 - [x] scroll_indicator
