@@ -13,12 +13,13 @@ module Zui
     DESKTOP_APPLICATION_FILES = %w[
       .DS_Store .gitattributes .gitignore Gemfile Gemfile.lock README.md Rakefile config.rb
     ].freeze
+    DESKTOP_APPLICATION_PATHS = %w[vendor/bundle].freeze
 
     attr_reader :platform, :tree_shake_report, :runtime_tree_shake_report, :runtime_mode
 
     def initialize(client: nil, platform: Platform.current, framework_root: FRAMEWORK_ROOT,
                    ruby: RbConfig.ruby, tree_shake: true, release_config: nil, runtime_mode: :lite,
-                   runtime_builder: nil, source_date_epoch: nil)
+                   runtime_builder: nil, gem_spec_loader: nil, source_date_epoch: nil)
       @platform = platform.assert_supported!
       @client = client || Client.new(platform: @platform)
       @framework_root = framework_root
@@ -32,7 +33,10 @@ module Zui
       @runtime_tree_shake_report = nil
       @release_config = release_config
       @runtime_builder = runtime_builder
+      @gem_spec_loader = gem_spec_loader
       @application_runtime = nil
+      @locked_gem_specs = nil
+      @bundled_project_gem_paths = []
       @source_date_epoch = ReproducibleBuild.epoch(source_date_epoch)
       @bundle_config = nil
       @release_asset_paths = []
@@ -50,6 +54,7 @@ module Zui
       @bundle_config = @release_config || load_project_config(project)
       @qt_configuration = QtBundleConfiguration.load(project)
       @release_asset_paths = configured_release_assets(project)
+      prepare_locked_gems(project)
       app_name = name || titleize(File.basename(project))
       destination ||= default_destination(project, app_name)
       destination = File.expand_path(destination)
@@ -163,7 +168,14 @@ module Zui
     def desktop_application_excluded?(relative)
       parts = relative.split(File::SEPARATOR)
       return true if parts.include?(".DS_Store")
-      return true if @release_asset_paths.include?(relative.tr(File::SEPARATOR, "/"))
+      normalized = relative.tr(File::SEPARATOR, "/")
+      return true if @release_asset_paths.include?(normalized)
+      return true if DESKTOP_APPLICATION_PATHS.any? do |path|
+        normalized == path || normalized.start_with?("#{path}/")
+      end
+      return true if @bundled_project_gem_paths.any? do |path|
+        normalized == path || normalized.start_with?("#{path}/")
+      end
       return false unless parts.length == 1
 
       DESKTOP_APPLICATION_EXCLUDES.include?(parts.first) ||
@@ -185,12 +197,34 @@ module Zui
 
     def install_application_runtime(project, destination)
       builder = @runtime_builder || if runtime_mode == :full
-                                      FullRuntime.new(platform:, ruby: @ruby, tree_shake: @tree_shake)
+                                      options = { platform:, ruby: @ruby, tree_shake: @tree_shake }
+                                      if @locked_gem_specs
+                                        options[:spec_loader] = ->(_project) { @locked_gem_specs }
+                                      end
+                                      FullRuntime.new(**options)
                                     else
                                       LiteRuntime.new(platform:)
                                     end
       @application_runtime = builder.install(project:, destination: File.join(destination, "ruby"))
       @runtime_tree_shake_report = builder.tree_shake_report if builder.respond_to?(:tree_shake_report)
+    end
+
+    def prepare_locked_gems(project)
+      return unless runtime_mode == :full
+
+      loader = @gem_spec_loader
+      loader ||= LockedGems.new.method(:specs) unless @runtime_builder
+      return unless loader
+
+      @locked_gem_specs = loader.call(project)
+      @bundled_project_gem_paths = @locked_gem_specs.filter_map do |spec|
+        next if spec.default_gem?
+
+        root = File.expand_path(spec.full_gem_path)
+        next if root == project || !root.start_with?("#{project}#{File::SEPARATOR}")
+
+        root.delete_prefix("#{project}#{File::SEPARATOR}").tr(File::SEPARATOR, "/")
+      end.uniq.sort
     end
 
     def write_linux_launcher(destination, app_name)

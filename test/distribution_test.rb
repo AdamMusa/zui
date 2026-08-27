@@ -8,6 +8,10 @@ require_relative "../lib/zui"
 require_relative "support/client_fixture"
 
 class DistributionTest < Minitest::Test
+  FakeGemSpec = Struct.new(:full_gem_path, :default, keyword_init: true) do
+    def default_gem? = default == true
+  end
+
   FakeRuntimeBuilder = Struct.new(:platform, :engine) do
     def initialize(platform, engine = "mruby") = super
 
@@ -128,6 +132,8 @@ class DistributionTest < Minitest::Test
       File.binwrite(File.join(project, "assets", "icon.ico"), "\x00\x00\x01\x00fixture".b)
       File.binwrite(File.join(project, "assets", "icon.png"), "\x89PNG\r\n\x1a\n".b)
       File.write(File.join(project, "README.md"), "development documentation")
+      FileUtils.mkdir_p(File.join(project, "vendor", "bundle"))
+      File.write(File.join(project, "vendor", "bundle", "cached-gem.rb"), "dependency cache")
       File.write(File.join(project, "config.rb"), <<~RUBY)
         Zui::Dist.configure do
           name "Desktop"
@@ -153,10 +159,32 @@ class DistributionTest < Minitest::Test
       end
       refute File.exist?(File.join(application, "assets", ".DS_Store"))
       refute File.exist?(File.join(application, "README.md"))
+      refute File.exist?(File.join(application, "vendor", "bundle"))
       %w[icon.icns icon.ico icon.png].each do |entry|
         refute File.exist?(File.join(application, "assets", entry))
       end
       assert File.file?(File.join(destination, "Contents", "Resources", "Application.icns"))
+    end
+  end
+
+  def test_full_bundle_does_not_duplicate_locked_project_gem_sources
+    platform = Zui::Platform.new(os: :linux, arch: :x86_64)
+    with_project(platform) do |project, client|
+      gem_root = File.join(project, "vendor", "paint")
+      FileUtils.mkdir_p(File.join(gem_root, "lib"))
+      File.write(File.join(gem_root, "lib", "paint.rb"), "module Paint; end\n")
+      FileUtils.mkdir_p(File.join(project, "vendor", "application-data"))
+      File.write(File.join(project, "vendor", "application-data", "palette.json"), "{}\n")
+      loader = ->(_project) { [FakeGemSpec.new(full_gem_path: gem_root)] }
+      destination = Zui::Distribution.new(
+        client:, platform:, runtime_mode: :full,
+        runtime_builder: FakeRuntimeBuilder.new(platform, "cruby"), gem_spec_loader: loader
+      ).bundle(project)
+
+      application = File.join(destination, "app")
+      refute File.exist?(File.join(application, "vendor", "paint"))
+      assert File.file?(File.join(application, "vendor", "application-data", "palette.json"))
+      assert File.file?(File.join(application, "main.rb"))
     end
   end
 
