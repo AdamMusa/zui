@@ -155,6 +155,13 @@ class QmlContractTest < Minitest::Test
     assert_includes source("Components/Builtins/KeyboardTextField.qml"), "EnterKeyAction.actionId"
   end
 
+  def test_mobile_permissions_can_surface_native_failures
+    %i[bluetooth_permission calendar_permission camera_permission contacts_permission
+       location_permission microphone_permission].each do |component|
+      assert_includes Zui::COMPONENTS.fetch(component).fetch(1), :error
+    end
+  end
+
   def test_mobile_text_to_speech_uses_typed_locale_and_qualified_signals
     speech = source("Components/Builtins/TextToSpeech.qml")
 
