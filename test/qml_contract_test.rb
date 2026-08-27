@@ -170,10 +170,11 @@ class QmlContractTest < Minitest::Test
   def test_badge_implicit_size_does_not_depend_on_its_resolved_size
     badge = source("Components/Builtins/Badge.qml")
 
-    assert_includes badge, "badgeSize * 0.58"
-    assert_includes badge, "estimatedLabelWidth"
+    assert_includes badge, "function labelText()"
+    assert_includes badge, 'Number(renderer.prop("font_size", 12)) * 0.62'
     refute_includes badge, "badgeText.implicitWidth"
     refute_includes badge, "badgeRoot.height * 0.58"
+    refute_includes badge, "readonly property"
   end
 
   def test_mobile_location_catalog_includes_places_and_geojson

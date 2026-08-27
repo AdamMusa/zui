@@ -7,32 +7,30 @@ import "../../Controls" as ZuiControls
 Rectangle {
   required property var renderer
       id: badgeRoot
-      readonly property bool dotMode: renderer.prop("dot", false) === true
-      readonly property real badgeSize: Number(renderer.prop("size", dotMode ? 8 : 20))
-      readonly property real horizontalPad: Number(renderer.prop("padding", 6))
-      readonly property var rawValue: renderer.prop("value", "")
-      readonly property real maximum: Number(renderer.prop("maximum", 99))
-      readonly property real fontPixelSize: Number(renderer.prop("font_size", Math.max(9, badgeSize * 0.58)))
-      readonly property string displayValue: {
-        if (dotMode) return ""
-        var number = Number(rawValue)
-        return rawValue !== "" && !isNaN(number) && number > maximum ? String(maximum) + "+" : String(rawValue)
+      function labelText() {
+        if (renderer.prop("dot", false) === true) return ""
+        var raw = renderer.prop("value", "")
+        var number = Number(raw)
+        var maximum = Number(renderer.prop("maximum", 99))
+        return raw !== "" && !isNaN(number) && number > maximum ? String(maximum) + "+" : String(raw)
       }
-      readonly property real estimatedLabelWidth: displayValue.length * fontPixelSize * 0.62
-      implicitWidth: dotMode ? badgeSize : Math.max(Number(renderer.prop("minimum_width", badgeSize)), Math.ceil(estimatedLabelWidth + horizontalPad * 2))
-      implicitHeight: badgeSize
-      radius: badgeSize / 2
+      implicitWidth: renderer.prop("dot", false) === true
+        ? Number(renderer.prop("size", 8))
+        : Math.max(Number(renderer.prop("minimum_width", 20)), Math.ceil(labelText().length
+          * Number(renderer.prop("font_size", 12)) * 0.62 + Number(renderer.prop("padding", 6)) * 2))
+      implicitHeight: Number(renderer.prop("size", renderer.prop("dot", false) === true ? 8 : 20))
+      radius: Number(renderer.prop("size", renderer.prop("dot", false) === true ? 8 : 20)) / 2
       color: renderer.prop("background", Color.accent)
       Text {
         id: badgeText
         anchors.centerIn: parent
-        visible: !badgeRoot.dotMode
-        text: badgeRoot.displayValue
+        visible: renderer.prop("dot", false) !== true
+        text: badgeRoot.labelText()
         textFormat: Text.PlainText
         color: renderer.prop("foreground", Color.background)
         font.family: renderer.fontFamily
         font.bold: true
-        font.pixelSize: badgeRoot.fontPixelSize
+        font.pixelSize: Number(renderer.prop("font_size", 12))
       }
-      TapHandler { onTapped: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "click", { value: badgeRoot.rawValue }) }
+      TapHandler { onTapped: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "click", { value: renderer.prop("value", "") }) }
     }
