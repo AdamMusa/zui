@@ -112,7 +112,14 @@ frameworks, and `ios/Zui.xcconfig` supplies Xcode build settings. URL schemes an
 belong in `Info.plist.in`, while Apple capabilities belong in `Zui.entitlements`.
 
 `zui mobile --fix` records detected dependency paths in the user's Zui mobile configuration and
-repairs missing Qt and mruby sources. The build commands create lean pinned mobile mruby runtimes,
+repairs missing Qt and mruby sources. It installs and verifies the complete Qt 6.8 mobile add-on
+catalog for the host, iOS, and Android SDKs: multimedia, maps and positioning, sensors, speech,
+WebView, virtual keyboard, Bluetooth/connectivity, OAuth/network authentication, WebSockets,
+WebChannel, charts/graphs, PDF, 3D, animation, state machines, and remote objects. This is a
+development SDK capability set, not an application payload: the QML import scanner and Zui tree
+shaker link and package only modules used by the selected application components.
+
+The build commands create lean pinned mobile mruby runtimes,
 precompile the bundled Ruby source to bytecode, and write products below `dist/ios` and
 `dist/android`. The mruby VM and Qt renderer share one native process; mobile does not invoke the
 desktop `zui run` child-process launcher.

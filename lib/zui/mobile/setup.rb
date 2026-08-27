@@ -12,6 +12,24 @@ module Zui
       BUILD_TOOLS_VERSION = "35.0.1"
       MRUBY_REVISION = "831da26b9021de0369d17b71b5667e2941a1a32d"
       MRUBY_JSON_REVISION = "f99d9428025469f2400f93c53b185f65f963e507"
+      QT_MOBILE_MODULES = %w[
+        qt3d qt5compat qtcharts qtconnectivity qtdatavis3d qtgraphs qtgrpc qtlocation qtlottie
+        qtmultimedia qtnetworkauth qtpdf qtpositioning qtquick3d qtquick3dphysics qtquicktimeline
+        qtremoteobjects qtscxml qtsensors qtspeech qtvirtualkeyboard qtwebchannel qtwebsockets qtwebview
+      ].freeze
+      QT_MODULE_PACKAGES = {
+        "qt3d" => "Qt63DCore", "qt5compat" => "Qt6Core5Compat", "qtcharts" => "Qt6Charts",
+        "qtconnectivity" => "Qt6Bluetooth", "qtdatavis3d" => "Qt6DataVisualization",
+        "qtgraphs" => "Qt6Graphs", "qtgrpc" => "Qt6Grpc", "qtlocation" => "Qt6Location",
+        "qtlottie" => "Qt6BodymovinPrivate", "qtmultimedia" => "Qt6Multimedia",
+        "qtnetworkauth" => "Qt6NetworkAuth", "qtpdf" => "Qt6Pdf",
+        "qtpositioning" => "Qt6Positioning", "qtquick3d" => "Qt6Quick3D",
+        "qtquick3dphysics" => "Qt6Quick3DPhysics", "qtquicktimeline" => "Qt6QuickTimeline",
+        "qtremoteobjects" => "Qt6RemoteObjects", "qtscxml" => "Qt6Scxml",
+        "qtsensors" => "Qt6Sensors", "qtspeech" => "Qt6TextToSpeech",
+        "qtvirtualkeyboard" => "Qt6VirtualKeyboard", "qtwebchannel" => "Qt6WebChannel",
+        "qtwebsockets" => "Qt6WebSockets", "qtwebview" => "Qt6WebView"
+      }.freeze
       PROJECT_TEMPLATE_ROOT = File.expand_path("templates", __dir__)
 
       attr_reader :config_path
@@ -61,7 +79,7 @@ module Zui
         dependencies = detect_dependencies
         repair_android_packages!(dependencies)
         dependencies = detect_dependencies
-        missing = required_keys.reject { |key| present?(dependencies[key]) }
+        missing = required_keys.reject { |key| dependency_ready?(key, dependencies[key]) }
         unless missing.empty?
           labels = missing.map { |key| dependency_label(key) }.join(", ")
           raise ArgumentError, "mobile setup could not find #{labels}; install the platform SDK and rerun `zui mobile --fix`"
@@ -79,7 +97,7 @@ module Zui
           configured?(key, configured) ? configured : detected
         end
         keys = target.to_sym == :ios ? ios_keys : android_keys
-        missing = keys.reject { |key| present?(values[key]) }
+        missing = keys.reject { |key| dependency_ready?(key, values[key]) }
         unless missing.empty?
           labels = missing.map { |key| dependency_label(key) }.join(", ")
           raise ArgumentError, "mobile setup needs #{labels}; run `zui mobile --fix`"
@@ -166,7 +184,21 @@ module Zui
       def configured?(key, value)
         return value.is_a?(String) && !value.empty? if key == "apple_team"
 
+        dependency_ready?(key, value)
+      end
+
+      def dependency_ready?(key, value)
+        return qt_sdk_ready?(value) if %w[qt_host qt_ios qt_android].include?(key.to_s)
+
         present?(value)
+      end
+
+      def qt_sdk_ready?(path)
+        return false unless present?(path)
+
+        QT_MODULE_PACKAGES.values.all? do |package|
+          File.directory?(File.join(path, "lib", "cmake", package))
+        end
       end
 
       def required_keys
@@ -212,7 +244,7 @@ module Zui
       def repair_qt!(dependencies)
         missing = %w[qt_host qt_android]
         missing << "qt_ios" if @host_platform.macos?
-        return if missing.all? { |key| present?(dependencies[key]) }
+        return if missing.all? { |key| qt_sdk_ready?(dependencies[key]) }
 
         python = @environment["PYTHON"] || "python3"
         tools = File.join(@root, "tools")
@@ -222,18 +254,27 @@ module Zui
           pip = File.join(tools, @host_platform.windows? ? "Scripts" : "bin", executable_name("pip"))
           run!([pip, "install", "aqtinstall==3.3.0"], label: "installing the Qt downloader", timeout: 600)
         end
-        qt_root = File.join(@root, "Qt")
+        default_qt_root = File.join(@root, "Qt")
         host = @host_platform.macos? ? %w[mac desktop clang_64] : %w[linux desktop gcc_64]
-        run!([aqt, "install-qt", host[0], host[1], QT_VERSION, host[2], "-O", qt_root],
-             label: "installing the Qt host SDK", timeout: 1_800) unless present?(dependencies["qt_host"])
-        if @host_platform.macos? && !present?(dependencies["qt_ios"])
-          run!([aqt, "install-qt", "mac", "ios", QT_VERSION, "ios", "-O", qt_root],
-               label: "installing the Qt iOS SDK", timeout: 1_800)
+        host_root = qt_root_for(dependencies["qt_host"]) || default_qt_root
+        run!([aqt, "install-qt", host[0], host[1], QT_VERSION, host[2], "-m", *QT_MOBILE_MODULES, "-O", host_root],
+             label: "installing the complete Qt host mobile catalog", timeout: 3_600) unless qt_sdk_ready?(dependencies["qt_host"])
+        if @host_platform.macos? && !qt_sdk_ready?(dependencies["qt_ios"])
+          ios_root = qt_root_for(dependencies["qt_ios"]) || default_qt_root
+          run!([aqt, "install-qt", "mac", "ios", QT_VERSION, "ios", "-m", *QT_MOBILE_MODULES, "-O", ios_root],
+               label: "installing the Qt iOS SDK", timeout: 3_600)
         end
-        unless present?(dependencies["qt_android"])
-          run!([aqt, "install-qt", "all_os", "android", QT_VERSION, "android_arm64_v8a", "-O", qt_root],
-               label: "installing the Qt Android SDK", timeout: 1_800)
+        unless qt_sdk_ready?(dependencies["qt_android"])
+          android_root = qt_root_for(dependencies["qt_android"]) || default_qt_root
+          run!([aqt, "install-qt", "all_os", "android", QT_VERSION, "android_arm64_v8a", "-m", *QT_MOBILE_MODULES, "-O", android_root],
+               label: "installing the Qt Android SDK", timeout: 3_600)
         end
+      end
+
+      def qt_root_for(sdk)
+        return nil unless present?(sdk)
+
+        File.expand_path("../..", sdk)
       end
 
       def repair_android_packages!(dependencies)

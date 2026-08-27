@@ -102,6 +102,10 @@ class MobileSetupTest < Minitest::Test
       assert_equal paths.fetch(:android_ndk), values.fetch("android_ndk")
       assert_equal "TEAM123456", values.fetch("apple_team")
       assert_equal values, JSON.parse(File.read(config))
+      Zui::Mobile::Setup::QT_MODULE_PACKAGES.each_value do |package|
+        assert File.directory?(File.join(paths.fetch(:qt_ios), "lib", "cmake", package))
+        assert File.directory?(File.join(paths.fetch(:qt_android), "lib", "cmake", package))
+      end
     end
   end
 
@@ -141,6 +145,19 @@ class MobileSetupTest < Minitest::Test
     end
   end
 
+  def test_complete_qt_mobile_catalog_has_a_verified_sdk_package_for_every_addon
+    modules = Zui::Mobile::Setup::QT_MOBILE_MODULES
+    packages = Zui::Mobile::Setup::QT_MODULE_PACKAGES
+
+    assert_equal modules.sort, packages.keys.sort
+    assert_includes modules, "qtlocation"
+    assert_includes modules, "qtsensors"
+    assert_includes modules, "qtspeech"
+    assert_includes modules, "qtwebview"
+    assert_includes modules, "qtmultimedia"
+    assert_includes modules, "qtvirtualkeyboard"
+  end
+
   private
 
   def dependency_paths(directory)
@@ -154,6 +171,11 @@ class MobileSetupTest < Minitest::Test
     }
     paths[:android_ndk] = File.join(paths.fetch(:android_sdk), "ndk", Zui::Mobile::Setup::NDK_VERSION)
     paths.each_value { |path| FileUtils.mkdir_p(path) }
+    %i[qt_host qt_ios qt_android].each do |key|
+      Zui::Mobile::Setup::QT_MODULE_PACKAGES.each_value do |package|
+        FileUtils.mkdir_p(File.join(paths.fetch(key), "lib", "cmake", package))
+      end
+    end
     paths
   end
 
