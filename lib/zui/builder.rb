@@ -652,6 +652,16 @@ module Zui
       node
     end
 
+    def text_to_speech(text = UNSET, id: nil, **props, &handler)
+      unless text.equal?(UNSET)
+        props = props.merge(text: text.to_s)
+        props[:auto_speak] = true unless props.key?(:auto_speak)
+      end
+      node = component(:text_to_speech, id:, **props)
+      @application.register_handler(node.id, :state, handler) if handler
+      node
+    end
+
     def animate(node, properties, duration: 200, easing: :in_out_quad, delay: 0)
       transition = Animation.new(duration:, easing:, delay:)
       @application.animate(node, properties, transition)

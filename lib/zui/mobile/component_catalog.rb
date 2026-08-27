@@ -82,8 +82,14 @@ module Zui
         "PluginParameter" => :map
       }.freeze
 
+      TEXT_TO_SPEECH = {
+        "TextToSpeech" => :text_to_speech,
+        "VoiceSelector" => :text_to_speech
+      }.freeze
+
       CORE = QUICK_CONTROLS.merge(QUICK_DIALOGS).merge(QUICK_LAYOUTS).freeze
-      ALL = CORE.merge(PERMISSIONS).merge(SENSORS).merge(POSITIONING).merge(LOCATION).freeze
+      ALL = CORE.merge(PERMISSIONS).merge(SENSORS).merge(POSITIONING).merge(LOCATION)
+                .merge(TEXT_TO_SPEECH).freeze
     end
   end
 end

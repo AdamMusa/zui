@@ -255,6 +255,7 @@ module Zui
     map_marker: [%i[latitude longitude altitude anchor_x anchor_y zoom_level auto_fade_in width height visible], %i[click drag], true],
     map_item_group: [%i[visible], %i[click], true],
     map_item_view: [%i[items latitude_field longitude_field label_field marker_width marker_height marker_color visible], %i[click], false],
+    text_to_speech: [%i[text engine engine_parameters volume rate pitch locale voice voice_gender voice_age command command_revision auto_speak visible], %i[state word voice_change engines error], false],
     dropdown: [%i[label value options foreground background popup_border accent font_family row_height popup_row_height show_label cursor], %i[change hover], false],
     searchable_dropdown: [%i[label value options placeholder empty_text trigger_label foreground background popup_border accent font_family row_height popup_row_height popup_min_height show_label cursor], %i[change hover], false],
     multi_select: [%i[label values options options_command options_command_cwd placeholder empty_text no_selection_text trigger_label show_label foreground background popup_border accent font_family row_height popup_row_height popup_min_height cursor], %i[change hover], false],
