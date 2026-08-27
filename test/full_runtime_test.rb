@@ -6,7 +6,7 @@ require "tmpdir"
 require_relative "../lib/zui"
 
 class FullRuntimeTest < Minitest::Test
-  FakeSpec = Struct.new(:name, :version, :full_gem_path, :extension_dir, :default, keyword_init: true) do
+  FakeSpec = Struct.new(:name, :version, :full_gem_path, :extension_dir, :files, :default, keyword_init: true) do
     def full_name = "#{name}-#{version}"
     def default_gem? = default == true
     def to_ruby = "Gem::Specification.new { |spec| spec.name = #{name.dump}; spec.version = #{version.dump} }\n"
@@ -30,6 +30,8 @@ class FullRuntimeTest < Minitest::Test
       File.write(File.join(project, "Gemfile"), "source 'https://rubygems.org'\n")
       File.write(File.join(project, "Gemfile.lock"), "GEM\n  specs:\n")
       app_spec = fake_spec(directory, "paint", "1.2.3")
+      FileUtils.mkdir_p(File.join(app_spec.full_gem_path, "dist"))
+      File.binwrite(File.join(app_spec.full_gem_path, "dist", "development-build.bin"), "must not ship")
       native_extension = File.join(
         directory, "installed-gems", "extensions", "x86_64-linux", "3.3.0", app_spec.full_name
       )
@@ -68,6 +70,7 @@ class FullRuntimeTest < Minitest::Test
       assert File.file?(File.join(destination, "lib", "ruby", "3.3.0", "x86_64-linux", "json.so"))
       assert File.file?(File.join(destination, "lib", "libruby.so"))
       assert File.file?(File.join(destination, "gems", "gems", "paint-1.2.3", "lib", "paint.rb"))
+      refute File.exist?(File.join(destination, "gems", "gems", "paint-1.2.3", "dist"))
       assert File.file?(File.join(destination, "gems", "specifications", "paint-1.2.3.gemspec"))
       assert File.file?(File.join(destination, "lib", "libpaint.so"))
       refute File.exist?(File.join(destination, "gems", "gems", "zui-#{Zui::VERSION}"))
@@ -135,6 +138,7 @@ class FullRuntimeTest < Minitest::Test
       assert_equal "paint-1.2.3", spec.full_name
       assert_equal gem_root, spec.full_gem_path
       assert_equal ["lib"], spec.require_paths
+      assert_equal ["lib/paint.rb"], spec.files
       assert_includes spec.to_ruby, 'name = "paint"'
     end
   end
@@ -197,6 +201,9 @@ class FullRuntimeTest < Minitest::Test
     path = File.join(root, "installed-gems", "#{name}-#{version}")
     FileUtils.mkdir_p(File.join(path, "lib"))
     File.write(File.join(path, "lib", "#{name.tr('-', '_')}.rb"), "# fixture\n")
-    FakeSpec.new(name:, version:, full_gem_path: path, extension_dir: nil, default:)
+    FakeSpec.new(
+      name:, version:, full_gem_path: path, extension_dir: nil,
+      files: ["lib/#{name.tr('-', '_')}.rb"], default:
+    )
   end
 end

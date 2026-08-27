@@ -6,7 +6,7 @@ module Zui
   class LockedGems
     Spec = Struct.new(
       :name, :version, :full_name, :full_gem_path, :extension_dir, :require_paths,
-      :platform, :extensions, :ruby, :default,
+      :platform, :extensions, :files, :ruby, :default,
       keyword_init: true
     ) do
       def default_gem? = default == true
@@ -41,6 +41,7 @@ module Zui
           require_paths: spec.require_paths,
           platform: spec.platform,
           extensions: spec.extensions,
+          files: spec.files,
           ruby: spec.to_ruby,
           default: spec.default_gem?
         )

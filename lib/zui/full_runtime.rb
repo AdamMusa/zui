@@ -164,11 +164,37 @@ module Zui
           raise ArgumentError, "project gem is not installed: #{spec.full_name}; run `bundle install`"
         end
 
-        FileUtils.cp_r(spec.full_gem_path, File.join(gem_home, "gems", spec.full_name))
+        install_gem_files(spec, File.join(gem_home, "gems", spec.full_name))
         File.write(File.join(gem_home, "specifications", "#{spec.full_name}.gemspec"), spec.to_ruby)
         install_gem_extensions(spec, gem_home)
       end
       specs
+    end
+
+    def install_gem_files(spec, target)
+      files = Array(spec.files).map(&:to_s).reject(&:empty?).uniq.sort
+      if files.empty?
+        raise ArgumentError, "gem #{spec.full_name} has no packaged files; set spec.files in its gemspec"
+      end
+
+      root = File.realpath(spec.full_gem_path)
+      FileUtils.mkdir_p(target)
+      files.each do |relative|
+        source = File.expand_path(relative, root)
+        unless inside?(source, root)
+          raise ArgumentError, "gem #{spec.full_name} has an unsafe packaged path: #{relative.inspect}"
+        end
+        unless File.file?(source)
+          raise ArgumentError, "gem #{spec.full_name} is missing packaged file: #{relative}"
+        end
+        unless inside?(File.realpath(source), root)
+          raise ArgumentError, "gem #{spec.full_name} has a packaged symlink outside its root: #{relative.inspect}"
+        end
+
+        destination = File.join(target, relative)
+        FileUtils.mkdir_p(File.dirname(destination))
+        FileUtils.cp(source, destination, preserve: true)
+      end
     end
 
     def install_gem_extensions(spec, gem_home)

@@ -14,6 +14,8 @@ class SmartHomeProjectGemTest < Minitest::Test
     assert_equal "smart-home-energy-0.1.0", application.full_name
     assert_equal PROJECT, application.full_gem_path
     assert_equal ["lib"], application.require_paths
+    assert_equal ["README.md", "lib/smart_home_energy.rb", "lib/smart_home_energy/version.rb"],
+                 application.files.sort
   end
 
   def test_application_gemspec_contains_only_its_project_library
