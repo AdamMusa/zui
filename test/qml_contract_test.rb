@@ -90,7 +90,7 @@ class QmlContractTest < Minitest::Test
   end
 
   def test_qt_mobile_control_catalog_maps_every_public_type_to_a_native_adapter
-    Zui::Mobile::ComponentCatalog::CORE.each do |qt_type, component|
+    Zui::Mobile::ComponentCatalog::ALL.each do |qt_type, component|
       assert Zui::COMPONENTS.key?(component), "#{qt_type} maps to missing #{component}"
       adapter = component.to_s.split("_").map(&:capitalize).join + ".qml"
       assert File.file?(File.join(ROOT, "Components", "Builtins", adapter)),

@@ -294,3 +294,12 @@ transitions, and animation groups receive Ruby APIs even though they are not vis
 - [x] settings
 - [x] standard_paths
 - [x] clipboard
+
+## Mobile permissions
+
+- [x] bluetooth_permission
+- [x] calendar_permission
+- [x] camera_permission
+- [x] contacts_permission
+- [x] location_permission
+- [x] microphone_permission

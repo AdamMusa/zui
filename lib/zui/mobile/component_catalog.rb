@@ -43,7 +43,17 @@ module Zui
         "LayoutItemProxy" => :layout_item_proxy
       }.freeze
 
+      PERMISSIONS = {
+        "BluetoothPermission" => :bluetooth_permission,
+        "CalendarPermission" => :calendar_permission,
+        "CameraPermission" => :camera_permission,
+        "ContactsPermission" => :contacts_permission,
+        "LocationPermission" => :location_permission,
+        "MicrophonePermission" => :microphone_permission
+      }.freeze
+
       CORE = QUICK_CONTROLS.merge(QUICK_DIALOGS).merge(QUICK_LAYOUTS).freeze
+      ALL = CORE.merge(PERMISSIONS).freeze
     end
   end
 end
