@@ -680,6 +680,16 @@ module Zui
       @application.register_handler(node.id, :load, handler) if handler
       node
     end
+    def web_socket(url = "", id: nil, **props, &handler)
+      node = component(:web_socket, id:, url: url.to_s, **props)
+      @application.register_handler(node.id, :message, handler) if handler
+      node
+    end
+    def web_socket_server(id: nil, **props, &handler)
+      node = component(:web_socket_server, id:, **props)
+      @application.register_handler(node.id, :message, handler) if handler
+      node
+    end
 
     def animate(node, properties, duration: 200, easing: :in_out_quad, delay: 0)
       transition = Animation.new(duration:, easing:, delay:)
