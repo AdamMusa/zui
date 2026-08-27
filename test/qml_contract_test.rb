@@ -167,6 +167,15 @@ class QmlContractTest < Minitest::Test
     refute_includes calendar, 'accessMode: String(root.renderer.prop('
   end
 
+  def test_badge_implicit_size_does_not_depend_on_its_resolved_size
+    badge = source("Components/Builtins/Badge.qml")
+
+    assert_includes badge, "badgeSize * 0.58"
+    assert_includes badge, "estimatedLabelWidth"
+    refute_includes badge, "badgeText.implicitWidth"
+    refute_includes badge, "badgeRoot.height * 0.58"
+  end
+
   def test_mobile_location_catalog_includes_places_and_geojson
     expected = %w[Category CategoryModel GeoJsonData GeocodeModel Map MapCircle MapCopyrightNotice
                   MapItemGroup MapItemView MapPolygon MapPolyline MapQuickItem MapRectangle MapRoute
