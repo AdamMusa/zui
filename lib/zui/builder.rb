@@ -8,7 +8,7 @@ module Zui
       stack scroll rectangle responsive_view aspect_ratio constrained_box fitted_box wrap split_view stack_layout loader flickable focus_scope flipable border_image key_catcher
       page pane frame group_box tabs stack_view swipe_view drawer expansion_panel accordion tool_bar popup dialog
       shader_effect shader_effect_source multi_effect rectangular_shadow opacity_mask blur drop_shadow colorize glow
-      drag_area drop_area pinch_area hover_area capture_session cursor_surface
+      drag_area drop_area pinch_area hover_area capture_session cursor_surface map map_marker map_item_group
     ].freeze
     VALUE_INPUTS = {
       text_field: :text,
@@ -641,6 +641,17 @@ module Zui
       node
     end
 
+    def map_circle(id: nil, **props, &handler) = map_item_component(:map_circle, id:, props:, handler:)
+    def map_rectangle(id: nil, **props, &handler) = map_item_component(:map_rectangle, id:, props:, handler:)
+    def map_polygon(path = [], id: nil, **props, &handler) = map_item_component(:map_polygon, id:, props: props.merge(path: Array(path)), handler:)
+    def map_polyline(path = [], id: nil, **props, &handler) = map_item_component(:map_polyline, id:, props: props.merge(path: Array(path)), handler:)
+    def map_route(path = [], id: nil, **props, &handler) = map_item_component(:map_route, id:, props: props.merge(path: Array(path)), handler:)
+    def map_item_view(items = [], id: nil, **props, &handler)
+      node = component(:map_item_view, id:, items: Array(items), **props)
+      @application.register_handler(node.id, :click, handler) if handler
+      node
+    end
+
     def animate(node, properties, duration: 200, easing: :in_out_quad, delay: 0)
       transition = Animation.new(duration:, easing:, delay:)
       @application.animate(node, properties, transition)
@@ -676,6 +687,12 @@ module Zui
     end
 
     private
+
+    def map_item_component(type, id:, props:, handler:)
+      node = component(type, id:, **props)
+      @application.register_handler(node.id, :click, handler) if handler
+      node
+    end
 
     def node_id(value)
       value.is_a?(Node) ? value.id : value.to_s

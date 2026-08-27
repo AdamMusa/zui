@@ -324,3 +324,15 @@ transitions, and animation groups receive Ruby APIs even though they are not vis
 
 - [x] position_source
 - [x] satellite_source
+
+## Mobile maps
+
+- [x] map
+- [x] map_circle
+- [x] map_rectangle
+- [x] map_polygon
+- [x] map_polyline
+- [x] map_route
+- [x] map_marker
+- [x] map_item_group
+- [x] map_item_view

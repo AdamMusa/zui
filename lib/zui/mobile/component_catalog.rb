@@ -73,8 +73,17 @@ module Zui
         "SatelliteSource" => :satellite_source
       }.freeze
 
+      LOCATION = {
+        "Map" => :map, "MapView" => :map, "MapCircle" => :map_circle,
+        "MapRectangle" => :map_rectangle, "MapPolygon" => :map_polygon,
+        "MapPolyline" => :map_polyline, "MapRoute" => :map_route,
+        "MapQuickItem" => :map_marker, "MapItemGroup" => :map_item_group,
+        "MapItemView" => :map_item_view, "Plugin" => :map,
+        "PluginParameter" => :map
+      }.freeze
+
       CORE = QUICK_CONTROLS.merge(QUICK_DIALOGS).merge(QUICK_LAYOUTS).freeze
-      ALL = CORE.merge(PERMISSIONS).merge(SENSORS).merge(POSITIONING).freeze
+      ALL = CORE.merge(PERMISSIONS).merge(SENSORS).merge(POSITIONING).merge(LOCATION).freeze
     end
   end
 end
