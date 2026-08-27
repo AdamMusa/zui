@@ -33,8 +33,9 @@ Item {
     handledCommandRevision = revision
     var command = String(renderer.prop("command", ""))
     var text = String(renderer.prop("text", ""))
-    if (first && renderer.prop("auto_speak", false) === true && text !== "") command = "say"
-    else if (first && revision <= 0) return
+    var autoSpeak = first && renderer.prop("auto_speak", false) === true && text !== ""
+    if (revision <= 0 && !autoSpeak) return
+    if (autoSpeak) command = "say"
     if (["say", "enqueue", "stop", "pause", "resume"].indexOf(command) < 0) return
     if (zuiIosSimulator) {
       if (!simulatorErrorReported) {
