@@ -259,8 +259,8 @@ target. Desktop releases use a versioned client; iOS and Android embed the rende
 | Android | ARM64 | Embedded native host + mruby | Signed APK | Emulator install and launch verified |
 
 Desktop application bundles do not require Ruby on the destination. The default `--lite` mode embeds Zui's
-versioned mruby runtime. `--full` embeds a private CRuby plus only the non-Zui gems resolved by the
-project's `Gemfile.lock`.
+versioned mruby runtime. `--full` embeds a private CRuby, the runtime-only Zui gem, and only the project
+gems resolved by `Gemfile.lock`.
 
 Unsupported architectures fail explicitly during configuration. Zui never silently compiles Qt,
 uses a system Qt installation, or downloads an asset for a different platform. See the complete
@@ -307,7 +307,7 @@ an explicit error.
 | `zui bundle [DIRECTORY]` | Build the default standalone `--lite` bundle with embedded mruby |
 | `zui bundle --full [DIRECTORY]` | Embed private CRuby and only the gems locked by the project |
 | `zui bundle --name NAME --output PATH` | Override the generated product name and destination |
-| `zui bundle --no-tree-shake` | Retain the complete component and Qt feature catalog for metaprogrammed applications |
+| `zui bundle --no-tree-shake` | Retain the complete component, Qt, and CRuby standard-library catalogs |
 | `zui bundle --dist [DIRECTORY]` | Build release installers from the required project-root `config.rb` |
 | `zui mobile --enable [DIRECTORY]` | Enable mobile development and create the project's Android/iOS configuration |
 | `zui mobile --fix` | Detect, install, and repair mobile build dependencies |
@@ -400,6 +400,30 @@ CRuby behavior or third-party gems. Full bundles require a locked project `Gemfi
 `bundle install` after changing dependencies. Both modes are built for the current target OS and
 architecture, and both use the same project-specific QML/native tree-shaking pass.
 
+Full desktop bundles also derive a deterministic CRuby standard-library closure from literal
+`require`, `require_relative`, and `autoload` calls in production application code and every locked
+gem. Locked gem require paths are installed directly into the private `RUBYLIB`, so the finished app
+does not need Bundler or automatic RubyGems activation. Zui always retains CRuby itself and its full
+encoding/transcoding catalog. It removes debug symbols, build residue, unused standard-library Ruby
+files and extensions, and native dependencies belonging only to removed extensions. The selected
+features and exact byte savings are recorded under `tree_shake.ruby` in `zui-bundle.json`.
+
+Safety takes precedence over size: if production or gem code contains a computed `require` or uses
+RubyGems runtime APIs, Zui records the reason and preserves the complete standard library. A feature
+whose name is computed elsewhere can be declared explicitly with `ruby.stdlib`:
+
+```json
+{
+  "ruby": {
+    "stdlib": ["net/http", "openssl"]
+  }
+}
+```
+
+Configured features must exist in the target CRuby installation. Use `--no-tree-shake` when a
+dynamic dependency set cannot be bounded. The same project, lockfile, target Ruby, configuration,
+and `SOURCE_DATE_EPOCH` produce the same normalized runtime and bundle payload digests.
+
 `zui bundle` statically analyzes every production Ruby source file, including code in conditional
 branches, and retains only the referenced Zui adapters, QML modules, plugins, and native library
 dependency closure. Test, spec, vendor, temporary, and previous distribution directories do not
@@ -436,7 +460,7 @@ Supported feature names are `gif`, `ico`, `jpeg`, `network-reachability`, `svg`,
 An explicitly requested module or plugin must exist in the configured native client; otherwise the
 bundle fails with its exact missing dependency instead of producing an incomplete application.
 
-Use `--no-tree-shake` only when the possible component set cannot be declared.
+Use `--no-tree-shake` only when the possible component, Qt, or CRuby dependency set cannot be declared.
 
 ### Native installers
 

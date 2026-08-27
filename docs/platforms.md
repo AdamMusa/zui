@@ -151,6 +151,14 @@ can declare computed component names plus a Qt Controls `style`, dynamic `featur
 `qml_modules`, and exact `plugins`. Requested native capabilities are validated against the client
 before pruning; `--no-tree-shake` is the explicit fallback for applications whose metaprogramming
 cannot be bounded.
+Full CRuby bundles apply the same closure rule to the Ruby runtime. Literal requires in production
+application files and locked gem runtime files select standard-library Ruby files, native extensions,
+and their linked libraries. CRuby's encoding/transcoding catalog remains complete. The locked gem
+require paths are added directly to the private runtime, while Bundler, automatic RubyGems activation,
+debug symbols, unused standard-library features, and libraries used only by removed extensions are
+omitted. A computed standard-library require can be declared as `ruby.stdlib` in
+`.zui-bundle.json`; an unbounded computed require or RubyGems runtime API use conservatively keeps the
+complete standard library. `--no-tree-shake` disables both the native and CRuby closure passes.
 `zui bundle --dist` adds a native installer layer around this bundle. Release identity and artwork
 come from the required project-root `config.rb`. Linux emits DEB and RPM packages, macOS emits a
 DMG, and Windows emits an Inno Setup executable. Packaging is native to the target operating system,
