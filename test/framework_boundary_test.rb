@@ -117,6 +117,7 @@ class FrameworkBoundaryTest < Minitest::Test
     assert_includes cmake, "INCLUDE_BY_TYPE webview Qt6::QDarwinWebViewPlugin"
     assert_includes host, "QtWebView::initialize();"
     assert_includes host, "ZUI_USES_WEBVIEW"
+    assert_includes host, 'qputenv("QML_DISABLE_DISK_CACHE", QByteArrayLiteral("1"));'
   end
 
   def test_component_and_resource_failures_use_the_framework_error_channel

@@ -94,6 +94,10 @@ int main(int argc, char *argv[]) {
 #if defined(ZUI_EMBEDDED_RUNTIME)
   QElapsedTimer startupTimer;
   startupTimer.start();
+  // Mobile QML is already compiled into the signed application. A persistent
+  // disk cache can otherwise outlive deterministic reinstalls of the same
+  // bundle version and execute an older framework resource.
+  qputenv("QML_DISABLE_DISK_CACHE", QByteArrayLiteral("1"));
 #endif
   QGuiApplication application(argc, argv);
 #if defined(ZUI_USES_WEBVIEW)
