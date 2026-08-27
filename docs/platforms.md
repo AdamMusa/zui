@@ -156,7 +156,9 @@ application files and locked gem runtime files select standard-library Ruby file
 and their linked libraries. CRuby's encoding/transcoding catalog remains complete. The locked gem
 require paths are added directly to the private runtime, while Bundler, automatic RubyGems activation,
 debug symbols, unused standard-library features, and libraries used only by removed extensions are
-omitted. A computed standard-library require can be declared as `ruby.stdlib` in
+omitted. Windows follows the same rule by walking the PE import closure from `ruby.exe`, selected
+standard-library extensions, and locked gem extensions instead of copying every DLL beside the build
+Ruby. A computed standard-library require can be declared as `ruby.stdlib` in
 `.zui-bundle.json`; an unbounded computed require or RubyGems runtime API use conservatively keeps the
 complete standard library. `--no-tree-shake` disables both the native and CRuby closure passes.
 `zui bundle --dist` adds a native installer layer around this bundle. Release identity and artwork
@@ -164,6 +166,12 @@ come from the required project-root `config.rb`. Linux emits DEB and RPM package
 DMG, and Windows emits an Inno Setup executable. Packaging is native to the target operating system,
 validates its icon before bundling, creates artifacts transactionally, and refuses to overwrite an
 existing release file.
+Generated build, package, dependency-cache, and IDE directories are excluded from the application
+payload. Locked local path gems under the project are installed once in the private gem home while
+ordinary project resources in the same parent directory remain application assets.
+Every bundle records its normalized `source_date_epoch` and `payload_sha256`. Native release CI
+builds a full-CRuby installer twice after changing source mtimes and requires exact byte equality for
+DMG, DEB, RPM, and Inno Setup EXE output.
 The current templates require no Ruby installation on the destination. `--lite` is the default and
 uses the pinned, platform-specific mruby runtime; applications with external gem requirements use
 `--full`, which copies private CRuby and only dependencies resolved by `Gemfile.lock`.

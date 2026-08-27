@@ -473,6 +473,16 @@ current operating system:
 | macOS | `.dmg` containing the `.app` and an Applications shortcut |
 | Windows | Inno Setup `.exe` installer |
 
+Desktop release inputs are normalized to `SOURCE_DATE_EPOCH` (or Zui's fixed default), and every
+bundle manifest records that epoch plus a SHA-256 of its payload. Native CI builds the full-CRuby
+installer twice with deliberately different source mtimes and rejects any DMG, DEB, RPM, or EXE that
+is not byte-for-byte identical. Windows installer entries do not store source timestamps.
+
+The desktop application payload excludes generated mobile/desktop build trees, dependency and IDE
+caches, and release output. A locked local path gem is copied only into the private CRuby gem home,
+not duplicated as application source. Qt and CRuby native libraries are retained by dependency
+closure on macOS, Linux, and Windows; unreadable binaries use a conservative retain-all fallback.
+
 Release packaging requires a `config.rb` file in the project root. It is executable Ruby using a
 validated Zui DSL:
 
