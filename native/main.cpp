@@ -103,10 +103,10 @@ int main(int argc, char *argv[]) {
 #if defined(ZUI_USES_VIRTUAL_KEYBOARD)
   qputenv("QT_IM_MODULE", QByteArrayLiteral("qtvirtualkeyboard"));
 #endif
-  QGuiApplication application(argc, argv);
 #if defined(ZUI_USES_WEBVIEW)
   QtWebView::initialize();
 #endif
+  QGuiApplication application(argc, argv);
   QCoreApplication::setApplicationName(QStringLiteral("Zui"));
   QCoreApplication::setOrganizationName(QStringLiteral("Zui"));
 #if defined(ZUI_EMBEDDED_RUNTIME)

@@ -116,6 +116,8 @@ class FrameworkBoundaryTest < Minitest::Test
     assert_includes cmake, "INCLUDE_BY_TYPE sensors Qt6::IOSSensorPlugin"
     assert_includes cmake, "INCLUDE_BY_TYPE webview Qt6::QDarwinWebViewPlugin"
     assert_includes host, "QtWebView::initialize();"
+    assert_operator host.index("QtWebView::initialize();"), :<,
+                    host.index("QGuiApplication application(argc, argv);")
     assert_includes host, "ZUI_USES_WEBVIEW"
     assert_includes host, 'qputenv("QML_DISABLE_DISK_CACHE", QByteArrayLiteral("1"));'
     assert_includes host, 'QStandardPaths::writableLocation(QStandardPaths::CacheLocation)'
