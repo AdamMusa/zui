@@ -112,6 +112,27 @@ class DistributionTest < Minitest::Test
     end
   end
 
+  def test_desktop_bundle_has_a_reproducible_payload_and_timestamp
+    platform = Zui::Platform.new(os: :macos, arch: :arm64)
+    with_project(platform) do |project, client|
+      root = File.dirname(project)
+      first = File.join(root, "First.app")
+      second = File.join(root, "Second.app")
+      epoch = 1_234_567_890
+
+      lite_distribution(client:, platform:, source_date_epoch: epoch).bundle(project, destination: first)
+      File.utime(Time.now, Time.now, File.join(project, "main.rb"))
+      lite_distribution(client:, platform:, source_date_epoch: epoch).bundle(project, destination: second)
+
+      assert_equal Zui::ReproducibleBuild.tree_digest(first), Zui::ReproducibleBuild.tree_digest(second)
+      first_manifest = JSON.parse(File.read(File.join(first, "Contents", "Resources", "zui-bundle.json")))
+      second_manifest = JSON.parse(File.read(File.join(second, "Contents", "Resources", "zui-bundle.json")))
+      assert_equal first_manifest.fetch("payload_sha256"), second_manifest.fetch("payload_sha256")
+      paths = Dir.glob(File.join(first, "**", "*"), File::FNM_DOTMATCH) << first
+      assert paths.all? { |path| File.lstat(path).mtime.to_i == epoch }
+    end
+  end
+
   def test_windows_bundle_has_native_runtime_and_safe_launchers
     platform = Zui::Platform.new(os: :windows, arch: :x86_64)
     with_project(platform) do |project, client|

@@ -18,7 +18,7 @@ module Zui
 
     def initialize(client: nil, platform: Platform.current, framework_root: FRAMEWORK_ROOT,
                    ruby: RbConfig.ruby, tree_shake: true, release_config: nil, runtime_mode: :lite,
-                   runtime_builder: nil)
+                   runtime_builder: nil, source_date_epoch: nil)
       @platform = platform.assert_supported!
       @client = client || Client.new(platform: @platform)
       @framework_root = framework_root
@@ -32,6 +32,7 @@ module Zui
       @release_config = release_config
       @runtime_builder = runtime_builder
       @application_runtime = nil
+      @source_date_epoch = ReproducibleBuild.epoch(source_date_epoch)
     end
 
     def bundle(source, name: nil, destination: nil)
@@ -54,6 +55,7 @@ module Zui
       when :macos then bundle_macos(project, destination, app_name)
       when :windows then bundle_windows(project, destination, app_name)
       end
+      finalize_reproducible_bundle(destination)
       destination
     rescue StandardError
       FileUtils.remove_entry(destination) if created && destination && File.exist?(destination)
@@ -313,6 +315,18 @@ module Zui
         manifest["application_version"] = @release_config.version
       end
       File.write(File.join(directory, "zui-bundle.json"), JSON.pretty_generate(manifest))
+    end
+
+    def finalize_reproducible_bundle(destination)
+      manifest_path = if platform.macos?
+                        File.join(destination, "Contents", "Resources", "zui-bundle.json")
+                      else
+                        File.join(destination, "zui-bundle.json")
+                      end
+      manifest = JSON.parse(File.read(manifest_path))
+      manifest["payload_sha256"] = ReproducibleBuild.tree_digest(destination, exclude: [manifest_path])
+      File.write(manifest_path, "#{JSON.pretty_generate(manifest)}\n")
+      ReproducibleBuild.normalize_tree(destination, epoch: @source_date_epoch)
     end
 
     def install_macos_release_icon(resources)

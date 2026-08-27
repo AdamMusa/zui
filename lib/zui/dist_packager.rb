@@ -25,6 +25,7 @@ module Zui
       end
       @environment = environment.to_h
       @runtime_builder = runtime_builder
+      @source_date_epoch = ReproducibleBuild.epoch(@environment["SOURCE_DATE_EPOCH"])
       @config = nil
       @tree_shake_report = nil
     end
@@ -69,7 +70,7 @@ module Zui
       distribution = Distribution.new(
         client: @client, platform:, framework_root: @framework_root, ruby: @ruby,
         tree_shake: @tree_shake, release_config: config, runtime_mode:,
-        runtime_builder: @runtime_builder
+        runtime_builder: @runtime_builder, source_date_epoch: @source_date_epoch
       )
       distribution.bundle(project, name: config.name, destination:)
       @tree_shake_report = distribution.tree_shake_report
@@ -222,14 +223,18 @@ module Zui
     def build_macos_dmg(bundle, temporary)
       root = File.join(temporary, "dmg-root")
       FileUtils.mkdir_p(root)
-      FileUtils.cp_r(bundle, root)
+      FileUtils.cp_r(bundle, root, preserve: true)
       File.symlink("/Applications", File.join(root, "Applications"))
+      ReproducibleBuild.normalize_tree(root, epoch: @source_date_epoch)
+      hybrid = File.join(temporary, "deterministic-udf.iso")
       output = File.join(temporary, artifact_names.first)
       hdiutil = command!("hdiutil", hint: "install the macOS command-line tools")
-      run!([hdiutil, "create", "-volname", config.name, "-srcfolder", root,
-            "-ov", "-format", "UDZO", output], timeout: 900)
+      run!([hdiutil, "makehybrid", "-udf", "-udf-volume-name", config.name,
+            "-o", hybrid, root], timeout: 900)
+      run!([hdiutil, "convert", hybrid, "-format", "UDZO", "-o", output], timeout: 900)
       raise ArgumentError, "hdiutil did not produce a DMG artifact" unless File.file?(output)
 
+      ReproducibleBuild.normalize_udif_segment_id(output)
       output
     end
 

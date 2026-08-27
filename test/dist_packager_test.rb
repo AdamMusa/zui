@@ -73,18 +73,35 @@ class DistPackagerTest < Minitest::Test
     with_project(Zui::Platform.new(os: :macos, arch: :arm64)) do |project, client, tools|
       write_tool(tools, "hdiutil", <<~SH)
         #!/bin/sh
-        source=""
-        output=""
-        previous=""
-        for argument in "$@"; do
-          [ "$previous" = "-srcfolder" ] && source=$argument
-          previous=$argument
-          output=$argument
-        done
-        test -f "$source/Signal Board.app/Contents/Resources/Application.icns" || exit 20
-        grep -q 'com.example.signal-board' "$source/Signal Board.app/Contents/Info.plist" || exit 21
-        grep -q '<string>1.2.3</string>' "$source/Signal Board.app/Contents/Info.plist" || exit 22
-        printf 'dmg-fixture' > "$output"
+        command=$1
+        shift
+        if [ "$command" = "makehybrid" ]; then
+          output=""
+          previous=""
+          for argument in "$@"; do
+            [ "$previous" = "-o" ] && output=$argument
+            previous=$argument
+            source=$argument
+          done
+          test -f "$source/Signal Board.app/Contents/Resources/Application.icns" || exit 20
+          grep -q 'com.example.signal-board' "$source/Signal Board.app/Contents/Info.plist" || exit 21
+          grep -q '<string>1.2.3</string>' "$source/Signal Board.app/Contents/Info.plist" || exit 22
+          printf 'hybrid-fixture' > "$output"
+        elif [ "$command" = "convert" ]; then
+          source=$1
+          output=""
+          previous=""
+          for argument in "$@"; do
+            [ "$previous" = "-o" ] && output=$argument
+            previous=$argument
+          done
+          test -f "$source" || exit 23
+          /bin/dd if=/dev/zero of="$output" bs=512 count=1 2>/dev/null
+          printf 'koly' | /bin/dd of="$output" bs=1 seek=0 conv=notrunc 2>/dev/null
+          printf 'random-segmentid' | /bin/dd of="$output" bs=1 seek=64 conv=notrunc 2>/dev/null
+        else
+          exit 24
+        fi
       SH
       packager = lite_packager(client:, tools:)
 
@@ -92,7 +109,8 @@ class DistPackagerTest < Minitest::Test
 
       assert_equal 1, artifacts.length
       assert_match(/macos-arm64\.dmg\z/, artifacts.first)
-      assert_equal "dmg-fixture", File.read(artifacts.first)
+      assert_equal "koly", File.binread(artifacts.first, 4)
+      assert_equal "\0" * 16, File.binread(artifacts.first, 16, 64)
     end
   end
 
