@@ -278,6 +278,11 @@ module Zui
           %(set "#{name}=#{value}")
         end
       end
+      variables = @application_runtime.variables.map do |name, value|
+        escaped = value.gsub("%", "%%").gsub('"', '""')
+        %(set "#{name}=#{escaped}")
+      end
+      environment.unshift(*variables)
       environment.unshift(%(set "PATH=%ruby_root%\\bin;%ruby_root%\\lib;%PATH%"))
       <<~CMD.gsub("\n", "\r\n")
         @echo off
@@ -437,6 +442,9 @@ module Zui
         else
           lines << "export #{name}=\"#{value}\""
         end
+      end
+      @application_runtime.variables.each do |name, value|
+        lines << "export #{name}=#{shell_quote(value)}"
       end
       lines << "ruby_command=\"$ruby_root/#{@application_runtime.executable}\""
       lines.join("\n")

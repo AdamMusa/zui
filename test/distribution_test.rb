@@ -29,7 +29,8 @@ class DistributionTest < Minitest::Test
           "RUBYLIB" => ["lib/ruby/3.3.0"],
           "GEM_HOME" => ["gems"],
           "GEM_PATH" => ["gems"]
-        } : {}
+        } : {},
+        variables: engine == "cruby" ? { "RUBYOPT" => "--disable-gems" } : {}
       ).write(destination)
     end
   end
@@ -231,6 +232,7 @@ class DistributionTest < Minitest::Test
       assert_includes launcher, 'ruby_root="$bundle_dir/runtime/ruby"'
       assert_includes launcher, 'ruby_command="$ruby_root/bin/ruby"'
       assert_includes launcher, 'export GEM_HOME="${ruby_root}/gems"'
+      assert_includes launcher, "export RUBYOPT='--disable-gems'"
       refute_includes launcher, "command -v ruby"
       assert File.file?(File.join(destination, "runtime", "ruby", "runtime.json"))
       refute File.exist?(File.join(destination, "runtime", "lib"))
@@ -250,6 +252,7 @@ class DistributionTest < Minitest::Test
       assert_includes launcher, "%ruby_root%\\bin\\ruby.exe"
       assert_includes launcher, "runtime\\native\\bin\\zui-host.exe"
       assert_includes launcher, "--ruby"
+      assert_includes launcher, 'set "RUBYOPT=--disable-gems"'
       refute File.exist?(File.join(destination, "run.rb"))
       refute_match(/^ruby /, launcher)
     end
