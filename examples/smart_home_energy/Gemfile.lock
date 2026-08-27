@@ -3,12 +3,6 @@ PATH
   specs:
     zui (0.0.10)
 
-PATH
-  remote: .
-  specs:
-    smart-home-energy (0.1.0)
-      zui (~> 0.0.10)
-
 GEM
   remote: https://rubygems.org/
   specs:
@@ -20,11 +14,9 @@ PLATFORMS
   x86_64-linux
 
 DEPENDENCIES
-  smart-home-energy!
   zui!
 
 CHECKSUMS
-  smart-home-energy (0.1.0)
   zui (0.0.10)
 
 BUNDLED WITH

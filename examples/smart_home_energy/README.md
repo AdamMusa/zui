@@ -12,6 +12,7 @@ bundle exec zui run main.rb
 bundle exec zui bundle --full
 ```
 
-Smart Home is a local application gem that depends on the local Zui gem. A full bundle installs both
-locked gems into its private CRuby runtime. The Zui gem is reduced to its runtime Ruby files while
-the native host and tree-shaken QML framework are packaged separately without duplicate sources.
+Smart Home remains an application project rather than a gem. Its Gemfile locks the local Zui gem as
+the only project dependency. A full bundle keeps the application sources and assets separate, installs
+only the runtime-pruned Zui gem into private CRuby, and packages the native host and tree-shaken QML
+framework without duplicate sources.
