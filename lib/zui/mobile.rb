@@ -86,6 +86,8 @@ module Zui
       BUILTIN_CRUBY_GEMS = %w[bundler json zui].freeze
       IOS_PLATFORM = Platform.new(os: :ios, arch: :arm64).freeze
 
+      attr_reader :runtime_tree_shake_report
+
       def initialize(project:, qt_ios: nil, qt_host: nil, mruby_root: nil, mruby_json: nil,
                      cruby_source_root: nil, cruby_build_root: nil, runtime_mode: :lite,
                      output: nil, simulator: nil, device: nil, team: nil,
@@ -281,6 +283,7 @@ module Zui
         end
         copy_cruby_standard_library(stage)
         gems = copy_project_gems(stage)
+        shake_cruby_standard_library(stage)
         @out.puts("Bundling the embedded CRuby runtime with #{gems.size} locked project gems...")
       end
 
@@ -309,6 +312,11 @@ module Zui
       end
 
       def finalize_stage(stage, config, framework_manifest:)
+        runtime_metadata = if @runtime_tree_shake_report
+                             { "cruby_tree_shake" => @runtime_tree_shake_report.to_h }
+                           else
+                             {}
+                           end
         Mobile.finalize_payload(
           root: stage, platform: :ios, runtime: @runtime_mode,
           source_date_epoch: @source_date_epoch,
@@ -318,7 +326,7 @@ module Zui
             "application_version" => config.version,
             "deployment_target" => @deployment_target,
             "zui_payload_sha256" => framework_manifest.fetch("payload_sha256")
-          }
+          }.merge(runtime_metadata)
         )
       end
 
@@ -425,11 +433,51 @@ module Zui
         digest << JSON.generate(manifest)
         Dir.glob(File.join(root, "**", "*"), File::FNM_DOTMATCH).sort.each do |path|
           next unless File.file?(path)
+          next if path == File.join(root, "gems.json")
 
           digest << path.delete_prefix("#{root}#{File::SEPARATOR}") << "\0"
           digest << Digest::SHA256.file(path).digest
         end
         digest.hexdigest
+      end
+
+      def shake_cruby_standard_library(stage)
+        root = File.join(stage, "cruby")
+        config = QtBundleConfiguration.load(@project)
+        @runtime_tree_shake_report = RubyRuntimeShaker.new(
+          project: @project,
+          runtime: root,
+          load_paths: %w[stdlib/generated stdlib/source],
+          configured_features: (config.ruby_stdlib + ["rbconfig"]).uniq,
+          additional_sources: [File.join(stage, "app.rb")]
+        ).shake!
+        ensure_cruby_load_paths(root)
+
+        manifest_path = File.join(root, "gems.json")
+        manifest = JSON.parse(File.read(manifest_path))
+        manifest["tree_shake"] = @runtime_tree_shake_report.to_h
+        manifest.delete("digest")
+        manifest["digest"] = mobile_gem_digest(root, manifest)
+        File.write(manifest_path, "#{JSON.pretty_generate(manifest)}\n")
+        @out.puts(
+          if @runtime_tree_shake_report.tree_shaken?
+            "Tree-shaken mobile CRuby standard library: " \
+              "#{(@runtime_tree_shake_report.saved_bytes / 1_000_000.0).round(1)} MB removed"
+          else
+            "Preserving the complete mobile CRuby standard library: " \
+              "#{@runtime_tree_shake_report.fallback}"
+          end
+        )
+      end
+
+      def ensure_cruby_load_paths(root)
+        %w[stdlib/generated stdlib/source].each do |relative|
+          directory = File.join(root, relative)
+          FileUtils.mkdir_p(directory)
+          next if Dir.children(directory).any?
+
+          File.write(File.join(directory, "zui-runtime.keep"), "deterministic empty load path\n")
+        end
       end
 
       def create_icon_catalog(stage, icon)

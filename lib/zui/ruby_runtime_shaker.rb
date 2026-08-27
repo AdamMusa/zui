@@ -33,11 +33,12 @@ module Zui
       end
     end
 
-    def initialize(project:, runtime:, load_paths:, configured_features: [])
+    def initialize(project:, runtime:, load_paths:, configured_features: [], additional_sources: [])
       @project = File.expand_path(project)
       @runtime = File.expand_path(runtime)
       @load_paths = Array(load_paths).map { |path| File.expand_path(path, @runtime) }.uniq
       @configured_features = Array(configured_features).map(&:to_s).uniq.sort
+      @additional_sources = Array(additional_sources).map { |path| File.expand_path(path) }.uniq.sort
     end
 
     def shake!
@@ -120,8 +121,11 @@ module Zui
         first = relative.split(File::SEPARATOR).first
         !EXCLUDED_SOURCE_DIRECTORIES.include?(first) && relative != "config.rb"
       end
-      gems = Dir.glob(File.join(@runtime, "gems", "gems", "*", "**", "*.rb"))
-      (project + gems).uniq.sort
+      gems = [
+        Dir.glob(File.join(@runtime, "gems", "gems", "*", "**", "*.rb")),
+        Dir.glob(File.join(@runtime, "gems", "*", "**", "*.rb"))
+      ].flatten
+      (project + gems + @additional_sources.select { |path| File.file?(path) }).uniq.sort
     end
 
     def analyze_sources(paths)

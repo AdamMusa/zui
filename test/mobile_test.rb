@@ -233,7 +233,7 @@ class MobileTest < Minitest::Test
       %w[version.rb common.rb ext.rb ext/generator/state.rb].each do |relative|
         refute File.exist?(File.join(stage, "cruby", "stdlib", "generated", "json", relative))
       end
-      assert_equal "module Paint; def self.label = 'Paint ready'; end\n",
+      assert_equal "require 'uri'\nmodule Paint; def self.label = 'Paint ready'; end\n",
                    File.read(File.join(stage, "cruby", "gems", "paint-1.2.3", "lib", "paint.rb"))
       assert File.file?(File.join(stage, "cruby", "specifications", "paint-1.2.3.gemspec"))
       refute File.exist?(File.join(stage, "cruby", "gems", "paint-1.2.3", "dist"))
@@ -242,6 +242,10 @@ class MobileTest < Minitest::Test
       assert_match(/\A[0-9a-f]{64}\z/, gem_manifest.fetch("digest"))
       assert_equal %w[stdlib/generated stdlib/source], gem_manifest.fetch("standard_library_paths")
       assert_equal ["gems/paint-1.2.3/lib"], gem_manifest.dig("gems", 0, "load_paths")
+      assert_nil gem_manifest.dig("tree_shake", "fallback")
+      assert_includes gem_manifest.dig("tree_shake", "features"), "uri"
+      refute File.exist?(File.join(stage, "cruby", "stdlib", "source", "net", "http.rb"))
+      assert builder.runtime_tree_shake_report.tree_shaken?
       arguments = command.calls.fetch(0).fetch(0)
       assert_includes arguments, "-DZUI_EMBEDDED_CRUBY=ON"
       assert_includes arguments, "-DZUI_CRUBY_SOURCE_ROOT=#{cruby.fetch(:source)}"
@@ -397,6 +401,7 @@ class MobileTest < Minitest::Test
     files = {
       File.join(source, "include", "ruby.h") => "ruby",
       File.join(source, "lib", "uri.rb") => "uri support",
+      File.join(source, "lib", "net", "http.rb") => "unused http support",
       File.join(build, "libruby.4.0-static.a") => "runtime",
       File.join(build, "rbconfig.rb") => "target rbconfig",
       File.join(build, "ext", "json", "generator", "generator.a") => "generator",
@@ -425,7 +430,7 @@ class MobileTest < Minitest::Test
     root = File.join(directory, "installed-gems", "#{name}-#{version}")
     FileUtils.mkdir_p([File.join(root, "lib"), File.join(root, "dist")])
     File.write(File.join(root, "lib", "#{name.tr('-', '_')}.rb"),
-               "module Paint; def self.label = 'Paint ready'; end\n")
+               "require 'uri'\nmodule Paint; def self.label = 'Paint ready'; end\n")
     File.write(File.join(root, "dist", "development.bin"), "must not ship")
     MobileGemSpec.new(
       name:, version:, full_gem_path: root, require_paths: ["lib"],

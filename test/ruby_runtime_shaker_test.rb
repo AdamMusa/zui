@@ -38,6 +38,23 @@ class RubyRuntimeShakerTest < Minitest::Test
     end
   end
 
+  def test_analyzes_additional_generated_application_sources
+    with_runtime do |project, runtime, load_paths|
+      write_project(project, "module Application; end")
+      generated = File.join(File.dirname(project), "generated-app.rb")
+      File.write(generated, "require 'json'\n")
+
+      report = Zui::RubyRuntimeShaker.new(
+        project:, runtime:, load_paths:, additional_sources: [generated]
+      ).shake!
+
+      assert report.tree_shaken?
+      assert_includes report.features, "json"
+      assert File.file?(File.join(load_paths.first, "json.rb"))
+      refute File.exist?(File.join(load_paths.first, "unused.rb"))
+    end
+  end
+
   def test_falls_back_for_dynamic_requires
     with_runtime do |project, runtime, load_paths|
       write_project(project, "feature = 'json'\nrequire feature")
