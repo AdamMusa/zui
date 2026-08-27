@@ -68,8 +68,13 @@ module Zui
         "TiltSensor" => :tilt_sensor
       }.freeze
 
+      POSITIONING = {
+        "PositionSource" => :position_source,
+        "SatelliteSource" => :satellite_source
+      }.freeze
+
       CORE = QUICK_CONTROLS.merge(QUICK_DIALOGS).merge(QUICK_LAYOUTS).freeze
-      ALL = CORE.merge(PERMISSIONS).merge(SENSORS).freeze
+      ALL = CORE.merge(PERMISSIONS).merge(SENSORS).merge(POSITIONING).freeze
     end
   end
 end

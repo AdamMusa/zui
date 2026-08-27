@@ -629,6 +629,18 @@ module Zui
       end
     end
 
+    def position_source(id: nil, **props, &handler)
+      node = component(:position_source, id:, **props)
+      @application.register_handler(node.id, :position, handler) if handler
+      node
+    end
+
+    def satellite_source(id: nil, **props, &handler)
+      node = component(:satellite_source, id:, **props)
+      @application.register_handler(node.id, :in_view, handler) if handler
+      node
+    end
+
     def animate(node, properties, duration: 200, easing: :in_out_quad, delay: 0)
       transition = Animation.new(duration:, easing:, delay:)
       @application.animate(node, properties, transition)

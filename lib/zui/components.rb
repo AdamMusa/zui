@@ -244,6 +244,8 @@ module Zui
     proximity_sensor: [%i[active always_on data_rate skip_duplicates axes_orientation_mode user_orientation refresh_revision visible], %i[reading active_change busy_change error], false],
     rotation_sensor: [%i[active always_on data_rate skip_duplicates axes_orientation_mode user_orientation refresh_revision visible], %i[reading active_change busy_change error], false],
     tilt_sensor: [%i[active always_on data_rate skip_duplicates axes_orientation_mode user_orientation refresh_revision visible], %i[reading active_change busy_change error], false],
+    position_source: [%i[active update_interval preferred_methods name refresh_revision visible], %i[position active_change methods_change error], false],
+    satellite_source: [%i[active update_interval name refresh_revision visible], %i[in_view in_use active_change error], false],
     dropdown: [%i[label value options foreground background popup_border accent font_family row_height popup_row_height show_label cursor], %i[change hover], false],
     searchable_dropdown: [%i[label value options placeholder empty_text trigger_label foreground background popup_border accent font_family row_height popup_row_height popup_min_height show_label cursor], %i[change hover], false],
     multi_select: [%i[label values options options_command options_command_cwd placeholder empty_text no_selection_text trigger_label show_label foreground background popup_border accent font_family row_height popup_row_height popup_min_height cursor], %i[change hover], false],

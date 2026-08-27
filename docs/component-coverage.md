@@ -319,3 +319,8 @@ transitions, and animation groups receive Ruby APIs even though they are not vis
 - [x] proximity_sensor
 - [x] rotation_sensor
 - [x] tilt_sensor
+
+## Mobile positioning
+
+- [x] position_source
+- [x] satellite_source
