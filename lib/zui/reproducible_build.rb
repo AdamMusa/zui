@@ -17,6 +17,9 @@ module Zui
     UDF_LOGICAL_VOLUME_INTEGRITY_DESCRIPTOR = 9
     UDF_FILE_SET_DESCRIPTOR = 256
     UDF_FILE_ENTRY = 261
+    ZIP_LOCAL_HEADER = 0x04034b50
+    ZIP_CENTRAL_HEADER = 0x02014b50
+    ZIP_END_OF_CENTRAL_DIRECTORY = 0x06054b50
 
     module_function
 
@@ -58,6 +61,47 @@ module Zui
         digest << "\0"
       end
       digest.hexdigest
+    end
+
+    def normalize_zip(path, epoch: DEFAULT_EPOCH)
+      path = File.expand_path(path)
+      contents = File.binread(path)
+      entries = read_zip_entries(contents)
+      dos_time, dos_date = zip_timestamp(epoch)
+      local_records = +"".b
+      central_records = +"".b
+
+      entries.sort_by { |entry| entry.fetch(:name) }.each do |entry|
+        offset = local_records.bytesize
+        flags = entry.fetch(:flags) & ~0x0008
+        name = entry.fetch(:name)
+        local_records << [
+          ZIP_LOCAL_HEADER, entry.fetch(:version_needed), flags, entry.fetch(:method), dos_time, dos_date,
+          entry.fetch(:crc), entry.fetch(:compressed_size), entry.fetch(:uncompressed_size), name.bytesize, 0
+        ].pack("VvvvvvVVVvv")
+        local_records << name << entry.fetch(:compressed_data)
+        central_records << [
+          ZIP_CENTRAL_HEADER, entry.fetch(:version_made), entry.fetch(:version_needed), flags,
+          entry.fetch(:method), dos_time, dos_date, entry.fetch(:crc), entry.fetch(:compressed_size),
+          entry.fetch(:uncompressed_size), name.bytesize, 0, 0, 0, entry.fetch(:internal_attributes),
+          entry.fetch(:external_attributes), offset
+        ].pack("VvvvvvvVVVvvvvvVV")
+        central_records << name
+      end
+
+      central_offset = local_records.bytesize
+      count = entries.length
+      output = local_records << central_records
+      output << [
+        ZIP_END_OF_CENTRAL_DIRECTORY, 0, 0, count, count, central_records.bytesize, central_offset, 0
+      ].pack("VvvvvVVv")
+      temporary = "#{path}.zui-normalize-#{Process.pid}"
+      File.binwrite(temporary, output)
+      File.chmod(0o644, temporary)
+      File.rename(temporary, path)
+      path
+    ensure
+      FileUtils.rm_f(temporary) if defined?(temporary)
     end
 
     def normalize_udif_segment_id(path)
@@ -138,6 +182,80 @@ module Zui
       paths.reject! { |path| %w[. ..].include?(File.basename(path)) }
       paths << root
       paths
+    end
+
+    def read_zip_entries(contents)
+      end_offset = contents.rindex([ZIP_END_OF_CENTRAL_DIRECTORY].pack("V"))
+      raise ArgumentError, "invalid ZIP archive: end of central directory not found" unless end_offset
+
+      end_record = contents.byteslice(end_offset, 22)
+      raise ArgumentError, "invalid ZIP archive: truncated end of central directory" unless end_record&.bytesize == 22
+
+      signature, disk, central_disk, disk_entries, entries, central_size, central_offset, comment_size =
+        end_record.unpack("VvvvvVVv")
+      unless signature == ZIP_END_OF_CENTRAL_DIRECTORY && disk.zero? && central_disk.zero? &&
+             disk_entries == entries && comment_size == contents.bytesize - end_offset - 22
+        raise ArgumentError, "unsupported multi-disk or malformed ZIP archive"
+      end
+      if entries == 0xffff || central_size == 0xffff_ffff || central_offset == 0xffff_ffff
+        raise ArgumentError, "ZIP64 archives are not supported for deterministic mobile packaging"
+      end
+      unless central_offset + central_size == end_offset
+        raise ArgumentError, "invalid ZIP archive: central directory boundary mismatch"
+      end
+
+      cursor = central_offset
+      Array.new(entries) do
+        header = contents.byteslice(cursor, 46)
+        raise ArgumentError, "invalid ZIP archive: truncated central directory" unless header&.bytesize == 46
+
+        values = header.unpack("VvvvvvvVVVvvvvvVV")
+        raise ArgumentError, "invalid ZIP archive: central directory signature mismatch" unless values.fetch(0) == ZIP_CENTRAL_HEADER
+
+        version_made, version_needed, flags, method = values.values_at(1, 2, 3, 4)
+        crc, compressed_size, uncompressed_size = values.values_at(7, 8, 9)
+        name_size, extra_size, entry_comment_size = values.values_at(10, 11, 12)
+        disk_start, internal_attributes, external_attributes, local_offset = values.values_at(13, 14, 15, 16)
+        if disk_start != 0 || compressed_size == 0xffff_ffff || uncompressed_size == 0xffff_ffff ||
+           local_offset == 0xffff_ffff
+          raise ArgumentError, "ZIP64 and multi-disk entries are not supported for deterministic mobile packaging"
+        end
+        raise ArgumentError, "encrypted ZIP entries are not supported for mobile packaging" unless (flags & 0x0001).zero?
+
+        name = contents.byteslice(cursor + 46, name_size)
+        raise ArgumentError, "invalid ZIP archive: truncated entry name" unless name&.bytesize == name_size
+        local = contents.byteslice(local_offset, 30)
+        raise ArgumentError, "invalid ZIP archive: truncated local header" unless local&.bytesize == 30
+
+        local_values = local.unpack("VvvvvvVVVvv")
+        unless local_values.fetch(0) == ZIP_LOCAL_HEADER && local_values.fetch(3) == method
+          raise ArgumentError, "invalid ZIP archive: local header mismatch for #{name.inspect}"
+        end
+        local_name_size, local_extra_size = local_values.values_at(9, 10)
+        local_name = contents.byteslice(local_offset + 30, local_name_size)
+        raise ArgumentError, "invalid ZIP archive: local entry name mismatch" unless local_name == name
+
+        data_offset = local_offset + 30 + local_name_size + local_extra_size
+        compressed_data = contents.byteslice(data_offset, compressed_size)
+        unless compressed_data&.bytesize == compressed_size
+          raise ArgumentError, "invalid ZIP archive: truncated entry data for #{name.inspect}"
+        end
+        cursor += 46 + name_size + extra_size + entry_comment_size
+        {
+          name:, version_made:, version_needed:, flags:, method:, crc:, compressed_size:,
+          uncompressed_size:, internal_attributes:, external_attributes:, compressed_data:
+        }
+      end.tap do
+        raise ArgumentError, "invalid ZIP archive: central directory size mismatch" unless cursor == end_offset
+      end
+    end
+
+    def zip_timestamp(value)
+      time = Time.at(epoch(value)).utc
+      year = [[time.year, 1980].max, 2107].min
+      dos_time = (time.hour << 11) | (time.min << 5) | (time.sec / 2)
+      dos_date = ((year - 1980) << 9) | (time.month << 5) | time.day
+      [dos_time, dos_date]
     end
     private_class_method :tree_paths
 

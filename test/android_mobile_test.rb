@@ -143,6 +143,7 @@ class AndroidMobileTest < Minitest::Test
       refute File.exist?(stale)
       assert_equal Zui::ReproducibleBuild::DEFAULT_EPOCH.to_s,
                    calls.fetch(0).fetch(1).dig(:env, "SOURCE_DATE_EPOCH")
+      assert_equal "1", calls.fetch(0).fetch(1).dig(:env, "ZERO_AR_DATE")
       assert_includes arguments, "-DZUI_ANDROID_PROJECT_DIR=#{File.join(project, 'android')}"
       assert_includes arguments, "-DZUI_FRAMEWORK_ROOT=#{framework}"
     end

@@ -356,6 +356,7 @@ module Zui
         apk = File.join(build, "android-build", "zui-host.apk")
         raise ArgumentError, "Android build did not produce #{apk}" unless File.file?(apk)
 
+        ReproducibleBuild.normalize_zip(apk, epoch: @source_date_epoch)
         apk
       end
 
@@ -408,7 +409,7 @@ module Zui
       end
 
       def reproducible_environment
-        { "SOURCE_DATE_EPOCH" => @source_date_epoch.to_s }
+        { "SOURCE_DATE_EPOCH" => @source_date_epoch.to_s, "ZERO_AR_DATE" => "1" }
       end
 
       def adb

@@ -81,6 +81,30 @@ class ReproducibleBuildTest < Minitest::Test
     end
   end
 
+  def test_normalizes_zip_order_timestamps_and_metadata_without_recompressing_entries
+    Dir.mktmpdir do |directory|
+      first = fake_zip(
+        File.join(directory, "first.apk"), [["res/b.txt", "beta"], ["assets/a.txt", "alpha"]],
+        dos_time: 0x1111, dos_date: 0x2222, extra: "first"
+      )
+      second = fake_zip(
+        File.join(directory, "second.apk"), [["assets/a.txt", "alpha"], ["res/b.txt", "beta"]],
+        dos_time: 0x3333, dos_date: 0x4444, extra: "second"
+      )
+      refute_equal File.binread(first), File.binread(second)
+
+      Zui::ReproducibleBuild.normalize_zip(first, epoch: 1_700_000_000)
+      Zui::ReproducibleBuild.normalize_zip(second, epoch: 1_700_000_000)
+
+      assert_equal File.binread(first), File.binread(second)
+      archive = File.binread(first)
+      name_size = archive.byteslice(26, 2).unpack1("v")
+      assert_equal "assets/a.txt", archive.byteslice(30, name_size)
+      assert_equal "alpha", archive.byteslice(30 + name_size, 5)
+      assert_equal 0o644, File.stat(first).mode & 0o777
+    end
+  end
+
   private
 
   def fake_udif(path, identifier)
@@ -88,6 +112,30 @@ class ReproducibleBuildTest < Minitest::Test
     footer[0, 4] = "koly"
     footer[64, 16] = identifier
     File.binwrite(path, footer)
+    path
+  end
+
+  def fake_zip(path, entries, dos_time:, dos_date:, extra:)
+    local = +"".b
+    central = +"".b
+    entries.each do |name, contents|
+      name = name.b
+      contents = contents.b
+      offset = local.bytesize
+      crc = Zlib.crc32(contents)
+      local << [0x04034b50, 20, 0, 0, dos_time, dos_date, crc, contents.bytesize,
+                contents.bytesize, name.bytesize, extra.bytesize].pack("VvvvvvVVVvv")
+      local << name << extra << contents
+      central << [0x02014b50, 0x0314, 20, 0, 0, dos_time, dos_date, crc, contents.bytesize,
+                  contents.bytesize, name.bytesize, extra.bytesize, 0, 0, 0, 0o100644 << 16,
+                  offset].pack("VvvvvvvVVVvvvvvVV")
+      central << name << extra
+    end
+    central_offset = local.bytesize
+    archive = local << central
+    archive << [0x06054b50, 0, 0, entries.length, entries.length, central.bytesize,
+                central_offset, 0].pack("VvvvvVVv")
+    File.binwrite(path, archive)
     path
   end
 
