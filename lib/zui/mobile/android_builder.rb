@@ -11,6 +11,8 @@ module Zui
       DEFAULT_API = 28
       DEFAULT_TARGET_API = 35
       DEFAULT_NDK_VERSION = "27.0.12077973"
+      DEFAULT_BUILD_TOOLS_VERSION = "35.0.1"
+      DEFAULT_CMAKE_VERSION = "3.22.1"
       ANDROID_PLATFORM = Platform.new(os: :android, arch: :arm64).freeze
 
       def initialize(project:, qt_android: nil, qt_host: nil, android_sdk: nil, android_ndk: nil,
@@ -78,8 +80,6 @@ module Zui
 
         preferred = File.join(@android_sdk, "ndk", DEFAULT_NDK_VERSION)
         return preferred if File.directory?(preferred)
-
-        Dir[File.join(@android_sdk, "ndk", "*")].select { |path| File.directory?(path) }.sort.last
       end
 
       def validate!
@@ -293,6 +293,7 @@ module Zui
         validate_file!(configuration, "Zui Android mruby build configuration")
         run!([RbConfig.ruby, "minirake"], label: "building Android mruby", chdir: @mruby_root,
              env: {
+               "SOURCE_DATE_EPOCH" => @source_date_epoch.to_s,
                "MRUBY_CONFIG" => configuration,
                "ZUI_ANDROID_NDK" => @android_ndk,
                "ZUI_ANDROID_ABI" => @abi,
@@ -309,13 +310,14 @@ module Zui
         bytecode = File.join(stage, "app.mrb")
         compiler = File.join(@mruby_root, "build", "host", "bin", "mrbc")
         @out.puts("Precompiling the mobile Ruby application...")
-        run!([compiler, "-o#{bytecode}", source],
+        run!([compiler, "-o#{bytecode}", source], env: reproducible_environment,
              label: "precompiling the Ruby application", timeout: 120)
         raise ArgumentError, "mrbc did not produce #{bytecode}" unless File.file?(bytecode)
       end
 
       def configure_native(config, bundle_id, stage, build_name)
         build = File.join(@output, "build")
+        FileUtils.rm_rf(build)
         FileUtils.mkdir_p(build)
         @out.puts("Generating the native Android application...")
         run!([
@@ -331,13 +333,13 @@ module Zui
           "-DZUI_ANDROID_PACKAGE_SOURCE_DIR=#{File.join(stage, 'android')}",
           "-DZUI_ANDROID_PROJECT_DIR=#{File.join(@project, 'android')}",
           "-DZUI_ANDROID_MIN_SDK=#{@api}", "-DZUI_ANDROID_TARGET_SDK=#{@target_api}"
-        ], label: "generating the Android build", timeout: 300)
+        ], label: "generating the Android build", env: reproducible_environment, timeout: 300)
         build
       end
 
       def build_apk(build)
         @out.puts("Building the Android APK...")
-        run!([cmake, "--build", build, "--target", "apk", "--parallel"],
+        run!([cmake, "--build", build, "--target", "apk", "--parallel"], env: reproducible_environment,
              label: "building the Android APK", timeout: 1_800, max_output_bytes: 64_000_000)
         apk = File.join(build, "android-build", "zui-host.apk")
         raise ArgumentError, "Android build did not produce #{apk}" unless File.file?(apk)
@@ -352,6 +354,7 @@ module Zui
         name = config.name.downcase.gsub(/[^a-z0-9]+/, "-").gsub(/\A-|\z/, "")
         aligned = File.join(@output, "#{name}-aligned.apk")
         signed = File.join(@output, "#{name}-#{@abi}.apk")
+        FileUtils.rm_f([aligned, signed])
         run!([File.join(tools, "zipalign"), "-f", "4", unsigned_apk, aligned],
              label: "aligning the Android APK", timeout: 120)
         run!([
@@ -366,25 +369,34 @@ module Zui
       end
 
       def android_build_tools
-        versions = Dir[File.join(@android_sdk, "build-tools", "*")].select do |path|
-          File.executable?(File.join(path, "apksigner")) && File.executable?(File.join(path, "zipalign"))
+        path = File.join(@android_sdk, "build-tools", DEFAULT_BUILD_TOOLS_VERSION)
+        tools = %w[apksigner zipalign].map { |name| File.join(path, executable_name(name)) }
+        unless tools.all? { |tool| File.executable?(tool) }
+          raise ArgumentError,
+                "Android SDK build tools #{DEFAULT_BUILD_TOOLS_VERSION} were not found; " \
+                "run `zui mobile --fix`"
         end
-        path = versions.max_by do |entry|
-          File.basename(entry).split(".").map { |part| part[/\d+/, 0].to_i }
-        end
-        raise ArgumentError, "Android SDK build tools with apksigner and zipalign were not found" unless path
 
         path
       end
 
       def ninja
-        candidates = Dir[File.join(@android_sdk, "cmake", "*", "bin", executable_name("ninja"))]
-        candidates.sort.last || executable_name("ninja")
+        pinned_cmake_tool("ninja")
       end
 
       def cmake
-        candidate = Dir[File.join(@android_sdk, "cmake", "*", "bin", executable_name("cmake"))].sort.last
-        candidate || executable_name("cmake")
+        pinned_cmake_tool("cmake")
+      end
+
+      def pinned_cmake_tool(name)
+        path = File.join(@android_sdk, "cmake", DEFAULT_CMAKE_VERSION, "bin", executable_name(name))
+        return path if File.executable?(path)
+
+        raise ArgumentError, "Android SDK CMake #{DEFAULT_CMAKE_VERSION} is missing #{name}; run `zui mobile --fix`"
+      end
+
+      def reproducible_environment
+        { "SOURCE_DATE_EPOCH" => @source_date_epoch.to_s }
       end
 
       def adb

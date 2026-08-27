@@ -103,6 +103,19 @@ class AndroidMobileTest < Minitest::Test
     end
   end
 
+  def test_android_defaults_do_not_fall_forward_to_an_unpinned_ndk
+    Dir.mktmpdir do |directory|
+      sdk = File.join(directory, "android-sdk")
+      FileUtils.mkdir_p(File.join(sdk, "ndk", "99.0.0"))
+      builder = Zui::Mobile::AndroidBuilder.new(
+        project: directory, android_sdk: sdk, environment: {},
+        host_platform: Zui::Platform.new(os: :macos, arch: :arm64)
+      )
+
+      assert_nil builder.instance_variable_get(:@android_ndk)
+    end
+  end
+
   def test_android_configuration_exposes_the_project_native_hook
     Dir.mktmpdir do |directory|
       project = File.join(directory, "project")
@@ -117,11 +130,17 @@ class AndroidMobileTest < Minitest::Test
       builder = create_builder(
         project, dependencies, command:, output: File.join(directory, "build")
       )
+      stale = File.join(directory, "build", "build", "stale.txt")
+      FileUtils.mkdir_p(File.dirname(stale))
+      File.write(stale, "stale build state")
       config = Zui::Dist.load(project:, platform: Zui::Mobile::AndroidBuilder::ANDROID_PLATFORM)
 
       builder.send(:configure_native, config, "dev.zui.touch_test", File.join(directory, "stage"), "runtime")
 
       arguments = calls.fetch(0).fetch(0)
+      refute File.exist?(stale)
+      assert_equal Zui::ReproducibleBuild::DEFAULT_EPOCH.to_s,
+                   calls.fetch(0).fetch(1).dig(:env, "SOURCE_DATE_EPOCH")
       assert_includes arguments, "-DZUI_ANDROID_PROJECT_DIR=#{File.join(project, 'android')}"
     end
   end
@@ -176,11 +195,16 @@ class AndroidMobileTest < Minitest::Test
       File.join(qt_android, "src", "android", "templates", "build.gradle"),
       File.join(android_sdk, "platform-tools", "adb"),
       File.join(android_ndk, "build", "cmake", "android.toolchain.cmake"),
+      File.join(android_sdk, "cmake", "3.22.1", "bin", "cmake"),
+      File.join(android_sdk, "cmake", "3.22.1", "bin", "ninja"),
+      File.join(android_sdk, "build-tools", "35.0.1", "apksigner"),
+      File.join(android_sdk, "build-tools", "35.0.1", "zipalign"),
       File.join(mruby, "minirake"), File.join(mruby_json, "mrbgem.rake")
     ]
     files.each do |path|
       FileUtils.mkdir_p(File.dirname(path))
       File.write(path, "")
+      FileUtils.chmod(0o755, path)
     end
     File.write(
       File.join(qt_android, "src", "android", "templates", "build.gradle"),

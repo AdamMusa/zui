@@ -144,6 +144,9 @@ class MobileTest < Minitest::Test
       File.write(launch_screen, "custom launch screen")
       command = XcodeConfigureCommand.new
       output = File.join(directory, "build")
+      stale = File.join(output, "xcode", "stale.txt")
+      FileUtils.mkdir_p(File.dirname(stale))
+      File.write(stale, "stale build state")
       builder = Zui::Mobile::IOSBuilder.new(
         project:, output:, framework_root: ROOT, command:,
         qt_ios: dependencies.fetch(:qt_ios), qt_host: dependencies.fetch(:qt_host),
@@ -155,6 +158,9 @@ class MobileTest < Minitest::Test
       builder.send(:configure_xcode, config, File.join(output, "stage"), "runtime", sdk: "/Simulator.sdk")
 
       arguments = command.calls.fetch(0).fetch(0)
+      refute File.exist?(stale)
+      assert_equal Zui::ReproducibleBuild::DEFAULT_EPOCH.to_s,
+                   command.calls.fetch(0).fetch(1).dig(:env, "SOURCE_DATE_EPOCH")
       assert_includes arguments, "-DCMAKE_OSX_SYSROOT=/Simulator.sdk"
       assert_includes arguments, "-DCMAKE_OSX_ARCHITECTURES=x86_64"
       assert_includes arguments, "-DZUI_IOS_INFO_PLIST=#{File.join(project, 'ios', 'Info.plist.in')}"

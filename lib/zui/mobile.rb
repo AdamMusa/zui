@@ -473,6 +473,8 @@ module Zui
         validate_file!(configuration, "Zui iOS mruby build configuration")
         run!([RbConfig.ruby, "minirake"], label: "building mruby", chdir: @mruby_root,
              env: {
+               "SOURCE_DATE_EPOCH" => @source_date_epoch.to_s,
+               "ZERO_AR_DATE" => "1",
                "MRUBY_CONFIG" => configuration,
                "ZUI_IOS_SDK" => sdk,
                "ZUI_IOS_ARCH" => @architecture,
@@ -492,12 +494,14 @@ module Zui
         bytecode = File.join(stage, "app.mrb")
         compiler = File.join(@mruby_root, "build", "host", "bin", "mrbc")
         @out.puts("Precompiling the mobile Ruby application...")
-        run!([compiler, "-o#{bytecode}", source], label: "precompiling the Ruby application", timeout: 120)
+        run!([compiler, "-o#{bytecode}", source], label: "precompiling the Ruby application",
+             env: reproducible_environment, timeout: 120)
         raise ArgumentError, "mrbc did not produce #{bytecode}" unless File.file?(bytecode)
       end
 
       def configure_xcode(config, stage, build_name, sdk:)
         build = File.join(@output, "xcode")
+        FileUtils.rm_rf(build)
         FileUtils.mkdir_p(build)
         @out.puts("Generating the native iOS application...")
         arguments = [
@@ -533,7 +537,7 @@ module Zui
         arguments << "-DZUI_IOS_INFO_PLIST=#{info_plist}" if File.file?(info_plist)
         arguments << "-DZUI_IOS_ENTITLEMENTS=#{entitlements}" if File.file?(entitlements)
         arguments << "-DZUI_IOS_PROJECT_DIR=#{ios_project}" if File.directory?(ios_project)
-        run!(arguments, label: "generating the Xcode project", timeout: 240)
+        run!(arguments, label: "generating the Xcode project", env: reproducible_environment, timeout: 240)
         project = File.join(build, "zui-host.xcodeproj")
         raise ArgumentError, "Qt did not generate #{project}" unless File.directory?(project)
 
@@ -617,8 +621,12 @@ module Zui
           arguments << "CODE_SIGNING_ALLOWED=NO"
         end
         arguments << "build"
-        run!(arguments, label: "building the iOS application", timeout: 1_800,
+        run!(arguments, label: "building the iOS application", env: reproducible_environment, timeout: 1_800,
              max_output_bytes: 64_000_000)
+      end
+
+      def reproducible_environment
+        { "SOURCE_DATE_EPOCH" => @source_date_epoch.to_s, "ZERO_AR_DATE" => "1" }
       end
 
       def install_and_launch(app, bundle_id, destination)
