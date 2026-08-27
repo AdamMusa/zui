@@ -241,6 +241,9 @@ module Zui
       hdiutil = command!("hdiutil", hint: "install the macOS command-line tools")
       run!([hdiutil, "makehybrid", "-udf", "-udf-volume-name", config.name,
             "-o", hybrid, root], timeout: 900)
+      ReproducibleBuild.normalize_udf(
+        hybrid, epoch: @source_date_epoch, volume_id: "#{config.identifier}\0#{config.version}"
+      )
       run!([hdiutil, "convert", hybrid, "-format", "UDZO", "-o", output], timeout: 900)
       raise ArgumentError, "hdiutil did not produce a DMG artifact" unless File.file?(output)
 

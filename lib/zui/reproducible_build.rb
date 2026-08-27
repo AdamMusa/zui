@@ -12,6 +12,11 @@ module Zui
     UDIF_FOOTER_SIZE = 512
     UDIF_SEGMENT_ID_OFFSET = 64
     UDIF_SEGMENT_ID_SIZE = 16
+    UDF_BLOCK_SIZE = 2048
+    UDF_PRIMARY_VOLUME_DESCRIPTOR = 1
+    UDF_LOGICAL_VOLUME_INTEGRITY_DESCRIPTOR = 9
+    UDF_FILE_SET_DESCRIPTOR = 256
+    UDF_FILE_ENTRY = 261
 
     module_function
 
@@ -69,6 +74,28 @@ module Zui
       path
     end
 
+    def normalize_udf(path, epoch: DEFAULT_EPOCH, volume_id: "zui")
+      timestamp = udf_timestamp(epoch)
+      volume_token = Digest::SHA256.hexdigest(volume_id.to_s)[0, 8].upcase
+      File.open(path, "r+b") do |file|
+        blocks = file.size / UDF_BLOCK_SIZE
+        blocks.times do |index|
+          file.seek(index * UDF_BLOCK_SIZE)
+          block = file.read(UDF_BLOCK_SIZE)
+          next unless block&.bytesize == UDF_BLOCK_SIZE
+          next unless valid_udf_descriptor_tag?(block)
+
+          changed = normalize_udf_descriptor(block, timestamp, volume_token)
+          next unless changed
+
+          update_udf_descriptor_tag(block)
+          file.seek(index * UDF_BLOCK_SIZE)
+          file.write(block)
+        end
+      end
+      path
+    end
+
     def tar_gzip(output, root:, entries:, epoch: DEFAULT_EPOCH, prefix: "", include_symlinks: true)
       output = File.expand_path(output)
       root = File.expand_path(root)
@@ -113,6 +140,68 @@ module Zui
       paths
     end
     private_class_method :tree_paths
+
+    def normalize_udf_descriptor(block, timestamp, volume_token)
+      case block.unpack1("v")
+      when UDF_PRIMARY_VOLUME_DESCRIPTOR
+        block[73, 8] = volume_token
+        block[376, 12] = timestamp
+      when UDF_LOGICAL_VOLUME_INTEGRITY_DESCRIPTOR, UDF_FILE_SET_DESCRIPTOR
+        block[16, 12] = timestamp
+      when UDF_FILE_ENTRY
+        block[96, 12] = timestamp
+        marker = block.index("\0*UDF Mac VolumeInfo".b)
+        if marker
+          block[marker + 34, 12] = timestamp
+          block[marker + 46, 12] = timestamp
+        end
+      else
+        return false
+      end
+      true
+    end
+    private_class_method :normalize_udf_descriptor
+
+    def valid_udf_descriptor_tag?(block)
+      return false unless [2, 3].include?(block.byteslice(2, 2).unpack1("v"))
+
+      length = block.byteslice(10, 2).unpack1("v")
+      return false if length > UDF_BLOCK_SIZE - 16
+      return false unless udf_crc16(block.byteslice(16, length)) == block.byteslice(8, 2).unpack1("v")
+
+      checksum = block.byteslice(0, 16).bytes.each_with_index.sum do |byte, index|
+        index == 4 ? 0 : byte
+      end & 0xff
+      checksum == block.getbyte(4)
+    end
+    private_class_method :valid_udf_descriptor_tag?
+
+    def update_udf_descriptor_tag(block)
+      length = block.byteslice(10, 2).unpack1("v")
+      raise ArgumentError, "invalid UDF descriptor CRC length: #{length}" if length > UDF_BLOCK_SIZE - 16
+
+      block[8, 2] = [udf_crc16(block.byteslice(16, length))].pack("v")
+      block.setbyte(4, 0)
+      checksum = block.byteslice(0, 16).bytes.sum & 0xff
+      block.setbyte(4, checksum)
+    end
+    private_class_method :update_udf_descriptor_tag
+
+    def udf_crc16(data)
+      data.each_byte.reduce(0) do |crc, byte|
+        crc ^= byte << 8
+        8.times { crc = (crc & 0x8000).zero? ? (crc << 1) : ((crc << 1) ^ 0x1021) }
+        crc & 0xffff
+      end
+    end
+    private_class_method :udf_crc16
+
+    def udf_timestamp(epoch)
+      time = Time.at(self.epoch(epoch)).utc
+      [0x1000, time.year].pack("vv") +
+        [time.month, time.day, time.hour, time.min, time.sec, 0, 0, 0].pack("C8")
+    end
+    private_class_method :udf_timestamp
 
     def add_tar_entry(archive, root, path, timestamp, prefix, include_symlinks)
       relative = path.delete_prefix("#{root}#{File::SEPARATOR}").tr(File::SEPARATOR, "/")
