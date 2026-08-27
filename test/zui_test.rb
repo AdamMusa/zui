@@ -1103,6 +1103,8 @@ class ZuiTest < Minitest::Test
     render = messages(output).last
 
     assert_equal "Sparkline.qml", render.dig("components", "custom_sparkline", "qml")
+    assert_equal false, render.dig("components", "custom_sparkline", "built_in")
+    assert_equal true, render.dig("components", "text", "built_in")
     assert_equal [1, 3, 2], render.dig("surfaces", "main", "children", 0, "props", "values")
   end
 

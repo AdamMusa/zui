@@ -117,7 +117,8 @@ Item {
       if (!/^[A-Z][A-Za-z0-9]*\.qml$/.test(String(definition.qml || "")))
         return reject("component registry adapter rejected: " + name + "/" + String(definition.qml || ""))
       if (!Array.isArray(definition.properties) || !Array.isArray(definition.events)
-          || !plainObject(definition.property_map || {}) || !plainObject(definition.event_map || {}))
+          || !plainObject(definition.property_map || {}) || !plainObject(definition.event_map || {})
+          || typeof definition.built_in !== "boolean")
         return reject("component registry schema rejected: " + name)
       var propertyMap = ({})
       for (var p = 0; p < definition.properties.length; p++) {
@@ -133,7 +134,8 @@ Item {
         propertyMap: definition.property_map || {},
         eventMap: definition.event_map || {},
         container: definition.container === true,
-        autoBind: definition.auto_bind !== false
+        autoBind: definition.auto_bind !== false,
+        builtIn: definition.built_in === true
       }
     }
     componentDefinitions = validated

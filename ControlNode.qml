@@ -28,21 +28,14 @@ Loader {
     return bridge ? bridge.nodeFor(controlId) : null
   }
 
-  readonly property bool builtIn: ["text", "label", "rich_text", "markdown", "selectable_text", "icon", "tooltip", "button", "round_button", "tool_button", "delay_button", "row", "column", "container", "image", "vector_image", "model_view_3d", "font_loader", "text_metrics", "animated_image", "video", "audio", "avatar", "badge", "chip", "spacer",
-    "grid", "row_layout", "column_layout", "grid_layout", "flow", "center", "card", "border_overlay", "responsive_view", "aspect_ratio", "constrained_box", "fitted_box", "wrap", "split_view", "stack_layout", "layout_item_proxy", "loader", "flickable", "focus_scope", "flipable", "border_image", "window", "application_window",
-    "stack", "scroll", "rectangle", "page", "pane", "frame", "group_box", "tabs", "tab_bar", "tab_button", "page_indicator", "stack_view", "swipe_view", "drawer", "navigation_rail", "breadcrumb", "pagination", "expansion_panel", "accordion", "tool_bar", "tool_separator", "menu", "menu_item", "menu_separator", "menu_bar", "context_menu", "popup", "dialog", "alert_dialog", "message_dialog", "bottom_sheet", "modal_sheet", "snackbar", "banner", "toast", "busy_indicator", "progress_ring", "skeleton", "item_delegate", "check_delegate", "radio_delegate", "switch_delegate", "swipe_delegate", "grid_view", "table_view", "tree_view", "action_button", "bar_icon_button", "bar_indicator", "toggle", "checkbox", "radio_button", "radio_group", "toggle_switch", "text_field",
-    "number_field", "text_area", "search_field", "password_field", "slider", "range_slider", "dial", "spin_box", "double_spin_box", "color_picker", "date_picker", "time_picker", "file_picker", "folder_picker", "font_picker", "dialog_button_box", "action", "action_group", "dropdown", "multi_select", "button_group", "progress", "line_chart", "area_chart", "bar_chart", "separator", "divider",
-    "section_header", "searchable_dropdown", "confirm_dialog", "panel_hero", "optical_glyph",
-    "cursor_surface", "widget_button", "list_view", "key_catcher", "canvas", "shape", "line", "path", "circle", "gradient", "shader_effect", "shader_effect_source", "multi_effect", "rectangular_shadow", "opacity_mask", "blur", "drop_shadow", "colorize", "glow", "particle_system",
-    "data_table", "horizontal_header", "vertical_header", "table_view_delegate", "tree_view_delegate", "horizontal_header_delegate", "vertical_header_delegate", "reorderable_list", "carousel", "calendar", "month_grid", "week_number_column", "day_of_week_row", "tumbler",
-    "stacked_bar_chart", "pie_chart", "donut_chart", "scatter_chart", "bubble_chart", "radar_chart", "heatmap", "sparkline", "gauge", "radial_gauge", "histogram", "candlestick_chart", "legend",
-    "drag_area", "drop_area", "pinch_area", "hover_area", "selection_rectangle", "scroll_bar", "scroll_indicator",
-    "animation", "number_animation", "color_animation", "rotation_animation", "vector_animation", "path_animation", "property_animation", "pause_animation", "script_action", "property_action", "parallel_animation", "sequential_animation", "spring_animation", "smoothed_animation", "anchor_animation", "parent_animation", "opacity_animator", "rotation_animator", "scale_animator", "x_animator", "y_animator", "uniform_animator", "frame_animation", "animation_controller", "behavior", "transition", "state", "state_group", "property_changes", "anchor_changes", "parent_change", "timer",
-    "media_player", "video_output", "sound_effect", "camera", "capture_session", "image_capture", "media_recorder", "audio_input", "audio_output", "media_devices", "screen_capture", "window_capture",
-    "list_model", "delegate_model", "delegate_model_group", "sort_filter_proxy_model", "folder_list_model", "settings", "standard_paths", "clipboard"].indexOf(node ? node.type : "") >= 0
-  readonly property bool structuralContainer: ["row", "column", "container", "grid", "row_layout",
-    "column_layout", "grid_layout", "flow", "center", "card", "stack", "scroll", "rectangle", "responsive_view", "aspect_ratio", "constrained_box", "fitted_box", "wrap", "split_view", "stack_layout", "loader", "flickable", "focus_scope", "flipable", "border_image", "key_catcher", "shader_effect", "shader_effect_source", "multi_effect", "rectangular_shadow", "opacity_mask", "blur", "drop_shadow", "colorize", "glow", "drag_area", "drop_area", "pinch_area", "hover_area", "capture_session"]
-    .indexOf(node ? node.type : "") >= 0
+  readonly property bool builtIn: {
+    var definition = nativeDefinition()
+    return definition ? definition.builtIn === true : false
+  }
+  readonly property bool structuralContainer: {
+    var definition = nativeDefinition()
+    return definition ? definition.container === true : false
+  }
   property string loadedAdapterKey: ""
   property string lastComponentErrorKey: ""
 

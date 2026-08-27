@@ -2,9 +2,9 @@
 
 module Zui
   class Component
-    attr_reader :name, :qml, :properties, :events, :property_map, :event_map, :container, :auto_bind
+    attr_reader :name, :qml, :properties, :events, :property_map, :event_map, :container, :auto_bind, :built_in
 
-    def initialize(name:, qml:, properties:, events:, property_map:, event_map:, container:, auto_bind:)
+    def initialize(name:, qml:, properties:, events:, property_map:, event_map:, container:, auto_bind:, built_in:)
       @name = name
       @qml = qml
       @properties = properties
@@ -13,6 +13,7 @@ module Zui
       @event_map = event_map
       @container = container
       @auto_bind = auto_bind
+      @built_in = built_in
     end
 
     def to_h
@@ -23,7 +24,8 @@ module Zui
         "property_map" => property_map.transform_keys(&:to_s).transform_values(&:to_s),
         "event_map" => event_map.transform_keys(&:to_s).transform_values(&:to_s),
         "container" => container,
-        "auto_bind" => auto_bind
+        "auto_bind" => auto_bind,
+        "built_in" => built_in
       }
     end
   end
@@ -48,7 +50,8 @@ module Zui
       @components = {}
     end
 
-    def register(name, qml:, properties: [], events: [], property_map: {}, event_map: {}, container: false, auto_bind: true)
+    def register(name, qml:, properties: [], events: [], property_map: {}, event_map: {}, container: false,
+                 auto_bind: true, built_in: false)
       key = name.to_sym
       raise ArgumentError, "component already registered: #{key}" if @components.key?(key)
       raise ArgumentError, "invalid component name: #{name.inspect}" unless NAME.match?(key.to_s)
@@ -74,7 +77,8 @@ module Zui
         property_map: normalized_property_map.freeze,
         event_map: normalized_event_map.freeze,
         container: !!container,
-        auto_bind: !!auto_bind
+        auto_bind: !!auto_bind,
+        built_in: !!built_in
       )
     end
 
@@ -96,7 +100,7 @@ module Zui
         copy.register(component.name, qml: component.qml, properties: component.properties,
                        events: component.events, property_map: component.property_map,
                        event_map: component.event_map, container: component.container,
-                       auto_bind: component.auto_bind)
+                       auto_bind: component.auto_bind, built_in: component.built_in)
       end
       copy
     end

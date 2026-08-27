@@ -24,7 +24,8 @@ class QmlContractTest < Minitest::Test
   end
 
   def assert_dynamic_component_route(renderer, component)
-    assert_match(/readonly property bool builtIn: \[.*"#{Regexp.escape(component)}"/m, renderer)
+    assert_equal true, Zui::DEFAULT_COMPONENTS.protocol_schema.dig(component, "built_in")
+    assert_includes renderer, "definition.builtIn === true"
     assert_includes renderer, "builtInSource(node.type)"
     assert_includes renderer, "sourceComponent: null"
   end
@@ -37,6 +38,8 @@ class QmlContractTest < Minitest::Test
     assert_includes router, "sourceComponent: null"
     assert_includes router, "function builtInSource(typeName)"
     assert_includes router, "builtInSource(node.type)"
+    assert_includes router, "definition.builtIn === true"
+    refute_includes router, 'readonly property bool builtIn: ['
 
     Zui::COMPONENTS.each_key do |component_name|
       name = component_name.to_s.split("_").map(&:capitalize).join
@@ -478,7 +481,7 @@ class QmlContractTest < Minitest::Test
     host = source("Components/Builtins/ModelView3d.qml")
     model = source("Components/Builtins/Support/ModelView3dScene.qml")
 
-    assert_includes renderer, '"model_view_3d"'
+    assert_equal true, Zui::DEFAULT_COMPONENTS.protocol_schema.dig("model_view_3d", "built_in")
     assert_includes renderer, "builtInSource(node.type)"
     refute_includes renderer, "id: modelView3dComponent"
     assert_includes host, 'Qt.resolvedUrl("Support/ModelView3dScene.qml")'

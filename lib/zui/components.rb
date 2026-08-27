@@ -307,6 +307,6 @@ module Zui
   DEFAULT_COMPONENTS = ComponentRegistry.new
   COMPONENTS.each do |name, (properties, events, container)|
     adapter = name.to_s.split("_").map(&:capitalize).join + ".qml"
-    DEFAULT_COMPONENTS.register(name, qml: adapter, properties:, events:, container:)
+    DEFAULT_COMPONENTS.register(name, qml: adapter, properties:, events:, container:, built_in: true)
   end
 end
