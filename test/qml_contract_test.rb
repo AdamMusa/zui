@@ -103,6 +103,8 @@ class QmlContractTest < Minitest::Test
     assert_includes host, 'QFont::insertSubstitution(QStringLiteral("RobotoMono"), result.textFamily)'
     assert_includes host, 'QStringLiteral("zuiBundledFontsReady")'
     assert_includes host, 'qgetenv("ZUI_QT_STYLE")'
+    assert_includes host, "malloc_zone_pressure_relief(nullptr, 0)"
+    assert_includes host, "scheduleAllocatorPressureRelief(&application)"
     refute_includes qml, "Quickshell"
     refute_includes qml, "Process {"
   end

@@ -23,6 +23,11 @@ using ZuiRuntimeTransport = ZuiProcess;
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QQuickStyle>
+#include <QTimer>
+
+#if defined(Q_OS_DARWIN)
+#include <malloc/malloc.h>
+#endif
 
 namespace {
 struct BundledFonts {
@@ -68,6 +73,16 @@ BundledFonts installBundledFonts(const QString &qmlRoot) {
   QFont::insertSubstitution(QStringLiteral("Roboto Mono"), result.textFamily);
   QGuiApplication::setFont(QFont(result.textFamily));
   return result;
+}
+
+void scheduleAllocatorPressureRelief(QObject *context) {
+#if defined(Q_OS_DARWIN)
+  const auto relieve = [] { malloc_zone_pressure_relief(nullptr, 0); };
+  QTimer::singleShot(2500, context, relieve);
+  QTimer::singleShot(8000, context, relieve);
+#else
+  Q_UNUSED(context);
+#endif
 }
 }
 
@@ -165,5 +180,6 @@ int main(int argc, char *argv[]) {
 #if defined(ZUI_EMBEDDED_RUNTIME)
   qInfo().noquote() << "Zui startup: interface loaded in" << startupTimer.elapsed() << "ms";
 #endif
+  scheduleAllocatorPressureRelief(&application);
   return application.exec();
 }
