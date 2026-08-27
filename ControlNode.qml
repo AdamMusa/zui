@@ -301,12 +301,12 @@ Loader {
       componentError("component_load_failed", "Unable to load the declared " + (node ? node.type : "component") + " renderer", { source: String(source) })
   }
   onNodeChanged: {
-    Qt.callLater(function() { root.ensureAdapterLoaded() })
+    root.ensureAdapterLoaded()
     if (item && !builtIn && item.hasOwnProperty("node")) item.node = node
     if (!builtIn) syncNativeProperties()
     Qt.callLater(runTransition)
   }
-  Component.onCompleted: Qt.callLater(function() { root.ensureAdapterLoaded() })
+  Component.onCompleted: root.ensureAdapterLoaded()
 
   TapHandler {
     enabled: root.structuralContainer && root.subscribed("click")

@@ -40,7 +40,7 @@ class QmlContractTest < Minitest::Test
     assert_includes router, "builtInSource(node.type)"
     assert_includes router, "definition.builtIn === true"
     refute_includes router, 'readonly property bool builtIn: ['
-    assert_includes router, "Qt.callLater(function() { root.ensureAdapterLoaded() })"
+    assert_includes router, "Component.onCompleted: root.ensureAdapterLoaded()"
     refute_includes router, "Qt.callLater(ensureAdapterLoaded)"
 
     Zui::COMPONENTS.each_key do |component_name|
