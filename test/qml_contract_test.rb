@@ -171,6 +171,14 @@ class QmlContractTest < Minitest::Test
     refute_includes chart, '+ "px " + String(renderer.prop("font_family", renderer.fontFamily))'
   end
 
+  def test_radial_gauge_rounds_animation_values_before_formatting_labels
+    chart = source("Components/Builtins/Support/ChartCanvas.qml")
+
+    assert_includes chart, "function displayNumber(value)"
+    assert_includes chart, 'Math.abs(number) < 1e-9'
+    assert_includes chart, 'format.replace("%{value}", chartRoot.displayNumber(value))'
+  end
+
   def test_renderer_installs_the_ruby_component_registry
     qml = source("Service.qml")
     assert_includes qml, "function validateComponents(components)"
