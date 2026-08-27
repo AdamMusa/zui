@@ -6,11 +6,22 @@ module Zui
   class LockedGems
     Spec = Struct.new(
       :name, :version, :full_name, :full_gem_path, :extension_dir, :require_paths,
-      :platform, :extensions, :files, :ruby, :default,
+      :platform, :extensions, :files, :ruby, :specification, :default,
       keyword_init: true
     ) do
       def default_gem? = default == true
-      def to_ruby = ruby
+
+      def to_ruby(files: nil)
+        return ruby if files.nil?
+
+        snapshot = specification.dup
+        snapshot.files = files
+        bindir = snapshot.bindir || "bin"
+        snapshot.executables = snapshot.executables.select do |executable|
+          files.include?(File.join(bindir, executable))
+        end
+        snapshot.to_ruby
+      end
     end
 
     def initialize(environment: ENV)
@@ -43,6 +54,7 @@ module Zui
           extensions: spec.extensions,
           files: spec.files,
           ruby: spec.to_ruby,
+          specification: spec.dup,
           default: spec.default_gem?
         )
       end

@@ -9,7 +9,13 @@ class FullRuntimeTest < Minitest::Test
   FakeSpec = Struct.new(:name, :version, :full_gem_path, :extension_dir, :files, :default, keyword_init: true) do
     def full_name = "#{name}-#{version}"
     def default_gem? = default == true
-    def to_ruby = "Gem::Specification.new { |spec| spec.name = #{name.dump}; spec.version = #{version.dump} }\n"
+    def to_ruby(files: self.files)
+      "Gem::Specification.new do |spec|\n" \
+        "  spec.name = #{name.dump}\n" \
+        "  spec.version = #{version.dump}\n" \
+        "  spec.files = #{files.inspect}\n" \
+        "end\n"
+    end
   end
 
   def test_installs_private_cruby_standard_library_and_only_project_gems
@@ -41,6 +47,9 @@ class FullRuntimeTest < Minitest::Test
       File.binwrite(native_dependency, "native-dependency-fixture")
       app_spec.extension_dir = native_extension
       zui_spec = fake_spec(directory, "zui", Zui::VERSION)
+      FileUtils.mkdir_p(File.join(zui_spec.full_gem_path, "mobile"))
+      File.write(File.join(zui_spec.full_gem_path, "mobile", "builder.rb"), "# development only\n")
+      zui_spec.files << "mobile/builder.rb"
       default_spec = fake_spec(directory, "json", "2.0.0", default: true)
       destination = File.join(directory, "runtime")
       platform = Zui::Platform.new(os: :linux, arch: :x86_64)
@@ -63,7 +72,7 @@ class FullRuntimeTest < Minitest::Test
       descriptor = runtime.install(project:, destination:)
 
       assert_equal "cruby", descriptor.engine
-      assert_equal ["paint-1.2.3"], descriptor.gems
+      assert_equal ["paint-1.2.3", "zui-#{Zui::VERSION}"], descriptor.gems
       assert_equal "bin/ruby", descriptor.executable
       assert File.file?(File.join(destination, "bin", "ruby"))
       assert File.file?(File.join(destination, "lib", "ruby", "3.3.0", "json.rb"))
@@ -73,11 +82,13 @@ class FullRuntimeTest < Minitest::Test
       refute File.exist?(File.join(destination, "gems", "gems", "paint-1.2.3", "dist"))
       assert File.file?(File.join(destination, "gems", "specifications", "paint-1.2.3.gemspec"))
       assert File.file?(File.join(destination, "lib", "libpaint.so"))
-      refute File.exist?(File.join(destination, "gems", "gems", "zui-#{Zui::VERSION}"))
+      assert File.file?(File.join(destination, "gems", "gems", "zui-#{Zui::VERSION}", "lib", "zui.rb"))
+      refute File.exist?(File.join(destination, "gems", "gems", "zui-#{Zui::VERSION}", "mobile"))
       refute File.exist?(File.join(destination, "gems", "gems", "json-2.0.0"))
       manifest = JSON.parse(File.read(File.join(destination, "runtime.json")))
       assert_equal "cruby", manifest.fetch("engine")
       assert_equal ["gems"], manifest.fetch("environment").fetch("GEM_HOME")
+      assert_equal "", manifest.fetch("load_path")
     end
   end
 

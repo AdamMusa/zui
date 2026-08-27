@@ -161,6 +161,8 @@ module Zui
 
     def install_runtime(destination)
       Runtime.install_qml(File.join(destination, "qml"), framework_root: @framework_root)
+      return if runtime_mode == :full
+
       FileUtils.mkdir_p(File.join(destination, "lib"))
       FileUtils.cp(File.join(@framework_root, "lib", "zui.rb"), File.join(destination, "lib", "zui.rb"))
       source = File.join(@framework_root, "lib", "zui")

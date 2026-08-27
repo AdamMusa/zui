@@ -179,6 +179,7 @@ class DistributionTest < Minitest::Test
       assert_includes launcher, 'export GEM_HOME="${ruby_root}/gems"'
       refute_includes launcher, "command -v ruby"
       assert File.file?(File.join(destination, "runtime", "ruby", "runtime.json"))
+      refute File.exist?(File.join(destination, "runtime", "lib"))
       manifest = JSON.parse(File.read(File.join(destination, "zui-bundle.json")))
       assert_equal "full", manifest.fetch("ruby_runtime")
     end

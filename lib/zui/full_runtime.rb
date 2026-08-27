@@ -45,7 +45,8 @@ module Zui
         version: ruby_version,
         executable:,
         environment:,
-        gems: gems.map(&:full_name)
+        gems: gems.map(&:full_name),
+        load_path: ""
       ).write(destination)
     rescue StandardError
       FileUtils.remove_entry(destination) if destination && File.exist?(destination)
@@ -154,7 +155,7 @@ module Zui
     end
 
     def install_project_gems(project, destination)
-      specs = @spec_loader.call(project).reject { |spec| spec.name == "zui" || spec.default_gem? }
+      specs = @spec_loader.call(project).reject(&:default_gem?)
       gem_home = File.join(destination, "gems")
       FileUtils.mkdir_p([File.join(gem_home, "gems"), File.join(gem_home, "specifications")])
       names = Set.new
@@ -164,15 +165,18 @@ module Zui
           raise ArgumentError, "project gem is not installed: #{spec.full_name}; run `bundle install`"
         end
 
-        install_gem_files(spec, File.join(gem_home, "gems", spec.full_name))
-        File.write(File.join(gem_home, "specifications", "#{spec.full_name}.gemspec"), spec.to_ruby)
+        files = packaged_gem_files(spec)
+        install_gem_files(spec, File.join(gem_home, "gems", spec.full_name), files:)
+        File.write(
+          File.join(gem_home, "specifications", "#{spec.full_name}.gemspec"),
+          spec.to_ruby(files:)
+        )
         install_gem_extensions(spec, gem_home)
       end
       specs
     end
 
-    def install_gem_files(spec, target)
-      files = Array(spec.files).map(&:to_s).reject(&:empty?).uniq.sort
+    def install_gem_files(spec, target, files: packaged_gem_files(spec))
       if files.empty?
         raise ArgumentError, "gem #{spec.full_name} has no packaged files; set spec.files in its gemspec"
       end
@@ -195,6 +199,13 @@ module Zui
         FileUtils.mkdir_p(File.dirname(destination))
         FileUtils.cp(source, destination, preserve: true)
       end
+    end
+
+    def packaged_gem_files(spec)
+      files = Array(spec.files).map(&:to_s).reject(&:empty?).uniq.sort
+      return files unless spec.name == "zui"
+
+      files.select { |path| path.start_with?("lib/") && path.end_with?(".rb") }
     end
 
     def install_gem_extensions(spec, gem_home)
