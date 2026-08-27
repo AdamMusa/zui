@@ -579,8 +579,10 @@ module Zui
         binary = queue.shift
         next unless File.file?(binary) && inspected.add?(binary)
 
-        dependencies = pe_dependencies(binary)
-        parsed = true unless dependencies.empty?
+        dependencies = PEDependencies.imports(binary)
+        next unless dependencies
+
+        parsed = true
         dependencies.each do |name|
           key = name.downcase
           next unless available.key?(key) && required.add?(key)
@@ -588,52 +590,12 @@ module Zui
           queue << available.fetch(key)
         end
       end
-      return unless parsed
+      unless parsed
+        @warnings << "native Windows library analysis was unavailable; libraries were retained"
+        return
+      end
 
       available.each { |name, path| FileUtils.rm_f(path) unless required.include?(name) }
-    end
-
-    def pe_dependencies(path)
-      data = File.binread(path)
-      return [] unless data.start_with?("MZ") && data.bytesize >= 64
-
-      pe_offset = data.byteslice(0x3c, 4)&.unpack1("V")
-      return [] unless pe_offset && data.byteslice(pe_offset, 4) == "PE\0\0"
-
-      section_count = data.byteslice(pe_offset + 6, 2).unpack1("v")
-      optional_size = data.byteslice(pe_offset + 20, 2).unpack1("v")
-      optional = pe_offset + 24
-      magic = data.byteslice(optional, 2).unpack1("v")
-      directory = optional + (magic == 0x20b ? 112 : 96)
-      import_rva = data.byteslice(directory + 8, 4)&.unpack1("V")
-      return [] unless import_rva&.positive?
-
-      sections = section_count.times.map do |index|
-        offset = optional + optional_size + index * 40
-        [data.byteslice(offset + 12, 4).unpack1("V"), data.byteslice(offset + 8, 4).unpack1("V"),
-         data.byteslice(offset + 16, 4).unpack1("V"), data.byteslice(offset + 20, 4).unpack1("V")]
-      end
-      rva_offset = lambda do |rva|
-        section = sections.find { |virtual, size, raw_size, _raw| rva >= virtual && rva < virtual + [size, raw_size].max }
-        section && section[3] + rva - section[0]
-      end
-      descriptor = rva_offset.call(import_rva)
-      return [] unless descriptor
-
-      dependencies = []
-      loop do
-        name_rva = data.byteslice(descriptor + 12, 4)&.unpack1("V")
-        break unless name_rva&.positive?
-
-        name_offset = rva_offset.call(name_rva)
-        break unless name_offset
-        name = data.byteslice(name_offset..)&.split("\0", 2)&.first
-        dependencies << name if name&.match?(/\.dll\z/i)
-        descriptor += 20
-      end
-      dependencies
-    rescue NoMethodError, RangeError
-      []
     end
 
     def native_binary_roots(patterns)

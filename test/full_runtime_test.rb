@@ -4,6 +4,7 @@ require "json"
 require "minitest/autorun"
 require "tmpdir"
 require_relative "../lib/zui"
+require_relative "support/pe_fixture"
 
 class FullRuntimeTest < Minitest::Test
   FakeSpec = Struct.new(:name, :version, :full_gem_path, :extension_dir, :files, :default, keyword_init: true) do
@@ -234,6 +235,48 @@ class FullRuntimeTest < Minitest::Test
       assert_equal "ruby-library", File.binread(installed_library)
       assert File.symlink?(installed_alias)
       assert_equal File.basename(library), File.readlink(installed_alias)
+    end
+  end
+
+  def test_windows_runtime_keeps_only_the_reachable_dll_closure
+    Dir.mktmpdir do |directory|
+      destination = File.join(directory, "runtime")
+      bin = File.join(destination, "bin")
+      extension = File.join(destination, "gems", "extensions", "paint.so")
+      FileUtils.mkdir_p([bin, File.dirname(extension)])
+      File.binwrite(File.join(bin, "ruby.exe"), PEFixture.binary("ruby.dll"))
+      File.binwrite(File.join(bin, "ruby.dll"), PEFixture.binary("yaml.dll"))
+      File.binwrite(File.join(bin, "yaml.dll"), PEFixture.binary("KERNEL32.dll"))
+      File.binwrite(File.join(bin, "openssl.dll"), PEFixture.binary("KERNEL32.dll"))
+      File.binwrite(File.join(bin, "unused.dll"), PEFixture.binary)
+      File.binwrite(extension, PEFixture.binary("openssl.dll"))
+      runtime = Zui::FullRuntime.new(
+        platform: Zui::Platform.new(os: :windows, arch: :x86_64)
+      )
+
+      runtime.send(:install_native_dependencies, destination)
+
+      %w[ruby.dll yaml.dll openssl.dll].each do |name|
+        assert File.file?(File.join(bin, name)), "expected #{name} to remain in the runtime closure"
+      end
+      refute File.exist?(File.join(bin, "unused.dll"))
+    end
+  end
+
+  def test_windows_runtime_retains_dlls_when_dependency_analysis_is_unavailable
+    Dir.mktmpdir do |directory|
+      destination = File.join(directory, "runtime")
+      bin = File.join(destination, "bin")
+      FileUtils.mkdir_p(bin)
+      File.binwrite(File.join(bin, "ruby.exe"), "unreadable executable")
+      File.binwrite(File.join(bin, "ruby.dll"), PEFixture.binary)
+      runtime = Zui::FullRuntime.new(
+        platform: Zui::Platform.new(os: :windows, arch: :x86_64)
+      )
+
+      runtime.send(:install_native_dependencies, destination)
+
+      assert File.file?(File.join(bin, "ruby.dll"))
     end
   end
 

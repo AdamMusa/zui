@@ -139,7 +139,7 @@ module Zui
     end
 
     def install_native_dependencies(destination)
-      return if platform.windows?
+      return prune_windows_runtime_libraries(destination) if platform.windows?
 
       library_root = File.join(destination, "lib")
       FileUtils.mkdir_p(library_root)
@@ -168,6 +168,38 @@ module Zui
           binaries << target
         end
       end
+    end
+
+    def prune_windows_runtime_libraries(destination)
+      bin = File.join(destination, "bin")
+      available = Dir[File.join(bin, "*.dll")].to_h { |path| [File.basename(path).downcase, path] }
+      return if available.empty?
+
+      roots = [File.join(bin, "ruby.exe")]
+      roots.concat(Dir[File.join(destination, "**", "*.{bundle,dll,so}")])
+      roots.reject! { |path| File.dirname(path) == bin && File.extname(path).casecmp?(".dll") }
+      queue = roots.uniq
+      required = Set.new
+      inspected = Set.new
+      parsed = false
+      until queue.empty?
+        binary = queue.shift
+        next unless File.file?(binary) && inspected.add?(binary)
+
+        dependencies = PEDependencies.imports(binary)
+        next unless dependencies
+
+        parsed = true
+        dependencies.each do |name|
+          key = name.downcase
+          next unless available.key?(key) && required.add?(key)
+
+          queue << available.fetch(key)
+        end
+      end
+      return unless parsed
+
+      available.each { |name, path| FileUtils.rm_f(path) unless required.include?(name) }
     end
 
     def shake_standard_library(project, destination, library_paths)
