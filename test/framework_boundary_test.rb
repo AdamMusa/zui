@@ -134,6 +134,13 @@ class FrameworkBoundaryTest < Minitest::Test
     assert_includes host, 'qputenv("QT_IM_MODULE", QByteArrayLiteral("qtvirtualkeyboard"));'
   end
 
+  def test_mobile_permission_status_events_are_deduplicated
+    permission = File.read(File.join(ROOT, "Components", "Builtins", "Support", "PermissionBridge.qml"))
+
+    assert_includes permission, "property int lastPublishedNativeStatus: -1"
+    assert_includes permission, "if (nativeStatus === lastPublishedNativeStatus) return"
+  end
+
   def test_component_and_resource_failures_use_the_framework_error_channel
     router = File.read(File.join(ROOT, "ControlNode.qml"))
     service = File.read(File.join(ROOT, "Service.qml"))
