@@ -98,6 +98,14 @@ class QmlContractTest < Minitest::Test
     end
   end
 
+  def test_protocol_component_limit_covers_the_complete_builtin_catalog
+    service = source("Service.qml")
+
+    assert_operator Zui::COMPONENTS.length, :>, 256
+    assert_includes service, "readonly property int maxComponentDefinitions: 1024"
+    assert_includes service, "names.length > maxComponentDefinitions"
+  end
+
   def test_service_uses_one_injected_bidirectional_transport
     qml = source("Service.qml")
     native = source("native/ZuiProcess.cpp")

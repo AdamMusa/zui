@@ -23,6 +23,7 @@ Item {
   property int eventSequence: 0
   readonly property int maxStringLength: 16384
   readonly property int maxCollectionItems: 256
+  readonly property int maxComponentDefinitions: 1024
 
   property var allowedTypes: ({})
   property var allowedProperties: ({})
@@ -105,7 +106,7 @@ Item {
   function validateComponents(components) {
     if (!plainObject(components)) return false
     var names = Object.keys(components)
-    if (names.length === 0 || names.length > 256) return false
+    if (names.length === 0 || names.length > maxComponentDefinitions) return false
     var validated = ({})
     for (var i = 0; i < names.length; i++) {
       var name = names[i]
