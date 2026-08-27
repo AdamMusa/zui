@@ -1,0 +1,24 @@
+PATH
+  remote: ../..
+  specs:
+    zui (0.0.10)
+
+GEM
+  remote: https://rubygems.org/
+  specs:
+
+PLATFORMS
+  arm64-darwin
+  arm64-darwin-25
+  ruby
+  x64-mingw-ucrt
+  x86_64-linux
+
+DEPENDENCIES
+  zui!
+
+CHECKSUMS
+  zui (0.0.10)
+
+BUNDLED WITH
+  4.0.11

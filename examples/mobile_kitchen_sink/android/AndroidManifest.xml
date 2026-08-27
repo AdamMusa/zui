@@ -1,0 +1,74 @@
+<?xml version="1.0"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    android:installLocation="auto"
+    android:versionCode="-- %%INSERT_VERSION_CODE%% --"
+    android:versionName="-- %%INSERT_VERSION_NAME%% --">
+
+    <!-- Keep these markers: Qt inserts module permissions and hardware features here. -->
+    <!-- %%INSERT_PERMISSIONS -->
+    <!-- %%INSERT_FEATURES -->
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
+    <uses-permission android:name="android.permission.WRITE_CONTACTS" />
+    <uses-permission android:name="android.permission.READ_CALENDAR" />
+    <uses-permission android:name="android.permission.WRITE_CALENDAR" />
+
+    <uses-feature android:name="android.hardware.camera.any" android:required="false" />
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
+    <uses-feature android:name="android.hardware.location" android:required="false" />
+    <uses-feature android:name="android.hardware.sensor.accelerometer" android:required="false" />
+
+    <supports-screens
+        android:anyDensity="true"
+        android:largeScreens="true"
+        android:normalScreens="true"
+        android:smallScreens="true" />
+
+    <application
+        android:name="org.qtproject.qt.android.bindings.QtApplication"
+        android:allowBackup="true"
+        android:fullBackupOnly="false"
+        android:hardwareAccelerated="true"
+        android:icon="@drawable/zui_icon"
+        android:label="-- %%INSERT_APP_NAME%% --"
+        android:theme="@style/ZuiTheme">
+
+        <activity
+            android:name="org.qtproject.qt.android.bindings.QtActivity"
+            android:configChanges="orientation|uiMode|screenLayout|screenSize|smallestScreenSize|layoutDirection|locale|fontScale|keyboard|keyboardHidden|navigation|mcc|mnc|density"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:screenOrientation="unspecified">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <meta-data
+                android:name="android.app.lib_name"
+                android:value="-- %%INSERT_APP_LIB_NAME%% --" />
+            <meta-data
+                android:name="android.app.arguments"
+                android:value="-- %%INSERT_APP_ARGUMENTS%% --" />
+        </activity>
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.qtprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/qtprovider_paths" />
+        </provider>
+    </application>
+</manifest>
