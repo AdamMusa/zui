@@ -8,6 +8,23 @@ WebView {
   function statusName(value) {
     return ["started", "stopped", "succeeded", "failed"][Number(value)] || "unknown"
   }
+  function synchronizeSettings() {
+    var props = renderer && renderer.node && renderer.node.props ? renderer.node.props : null
+    if (!props) return
+    // Qt's Darwin WebView creates its native settings object during component
+    // completion. Eager bindings can call into it while its WKWebView is still
+    // null, so preserve platform defaults and defer only explicit overrides.
+    if (props.local_storage !== undefined) settings.localStorageEnabled = props.local_storage !== false
+    if (props.javascript !== undefined) settings.javaScriptEnabled = props.javascript !== false
+    if (props.allow_file_access !== undefined) settings.allowFileAccess = props.allow_file_access === true
+    if (props.local_content_file_access !== undefined)
+      settings.localContentCanAccessFileUrls = props.local_content_file_access === true
+  }
+  function synchronize() {
+    synchronizeSettings()
+    processCommand()
+  }
+  function scheduleSynchronize() { Qt.callLater(synchronize) }
   function processCommand() {
     var revision = Number(renderer.prop("command_revision", 0))
     if (revision === handledCommandRevision) return
@@ -34,10 +51,6 @@ WebView {
   visible: renderer.prop("visible", true) !== false
   url: String(renderer.prop("url", ""))
   httpUserAgent: String(renderer.prop("http_user_agent", ""))
-  settings.localStorageEnabled: renderer.prop("local_storage", true) !== false
-  settings.javaScriptEnabled: renderer.prop("javascript", true) !== false
-  settings.allowFileAccess: renderer.prop("allow_file_access", false) === true
-  settings.localContentCanAccessFileUrls: renderer.prop("local_content_file_access", false) === true
   onLoadingChanged: function(request) {
     var name = statusName(request.status)
     var payload = { status: name, native_status: Number(request.status), url: String(request.url),
@@ -51,6 +64,6 @@ WebView {
   onUrlChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "url_change", { value: String(url) })
   onCookieAdded: function(domain, name) { renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "cookie", { action: "added", domain: domain, name: name }) }
   onCookieRemoved: function(domain, name) { renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "cookie", { action: "removed", domain: domain, name: name }) }
-  Component.onCompleted: processCommand()
-  Connections { target: renderer; function onNodeChanged() { root.processCommand() } }
+  Component.onCompleted: scheduleSynchronize()
+  Connections { target: renderer; function onNodeChanged() { root.scheduleSynchronize() } }
 }

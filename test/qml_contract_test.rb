@@ -179,6 +179,15 @@ class QmlContractTest < Minitest::Test
     refute_includes speech, 'locale: String(root.renderer.prop("locale", ""))'
   end
 
+  def test_mobile_webview_defers_explicit_settings_until_native_completion
+    webview = source("Components/Builtins/WebView.qml")
+
+    assert_includes webview, "function scheduleSynchronize() { Qt.callLater(synchronize) }"
+    assert_includes webview, "if (props.local_storage !== undefined)"
+    assert_includes webview, "settings.localStorageEnabled = props.local_storage !== false"
+    refute_includes webview, 'settings.localStorageEnabled: renderer.prop('
+  end
+
   def test_mobile_map_signal_handlers_read_qualified_map_properties
     map = source("Components/Builtins/Map.qml")
 
