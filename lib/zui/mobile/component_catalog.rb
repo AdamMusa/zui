@@ -94,6 +94,8 @@ module Zui
       WEB = { "WebView" => :web_view }.freeze
       WEB_SOCKETS = { "WebSocket" => :web_socket, "WebSocketServer" => :web_socket_server }.freeze
       LOTTIE = { "LottieAnimation" => :lottie_animation }.freeze
+      PDF = %w[PdfDocument PdfMultiPageView PdfPageView PdfScrollablePageView PdfPageImage
+               PdfPageNavigator PdfSearchModel PdfSelection].to_h { |name| [name, :pdf_view] }.freeze
 
       TOUCH_INTERACTION = {
         "TapHandler" => :tap_area, "PointHandler" => :point_handler,
@@ -105,7 +107,7 @@ module Zui
       CORE = QUICK_CONTROLS.merge(QUICK_DIALOGS).merge(QUICK_LAYOUTS).freeze
       ALL = CORE.merge(PERMISSIONS).merge(SENSORS).merge(POSITIONING).merge(LOCATION)
                 .merge(TEXT_TO_SPEECH).merge(WEB).merge(WEB_SOCKETS).merge(LOTTIE)
-                .merge(TOUCH_INTERACTION).freeze
+                .merge(PDF).merge(TOUCH_INTERACTION).freeze
     end
   end
 end
