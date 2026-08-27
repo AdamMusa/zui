@@ -20,7 +20,8 @@ module Zui
                      device_kind: nil,
                      abi: DEFAULT_ABI, api: DEFAULT_API, target_api: DEFAULT_TARGET_API,
                      framework_root: FRAMEWORK_ROOT, environment: ENV,
-                     host_platform: Platform.current, command: Command, out: $stdout)
+                     host_platform: Platform.current, command: Command,
+                     verify_reproducible: false, out: $stdout)
         @project = File.expand_path(project)
         @qt_android = expand_dependency(qt_android || environment["ZUI_QT_ANDROID"])
         @qt_host = expand_dependency(qt_host || environment["ZUI_QT_HOST"])
@@ -42,11 +43,32 @@ module Zui
         @source_date_epoch = ReproducibleBuild.epoch(environment["SOURCE_DATE_EPOCH"])
         @host_platform = host_platform
         @command = command
+        @verify_reproducible = verify_reproducible == true
         @out = out
       end
 
       def build(install: true)
         validate!
+        builds = @verify_reproducible ? [build_once, build_once] : [build_once]
+        result = builds.last
+        if builds.length == 2
+          result.reproducibility = Reproducibility.verify!(builds.first.identity, result.identity)
+          @out.puts("Verified two byte-identical Android APK builds: #{result.identity.artifact_sha256}")
+        end
+        if install
+          device = select_device
+          launched = install_and_launch(result.apk, result.bundle_id, device)
+          launched.identity = result.identity
+          launched.reproducibility = result.reproducibility
+          result = launched
+        end
+        Reproducibility.write_metadata(result)
+        result
+      end
+
+      private
+
+      def build_once
         config = Dist.load(project: @project, platform: ANDROID_PLATFORM)
         bundle_id = android_identifier(config.identifier)
         stage = prepare_stage(config)
@@ -59,15 +81,14 @@ module Zui
                   "#{(framework_report.saved_bytes / 1_000_000.0).round(1)} MB removed")
         build_directory = configure_native(config, bundle_id, stage, build_name, framework:)
         unsigned_apk = build_apk(build_directory)
+        unsigned_sha256 = Digest::SHA256.file(unsigned_apk).hexdigest
         apk = sign_apk(unsigned_apk, config)
-        result = Result.new(apk:, bundle_id:)
-        return result unless install
-
-        device = select_device
-        install_and_launch(apk, bundle_id, device)
+        identity = Reproducibility.android_identity(
+          apk:, unsigned_sha256:, source_date_epoch: @source_date_epoch,
+          toolchain: android_toolchain_identity(build_name)
+        )
+        Result.new(apk:, bundle_id:, identity:)
       end
-
-      private
 
       def expand_dependency(path)
         path && !path.empty? ? File.expand_path(path) : nil
@@ -410,6 +431,21 @@ module Zui
 
       def reproducible_environment
         { "SOURCE_DATE_EPOCH" => @source_date_epoch.to_s, "ZERO_AR_DATE" => "1" }
+      end
+
+      def android_toolchain_identity(build_name)
+        library = File.join(@mruby_root, "build", build_name, "lib", "libmruby.a")
+        {
+          "qt" => Setup::QT_VERSION,
+          "android_ndk" => DEFAULT_NDK_VERSION,
+          "android_build_tools" => DEFAULT_BUILD_TOOLS_VERSION,
+          "cmake" => DEFAULT_CMAKE_VERSION,
+          "abi" => @abi,
+          "minimum_api" => @api,
+          "target_api" => @target_api,
+          "ruby_runtime" => "mruby",
+          "ruby_runtime_sha256" => Digest::SHA256.file(library).hexdigest
+        }
       end
 
       def adb

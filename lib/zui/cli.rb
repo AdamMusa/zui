@@ -156,6 +156,7 @@ module Zui
               --team ID            Apple development team (or ZUI_APPLE_TEAM)
               --architecture ARCH  Simulator Ruby architecture: x86_64 or arm64
               --deployment VERSION Minimum iOS version (default: 16.0)
+              --verify-reproducible Build twice and verify deterministic output
           -o, --output PATH        Build workspace (default: dist/ios-simulator or dist/ios-device)
               --build-only        Build without installing or launching
 
@@ -166,6 +167,7 @@ module Zui
               --abi ABI            Android ABI (default: arm64-v8a)
               --api LEVEL          Minimum Android API (default: 28)
               --target-api LEVEL   Target Android API (default: 35)
+              --verify-reproducible Build twice and verify deterministic output
 
         The selected Ruby runtime and native Qt renderer run inside the app process;
         mobile builds do not use a web view or require a separate Ruby process.
@@ -197,6 +199,7 @@ module Zui
               --abi ABI            Android ABI (default: arm64-v8a)
               --api LEVEL          Minimum Android API (default: 28)
               --target-api LEVEL   Target Android API (default: 35)
+              --verify-reproducible Build twice and verify deterministic output
 
         DIRECTORY defaults to the current project. Configuration, launcher icons,
         and optional splash artwork are read from config.rb. Artifacts are written
@@ -218,6 +221,7 @@ module Zui
               --abi ABI            Android ABI (default: arm64-v8a)
               --api LEVEL          Minimum Android API (default: 28)
               --target-api LEVEL   Target Android API (default: 35)
+              --verify-reproducible Build twice before installing
 
         Without --device, iOS uses a simulator and Android uses an emulator.
         When TARGET is omitted, Zui infers it from an existing dist/ios or
@@ -393,6 +397,7 @@ module Zui
         option.on("--team ID") { |value| options[:team] = value }
         option.on("--architecture ARCH") { |value| options[:architecture] = value }
         option.on("--deployment VERSION") { |value| options[:deployment_target] = value }
+        option.on("--verify-reproducible") { options[:verify_reproducible] = true }
         option.on("-o PATH", "--output PATH") { |value| options[:output] = value }
         option.on("--build-only") { options[:install] = false }
       end
@@ -463,6 +468,7 @@ module Zui
           option.on("--api LEVEL", Integer) { |value| options[:api] = value }
           option.on("--target-api LEVEL", Integer) { |value| options[:target_api] = value }
         end
+        option.on("--verify-reproducible") { options[:verify_reproducible] = true }
       end.parse!(arguments)
       select_ios_runtime!(options, command: "build ios") if target == "ios"
       options
@@ -483,6 +489,7 @@ module Zui
         option.on("--abi ABI") { |value| options[:abi] = value }
         option.on("--api LEVEL", Integer) { |value| options[:api] = value }
         option.on("--target-api LEVEL", Integer) { |value| options[:target_api] = value }
+        option.on("--verify-reproducible") { options[:verify_reproducible] = true }
       end.parse!(arguments)
       select_ios_runtime!(options, command: "install") if options[:lite] || options[:full]
       options
@@ -555,6 +562,11 @@ module Zui
     def report_mobile_build(target, result)
       artifact = target == "ios" ? result.app : result.apk
       @out.puts("Built #{target == 'ios' ? 'iOS application' : 'Android APK'} #{artifact}")
+      if result.reproducibility
+        detail = result.reproducibility.artifact_byte_identical ? "artifact and payload" : "signature-normalized payload"
+        @out.puts("Verified reproducible #{detail}: #{result.identity.payload_sha256}")
+      end
+      @out.puts("Build identity #{result.metadata}") if result.metadata
     end
 
     def mobile_android_project(arguments)
@@ -570,6 +582,7 @@ module Zui
         option.on("--abi ABI") { |value| options[:abi] = value }
         option.on("--api LEVEL", Integer) { |value| options[:api] = value }
         option.on("--target-api LEVEL", Integer) { |value| options[:target_api] = value }
+        option.on("--verify-reproducible") { options[:verify_reproducible] = true }
         option.on("-o PATH", "--output PATH") { |value| options[:output] = value }
         option.on("--build-only") { options[:install] = false }
       end

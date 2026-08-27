@@ -8,7 +8,10 @@ require "set"
 
 module Zui
   module Mobile
-    Result = Struct.new(:app, :apk, :bundle_id, :simulator, :device, :pid, keyword_init: true)
+    Result = Struct.new(
+      :app, :apk, :bundle_id, :simulator, :device, :pid, :identity, :reproducibility, :metadata,
+      keyword_init: true
+    )
     PAYLOAD_MANIFEST = "zui-mobile.json"
 
     def self.finalize_payload(root:, platform:, runtime:, source_date_epoch:, metadata: {})
@@ -94,7 +97,7 @@ module Zui
                      architecture: DEFAULT_ARCHITECTURE,
                      deployment_target: DEFAULT_DEPLOYMENT_TARGET, framework_root: FRAMEWORK_ROOT,
                      environment: ENV, host_platform: Platform.current, command: Command,
-                     gem_spec_loader: nil, out: $stdout)
+                     gem_spec_loader: nil, verify_reproducible: false, out: $stdout)
         @project = File.expand_path(project)
         @qt_ios = expand_dependency(qt_ios || environment["ZUI_QT_IOS"])
         @qt_host = expand_dependency(qt_host || environment["ZUI_QT_HOST"])
@@ -114,12 +117,32 @@ module Zui
         @host_platform = host_platform
         @command = command
         @gem_spec_loader = gem_spec_loader || LockedGems.new(environment:).method(:specs)
+        @verify_reproducible = verify_reproducible == true
         @source_date_epoch = ReproducibleBuild.epoch(environment["SOURCE_DATE_EPOCH"])
         @out = out
       end
 
       def build(install: true)
         validate!
+        builds = @verify_reproducible ? [build_once, build_once] : [build_once]
+        result = builds.last
+        if builds.length == 2
+          result.reproducibility = Reproducibility.verify!(builds.first.identity, result.identity)
+          @out.puts("Verified two byte-identical iOS payload builds: #{result.identity.payload_sha256}")
+        end
+        if install
+          launched = install_and_launch(result.app, result.bundle_id, result.device || result.simulator)
+          launched.identity = result.identity
+          launched.reproducibility = result.reproducibility
+          result = launched
+        end
+        Reproducibility.write_metadata(result)
+        result
+      end
+
+      private
+
+      def build_once
         config = Dist.load(project: @project, platform: IOS_PLATFORM)
         stage = prepare_stage(config)
         sdk_name = physical_device? ? "iphoneos" : "iphonesimulator"
@@ -145,15 +168,18 @@ module Zui
         app = File.join(@output, "xcode", products, "#{config.name}.app")
         raise ArgumentError, "iOS build did not produce #{app}" unless File.directory?(app)
 
-        result = Result.new(app:, bundle_id: config.identifier,
-                            simulator: physical_device? ? nil : destination,
-                            device: physical_device? ? destination : nil)
-        return result unless install
+        verify_ios_signature(app) if physical_device?
+        identity = Reproducibility.ios_identity(
+          app:, signed: physical_device?, source_date_epoch: @source_date_epoch,
+          toolchain: ios_toolchain_identity(sdk_name, build_name), command: @command
+        )
 
-        install_and_launch(app, config.identifier, destination)
+        Result.new(
+          app:, bundle_id: config.identifier, identity:,
+          simulator: physical_device? ? nil : destination,
+          device: physical_device? ? destination : nil
+        )
       end
-
-      private
 
       def expand_dependency(path)
         path && !path.empty? ? File.expand_path(path) : nil
@@ -707,6 +733,30 @@ module Zui
              max_output_bytes: 64_000_000)
       end
 
+      def verify_ios_signature(app)
+        run!(["codesign", "--verify", "--deep", "--strict", "--verbose=2", app],
+             label: "verifying the iOS application signature", timeout: 120)
+      end
+
+      def ios_toolchain_identity(sdk_name, build_name)
+        library = if full_runtime?
+                    cruby_library
+                  else
+                    File.join(@mruby_root, "build", build_name, "lib", "libmruby.a")
+                  end
+        {
+          "qt" => Setup::QT_VERSION,
+          "xcode" => command_output(["xcodebuild", "-version"], label: "identifying Xcode").lines.map(&:strip).join(" "),
+          "ios_sdk" => command_output(
+            ["xcrun", "--sdk", sdk_name, "--show-sdk-version"], label: "identifying the iOS SDK"
+          ),
+          "architecture" => @architecture,
+          "deployment_target" => @deployment_target,
+          "ruby_runtime" => @runtime_mode.to_s,
+          "ruby_runtime_sha256" => Digest::SHA256.file(library).hexdigest
+        }
+      end
+
       def reproducible_environment
         { "SOURCE_DATE_EPOCH" => @source_date_epoch.to_s, "ZERO_AR_DATE" => "1" }
       end
@@ -775,5 +825,6 @@ module Zui
   end
 end
 
+require_relative "mobile/reproducibility"
 require_relative "mobile/setup"
 require_relative "mobile/android_builder"

@@ -303,7 +303,9 @@ class CLITest < Minitest::Test
         request = arguments
         builder
       }) do
-        Zui::CLI.run(["build", "android", "/project"], out: output, err: StringIO.new)
+        Zui::CLI.run(
+          ["build", "android", "--verify-reproducible", "/project"], out: output, err: StringIO.new
+        )
       end
 
       assert_equal 0, status
@@ -313,6 +315,7 @@ class CLITest < Minitest::Test
     assert_equal false, install_request
     assert_equal "/qt/android", request.fetch(:qt_android)
     assert_equal "/sdk", request.fetch(:android_sdk)
+    assert_equal true, request.fetch(:verify_reproducible)
     assert_includes output.string, "/project/dist/android/touch.apk"
   end
 
