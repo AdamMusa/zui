@@ -315,7 +315,12 @@ module Zui
     cursor_surface: [%i[cursor current outline bordered foreground accent fill current_fill], %i[click], true],
     widget_button: [%i[text font_family font_size foreground active_color active horizontal_margin vertical_padding fixed_width fixed_height text_rotation keep_space dimmed concealed interactive pressable use_active_color maintain_indicator_reveal label_visible has_visual_content tooltip], %i[click right_click middle_click wheel], false],
     list_view: [%i[items key_field label_field description_field icon_field selected orientation spacing width height empty_text visible], %i[activate change scroll], false],
-    key_catcher: [%i[blocked visible], %i[move activate return close delete tab text], true]
+    key_catcher: [%i[blocked visible], %i[move activate return close delete tab text], true],
+    view_3d: [%i[width height camera environment import_scene render_mode render_format texture_width texture_height visible], %i[click pick error], true],
+    node_3d: [%i[position x y z euler_rotation rotation_x rotation_y rotation_z rotation scale pivot opacity visible static_flags], %i[error], true],
+    model_3d: [%i[source geometry materials morph_targets instancing instance_root skeleton skin baked_lightmap inverse_bind_poses pickable casts_shadows receives_shadows casts_reflections receives_reflections used_in_baked_lighting lightmap_base_resolution depth_bias instancing_lod_min instancing_lod_max level_of_detail_bias position x y z euler_rotation rotation_x rotation_y rotation_z rotation scale pivot opacity visible static_flags], %i[bounds error], true],
+    loader_3d: [%i[active source asynchronous position x y z euler_rotation rotation_x rotation_y rotation_z rotation scale pivot opacity visible static_flags], %i[status loaded error], false],
+    repeater_3d: [%i[model spacing position x y z euler_rotation rotation_x rotation_y rotation_z rotation scale pivot opacity visible static_flags], %i[object_added object_removed error], true]
   }.freeze
 
   DEFAULT_COMPONENTS = ComponentRegistry.new

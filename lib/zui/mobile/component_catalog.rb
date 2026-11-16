@@ -123,11 +123,19 @@ module Zui
         "HoverHandler" => :hover_area, "DropArea" => :drop_area
       }.freeze
 
+      # Qt Quick 3D. The GPU scene graph is a module surface of its own, so
+      # every group below keeps one QtQuick3D submodule alive through mobile
+      # tree-shaking.
+      QUICK3D_SCENE = {
+        "View3D" => :view_3d, "Node" => :node_3d, "Model" => :model_3d,
+        "Loader3D" => :loader_3d, "Repeater3D" => :repeater_3d
+      }.freeze
+
       CORE = QUICK_CONTROLS.merge(QUICK_DIALOGS).merge(QUICK_LAYOUTS).freeze
       ALL = CORE.merge(PERMISSIONS).merge(DEVICE_INFORMATION).merge(VIRTUAL_KEYBOARD)
                 .merge(SENSORS).merge(POSITIONING).merge(LOCATION)
                 .merge(TEXT_TO_SPEECH).merge(WEB).merge(WEB_SOCKETS).merge(LOTTIE)
-                .merge(PDF).merge(TOUCH_INTERACTION).freeze
+                .merge(PDF).merge(TOUCH_INTERACTION).merge(QUICK3D_SCENE).freeze
     end
   end
 end

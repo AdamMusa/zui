@@ -731,6 +731,53 @@ class QmlContractTest < Minitest::Test
     assert_includes model, "temporalAAEnabled: false"
   end
 
+  def test_view_3d_hosts_a_native_viewport_and_recurses_through_the_scene_graph
+    renderer = source("ControlNode.qml")
+    host = source("Components/Builtins/View3d.qml")
+    scene = source("Components/Builtins/Support/View3dScene.qml")
+    branch = source("Components/Builtins/Support/Scene3dBranch.qml")
+    children = source("Components/Builtins/Support/Scene3dChildren.qml")
+
+    assert_dynamic_component_route(renderer, "view_3d")
+    assert_equal true, Zui::DEFAULT_COMPONENTS.protocol_schema.dig("view_3d", "built_in")
+    assert_includes host, 'renderer.componentError("qtquick3d_unavailable"'
+    assert_includes host, 'Qt.resolvedUrl("Support/View3dScene.qml")'
+    assert_includes scene, "import QtQuick3D"
+    assert_includes scene, "View3D {"
+    assert_includes scene, "Node {"
+    assert_includes scene, "nativeView.pick(x, y)"
+    # A 3D object is not an Item, so the Item tree cannot carry the scene. The
+    # branch recursion mirrors it and attaches each object to its 3D parent.
+    assert_includes branch, 'Qt.resolvedUrl("../" + adapterName(node.type) + ".qml")'
+    assert_includes branch, "object.parent = target"
+    assert_includes branch, 'componentError("scene3d_attach_failed"'
+    assert_includes children, 'Qt.resolvedUrl("Scene3dBranch.qml")'
+    refute_includes branch, "ControlNode.qml"
+  end
+
+  def test_scene_3d_resources_resolve_from_children_and_by_ruby_id
+    branch = source("Components/Builtins/Support/Scene3dBranch.qml")
+    model = source("Components/Builtins/Model3d.qml")
+    scene = source("Components/Builtins/Support/View3dScene.qml")
+
+    assert_includes branch, "function childObjectsAndReferences(types, referenceProperty)"
+    assert_includes branch, "function childObjectOrReference(types, referenceProperty)"
+    assert_includes scene, "function registerSceneObject(objectId, object)"
+    assert_includes model, 'renderer.childObjectsAndReferences(model3d.materialTypes, "materials")'
+    assert_includes model, 'renderer.childObjectOrReference(model3d.geometryTypes, "geometry")'
+    assert_includes model, 'Value3d.meshSource(renderer, renderer.prop("source", ""))'
+  end
+
+  def test_scene_3d_nodes_keep_qt_defaults_for_undeclared_transforms
+    %w[Node3d Model3d Loader3d Repeater3d].each do |adapter|
+      qml = source("Components/Builtins/#{adapter}.qml")
+
+      assert_includes qml, 'property: "rotation"'
+      assert_includes qml, 'when: renderer.hasProp("rotation")'
+      assert_includes qml, 'Value3d.vector3d(renderer.prop("scale", null), 1, 1, 1)'
+    end
+  end
+
   def test_font_loader_has_a_specific_native_resource_renderer
     renderer = source("ControlNode.qml")
 
