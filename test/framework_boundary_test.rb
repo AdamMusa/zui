@@ -172,6 +172,25 @@ class FrameworkBoundaryTest < Minitest::Test
     assert_includes host, 'qputenv("QT_IM_MODULE", QByteArrayLiteral("qtvirtualkeyboard"));'
   end
 
+  def test_mobile_charts_and_graphs_are_linked_only_when_tree_shaking_keeps_them
+    cmake = File.read(File.join(ROOT, "native", "CMakeLists.txt"))
+
+    assert_includes cmake, '"${ZUI_FRAMEWORK_ROOT}/Components/Builtins/Chart*.qml"'
+    assert_includes cmake, '"${ZUI_FRAMEWORK_ROOT}/Components/Builtins/Graph*.qml"'
+    assert_includes cmake, "find_package(Qt6 6.8 REQUIRED COMPONENTS Charts ChartsQml)"
+    assert_includes cmake, "find_package(Qt6 6.8 REQUIRED COMPONENTS Graphs Quick3D)"
+    assert_includes cmake, "target_link_libraries(zui-host PRIVATE Qt6::Charts Qt6::ChartsQml)"
+    assert_includes cmake, "target_link_libraries(zui-host PRIVATE Qt6::Graphs Qt6::Quick3D)"
+    assert_includes cmake, "if(ZUI_EMBEDDED_RUNTIME AND zui_chart_adapters)"
+    assert_includes cmake, "if(ZUI_EMBEDDED_RUNTIME AND zui_graph_adapters)"
+  end
+
+  def test_continuous_integration_installs_the_chart_and_graph_qt_modules
+    workflow = File.read(File.join(ROOT, ".github", "workflows", "platforms.yml"))
+
+    assert_includes workflow, "qtcharts qtgraphs"
+  end
+
   def test_mobile_permission_status_events_are_deduplicated
     permission = File.read(File.join(ROOT, "Components", "Builtins", "Support", "PermissionBridge.qml"))
 

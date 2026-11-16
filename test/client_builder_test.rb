@@ -80,6 +80,27 @@ class ClientBuilderTest < Minitest::Test
     end
   end
 
+  def test_linux_qml_payload_carries_chart_and_graph_modules_when_qt_provides_them
+    Dir.mktmpdir do |directory|
+      qml = File.join(directory, "qt", "qml")
+      stage = File.join(directory, "stage")
+      Zui::ClientBuilder::LINUX_QML_ROOTS.each do |root|
+        FileUtils.mkdir_p(File.join(qml, root))
+      end
+      charts = File.join(qml, "QtCharts")
+      FileUtils.mkdir_p(File.join(charts, "designer"))
+      File.write(File.join(charts, "qmldir"), "module QtCharts\n")
+
+      builder.send(:install_linux_qml, stage, "QT_INSTALL_QML" => qml)
+
+      assert_equal %w[QtCharts QtGraphs], Zui::ClientBuilder::LINUX_OPTIONAL_QML_ROOTS
+      assert_empty Zui::ClientBuilder::LINUX_OPTIONAL_QML_ROOTS & Zui::ClientBuilder::LINUX_QML_ROOTS
+      assert File.file?(File.join(stage, "qml", "QtCharts", "qmldir"))
+      refute File.exist?(File.join(stage, "qml", "QtCharts", "designer"))
+      refute File.exist?(File.join(stage, "qml", "QtGraphs"))
+    end
+  end
+
   def test_linux_plugin_payload_excludes_designer_and_pdf_plugins
     Dir.mktmpdir do |directory|
       plugins = File.join(directory, "qt", "plugins")

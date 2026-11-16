@@ -9,7 +9,12 @@ module Zui
   # Internal CI/release builder. It is deliberately not used by `zui configure`.
   class ClientBuilder
     LINUX_QML_ROOTS = %w[QML Qt QtCore QtMultimedia QtQml QtQuick QtQuick3D].freeze
+    # QtCharts and QtGraphs carry the real Qt charting and GPU graph types. A Qt
+    # installation can legitimately omit them, so they are copied when present
+    # instead of being required like the roots the framework always imports.
+    LINUX_OPTIONAL_QML_ROOTS = %w[QtCharts QtGraphs].freeze
     LINUX_QML_EXCLUSIONS = %w[
+      QtCharts/designer QtGraphs/designer
       Qt/labs/StyleKit Qt/labs/animation Qt/labs/settings Qt/labs/sharedimage Qt/labs/synchronizer
       Qt/labs/wavefrontmesh Qt/test QtQuick/Controls/FluentWinUI3 QtQuick/Controls/Imagine
       QtQuick/Controls/Material QtQuick/Controls/Universal QtQuick/Controls/designer QtQuick/LocalStorage
@@ -145,6 +150,10 @@ module Zui
         raise ArgumentError, "required Qt QML module is missing: #{path}" unless File.directory?(path)
 
         FileUtils.cp_r(path, destination)
+      end
+      LINUX_OPTIONAL_QML_ROOTS.each do |name|
+        path = File.join(source, name)
+        FileUtils.cp_r(path, destination) if File.directory?(path)
       end
       LINUX_QML_EXCLUSIONS.each do |relative|
         path = File.join(destination, relative)
