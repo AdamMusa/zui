@@ -59,6 +59,12 @@ if(ZUI_EMBEDDED_RUNTIME AND EXISTS "${ZUI_FRAMEWORK_ROOT}/Components/Builtins/Vi
   set(ZUI_USES_VIRTUAL_KEYBOARD ON)
 endif()
 
+set(ZUI_USES_XML_LIST_MODEL OFF)
+if(ZUI_EMBEDDED_RUNTIME AND EXISTS "${ZUI_FRAMEWORK_ROOT}/Components/Builtins/XmlListModel.qml")
+  find_package(Qt6 6.8 REQUIRED COMPONENTS QmlXmlListModel)
+  set(ZUI_USES_XML_LIST_MODEL ON)
+endif()
+
 set(zui_host_sources
   main.cpp
   ZuiClipboard.cpp
@@ -171,6 +177,12 @@ endif()
 if(ZUI_USES_VIRTUAL_KEYBOARD)
   target_link_libraries(zui-host PRIVATE Qt6::VirtualKeyboard)
   target_compile_definitions(zui-host PRIVATE ZUI_USES_VIRTUAL_KEYBOARD=1)
+endif()
+
+# QtQml.XmlListModel is not a QtQuick dependency, so a statically linked mobile
+# host only carries it when tree-shaking kept the adapter.
+if(ZUI_USES_XML_LIST_MODEL)
+  target_link_libraries(zui-host PRIVATE Qt6::QmlXmlListModel)
 endif()
 
 if(ZUI_EMBEDDED_RUNTIME)
