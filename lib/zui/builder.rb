@@ -393,6 +393,14 @@ module Zui
       component(:particle_system, id:, **props)
     end
 
+    PARTICLE_REFERENCE_PROPERTIES = %i[system shape emit_shape velocity acceleration].freeze
+    %i[emitter trail_emitter].each do |type|
+      define_method(type) do |system = nil, id: nil, **props|
+        props = props.merge(system:) unless system.nil?
+        component(type, id:, **normalize_particle_references(props))
+      end
+    end
+
     def selection_rectangle(target, id: nil, **props) = component(:selection_rectangle, id:, target: node_id(target), **props)
     def scroll_bar(target = nil, id: nil, **props)
       props = props.merge(target: node_id(target)) unless target.nil?
@@ -819,6 +827,14 @@ module Zui
 
     def node_id(value)
       value.is_a?(Node) ? value.id : value.to_s
+    end
+
+    # Particle building blocks reference each other by control id, so a node
+    # passed for one of those properties becomes its id.
+    def normalize_particle_references(props)
+      props.each_with_object({}) do |(key, value), normalized|
+        normalized[key] = PARTICLE_REFERENCE_PROPERTIES.include?(key) ? node_id(value) : value
+      end
     end
 
     def normalize_animation_specs(animations)

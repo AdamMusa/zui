@@ -90,6 +90,58 @@ class QmlContractTest < Minitest::Test
     end
   end
 
+  def test_particle_emitters_join_a_system_referenced_by_control_id
+    emitter = File.read(File.join(ROOT, "Components", "Builtins", "Emitter.qml"))
+    trail = File.read(File.join(ROOT, "Components", "Builtins", "TrailEmitter.qml"))
+    system = File.read(File.join(ROOT, "Components", "Builtins", "ParticleSystem.qml"))
+
+    assert_includes system, "readonly property var nativeParticleSystem: nativeSystem"
+    [emitter, trail].each do |qml|
+      assert_includes qml, "import QtQuick.Particles"
+      assert_includes qml, 'nativeHandle(renderer ? renderer.prop("system", "") : "", "nativeParticleSystem")'
+      assert_includes qml, "nativeEmitter.pulse(duration)" if qml.equal?(emitter)
+    end
+    assert_includes emitter, "Emitter {"
+    assert_includes trail, "TrailEmitter {"
+    assert_includes trail, "TrailEmitter.ParticleSize"
+    assert_includes trail, "onEmitFollowParticles"
+  end
+
+  def test_particle_emitters_never_hand_qt_a_null_shape_or_direction
+    %w[Emitter TrailEmitter].each do |adapter|
+      qml = File.read(File.join(ROOT, "Components", "Builtins", "#{adapter}.qml"))
+
+      assert_includes qml, "RectangleShape { id: uniformArea; fill: true }"
+      assert_includes qml, "AngleDirection { id: zeroVelocity }"
+      assert_includes qml, "AngleDirection { id: zeroAcceleration }"
+      assert_match(/shape: \w+\.emissionShape \? \w+\.emissionShape : uniformArea/, qml)
+      assert_match(/velocity: \w+\.velocityDirection \? \w+\.velocityDirection : zeroVelocity/, qml)
+      assert_match(/acceleration: \w+\.accelerationDirection \? \w+\.accelerationDirection : zeroAcceleration/, qml)
+    end
+  end
+
+  def test_particle_system_exposes_its_whole_native_surface
+    system = File.read(File.join(ROOT, "Components", "Builtins", "ParticleSystem.qml"))
+    schema = Zui::COMPONENTS.fetch(:particle_system)
+
+    assert_includes system, "nativeSystem.restart()"
+    assert_includes system, "nativeSystem.reset()"
+    assert_includes system, "onSystemInitialized: particleRoot.send(\"initialize\", {})"
+    assert_includes schema.first, :restart_revision
+    assert_includes schema.first, :reset_revision
+    assert_includes schema[1], :restart
+    assert_includes schema[1], :reset
+    assert_includes schema[1], :initialize
+  end
+
+  def test_particle_modules_are_linked_whenever_tree_shaking_keeps_their_adapters
+    cmake = File.read(File.join(ROOT, "native", "CMakeLists.txt"))
+
+    assert_includes cmake, "function(zui_framework_imports_qml_module"
+    assert_includes cmake, 'zui_framework_imports_qml_module("QtQuick\\\\.Particles" ZUI_USES_PARTICLES)'
+    assert_includes cmake, "target_link_libraries(zui-host PRIVATE Qt6::QuickParticlesPrivate)"
+  end
+
   def test_component_coverage_catalog_has_no_unimplemented_entries
     coverage = File.read(File.join(ROOT, "docs", "component-coverage.md"))
 
