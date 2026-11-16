@@ -116,6 +116,20 @@ module Zui
       PDF = %w[PdfDocument PdfMultiPageView PdfPageView PdfScrollablePageView PdfPageImage
                PdfPageNavigator PdfSearchModel PdfSelection].to_h { |name| [name, :pdf_view] }.freeze
 
+      # QtQuick.Particles. The affectors that act on particles already alive.
+      PARTICLES_AFFECTORS = {
+        "ParticleSystem" => :particle_system,
+        "Affector" => :affector,
+        "Age" => :age,
+        "Attractor" => :attractor,
+        "Friction" => :friction,
+        "Gravity" => :gravity,
+        "GroupGoal" => :group_goal,
+        "SpriteGoal" => :sprite_goal,
+        "Turbulence" => :turbulence,
+        "Wander" => :wander
+      }.freeze
+
       TOUCH_INTERACTION = {
         "TapHandler" => :tap_area, "PointHandler" => :point_handler,
         "MultiPointTouchArea" => :multi_touch_area, "WheelHandler" => :wheel_area,
@@ -127,7 +141,7 @@ module Zui
       ALL = CORE.merge(PERMISSIONS).merge(DEVICE_INFORMATION).merge(VIRTUAL_KEYBOARD)
                 .merge(SENSORS).merge(POSITIONING).merge(LOCATION)
                 .merge(TEXT_TO_SPEECH).merge(WEB).merge(WEB_SOCKETS).merge(LOTTIE)
-                .merge(PDF).merge(TOUCH_INTERACTION).freeze
+                .merge(PDF).merge(TOUCH_INTERACTION).merge(PARTICLES_AFFECTORS).freeze
     end
   end
 end

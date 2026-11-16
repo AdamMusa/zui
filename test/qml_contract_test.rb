@@ -90,6 +90,61 @@ class QmlContractTest < Minitest::Test
     end
   end
 
+  PARTICLE_AFFECTOR_ADAPTERS = {
+    affector: "Affector", age: "Age", attractor: "Attractor", friction: "Friction",
+    gravity: "Gravity", group_goal: "GroupGoal", sprite_goal: "SpriteGoal",
+    turbulence: "Turbulence", wander: "Wander"
+  }.freeze
+
+  def test_particle_affectors_act_on_a_system_referenced_by_control_id
+    system = File.read(File.join(ROOT, "Components", "Builtins", "ParticleSystem.qml"))
+
+    assert_includes system, "readonly property var nativeParticleSystem: nativeSystem"
+    PARTICLE_AFFECTOR_ADAPTERS.each do |component, adapter|
+      qml = File.read(File.join(ROOT, "Components", "Builtins", "#{adapter}.qml"))
+
+      assert_includes qml, "import QtQuick.Particles"
+      assert_includes qml, "#{adapter} {"
+      assert_includes qml, 'nativeHandle(renderer ? renderer.prop("system", "") : "", "nativeParticleSystem")'
+      assert_includes qml, "RectangleShape { id: uniformArea; fill: true }"
+      assert_includes qml, 'send("affected"'
+      assert_includes Zui::COMPONENTS.fetch(component)[1], :affected
+      assert_includes Zui::COMPONENTS.fetch(component).first, :when_colliding_with
+    end
+  end
+
+  def test_standalone_turbulence_keeps_the_noise_grid_bounded
+    turbulence = File.read(File.join(ROOT, "Components", "Builtins", "Turbulence.qml"))
+
+    assert_includes turbulence, "model: turbulenceRoot.columns * turbulenceRoot.rows"
+    assert_includes turbulence, "column * turbulenceRoot.tileWidth"
+    assert_includes turbulence, "row * turbulenceRoot.tileHeight"
+    assert_includes turbulence, 'renderer.prop("grid_size", 256)'
+    assert_includes Zui::COMPONENTS.fetch(:turbulence).first, :grid_size
+  end
+
+  def test_particle_affector_enums_use_the_qt_names
+    attractor = File.read(File.join(ROOT, "Components", "Builtins", "Attractor.qml"))
+    wander = File.read(File.join(ROOT, "Components", "Builtins", "Wander.qml"))
+
+    %w[Attractor.Position Attractor.Velocity Attractor.Acceleration].each do |value|
+      assert_includes attractor, value
+    end
+    %w[Attractor.Constant Attractor.Quadratic Attractor.InverseLinear
+       Attractor.InverseQuadratic Attractor.Linear].each do |value|
+      assert_includes attractor, value
+    end
+    %w[Wander.Position Wander.Velocity Wander.Acceleration].each { |value| assert_includes wander, value }
+  end
+
+  def test_particle_modules_are_linked_whenever_tree_shaking_keeps_their_adapters
+    cmake = File.read(File.join(ROOT, "native", "CMakeLists.txt"))
+
+    assert_includes cmake, "function(zui_framework_imports_qml_module"
+    assert_includes cmake, 'zui_framework_imports_qml_module("QtQuick\\\\.Particles" ZUI_USES_PARTICLES)'
+    assert_includes cmake, "target_link_libraries(zui-host PRIVATE Qt6::QuickParticlesPrivate)"
+  end
+
   def test_component_coverage_catalog_has_no_unimplemented_entries
     coverage = File.read(File.join(ROOT, "docs", "component-coverage.md"))
 
