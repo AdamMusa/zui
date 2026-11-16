@@ -5,6 +5,9 @@ Item {
   id: particleRoot
   required property var renderer
   property int handledBurstRevision: -1
+  // Emitters, painters and affectors declared outside this wrapper join the
+  // system through this handle, resolved by control id.
+  readonly property var nativeParticleSystem: nativeSystem
   readonly property real turbulenceWidth: Math.max(0, Number(renderer.prop("turbulence_width", width)))
   readonly property real turbulenceHeight: Math.max(0, Number(renderer.prop("turbulence_height", height)))
   readonly property real turbulenceGridLimit: Number(renderer.prop("turbulence_grid_size", 256))

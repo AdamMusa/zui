@@ -116,6 +116,15 @@ module Zui
       PDF = %w[PdfDocument PdfMultiPageView PdfPageView PdfScrollablePageView PdfPageImage
                PdfPageNavigator PdfSearchModel PdfSelection].to_h { |name| [name, :pdf_view] }.freeze
 
+      # QtQuick.Particles. The painters that give a group its look and the
+      # grouping that gives it a lifetime.
+      PARTICLES_PAINTERS = {
+        "ParticleSystem" => :particle_system,
+        "ImageParticle" => :image_particle,
+        "ItemParticle" => :item_particle,
+        "ParticleGroup" => :particle_group
+      }.freeze
+
       TOUCH_INTERACTION = {
         "TapHandler" => :tap_area, "PointHandler" => :point_handler,
         "MultiPointTouchArea" => :multi_touch_area, "WheelHandler" => :wheel_area,
@@ -127,7 +136,7 @@ module Zui
       ALL = CORE.merge(PERMISSIONS).merge(DEVICE_INFORMATION).merge(VIRTUAL_KEYBOARD)
                 .merge(SENSORS).merge(POSITIONING).merge(LOCATION)
                 .merge(TEXT_TO_SPEECH).merge(WEB).merge(WEB_SOCKETS).merge(LOTTIE)
-                .merge(PDF).merge(TOUCH_INTERACTION).freeze
+                .merge(PDF).merge(TOUCH_INTERACTION).merge(PARTICLES_PAINTERS).freeze
     end
   end
 end
