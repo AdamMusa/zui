@@ -6,10 +6,38 @@ Map {
   id: root
   required property var renderer
   property var parameterObjects: []
+  // A map_plugin component can be shared by every QtLocation model in a surface; when one is
+  // named it owns the provider, and the map's own plugin/plugin_parameters are not used.
+  readonly property var sharedPluginItem: {
+    var source = String(renderer.prop("plugin_source", ""))
+    return source === "" ? null : renderer.findRenderedItem(source)
+  }
   function coordinate(latitude, longitude, altitude) {
     return QtPositioning.coordinate(Number(latitude), Number(longitude), Number(altitude || 0))
   }
+  function mapTypePayload(type) {
+    if (!type) return null
+    return { name: String(type.name), description: String(type.description), style: Number(type.style),
+      mobile: type.mobile === true, night: type.night === true, metadata: type.metadata || {} }
+  }
+  function publishMapTypes() {
+    var types = []
+    for (var index = 0; index < supportedMapTypes.length; index++) types.push(mapTypePayload(supportedMapTypes[index]))
+    send("map_types", { types: types, active: mapTypePayload(activeMapType) })
+  }
   function configurePlugin() {
+    if (sharedPluginItem) {
+      if (sharedPluginItem.plugin === undefined) {
+        renderer.componentError("map_plugin_source_invalid", "plugin_source does not name a map_plugin component",
+          { plugin_source: String(renderer.prop("plugin_source", "")) })
+      }
+      return
+    }
+    if (String(renderer.prop("plugin_source", "")) !== "") {
+      renderer.componentError("map_plugin_source_missing", "The map_plugin named by plugin_source was not found",
+        { plugin_source: String(renderer.prop("plugin_source", "")) })
+      return
+    }
     for (var oldIndex = 0; oldIndex < parameterObjects.length; oldIndex++) parameterObjects[oldIndex].destroy()
     var objects = []
     var values = renderer.prop("plugin_parameters", {}) || {}
@@ -29,6 +57,9 @@ Map {
         return
       }
     }
+    if (supportedMapTypes.length > 0)
+      renderer.componentError("map_type_unavailable", "The map provider does not publish a matching map type",
+        { map_type: requested, available: supportedMapTypes.length })
   }
   function send(name, payload) {
     if (renderer.subscribed(name)) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, name, payload || {})
@@ -36,7 +67,7 @@ Map {
   implicitWidth: Number(renderer.prop("width", 640))
   implicitHeight: Number(renderer.prop("height", 420))
   visible: renderer.prop("visible", true) !== false
-  plugin: nativePlugin
+  plugin: root.sharedPluginItem && root.sharedPluginItem.plugin !== undefined ? root.sharedPluginItem.plugin : nativePlugin
   center: coordinate(renderer.prop("latitude", 0), renderer.prop("longitude", 0), renderer.prop("altitude", 0))
   zoomLevel: Number(renderer.prop("zoom", 12))
   minimumZoomLevel: Number(renderer.prop("minimum_zoom", 1))
@@ -93,10 +124,10 @@ Map {
   }
   onCenterChanged: root.send("center_change", { latitude: root.center.latitude, longitude: root.center.longitude, altitude: root.center.altitude })
   onZoomLevelChanged: root.send("zoom_change", { value: root.zoomLevel })
-  onActiveMapTypeChanged: root.send("map_type_change", { name: root.activeMapType ? root.activeMapType.name : "" })
+  onActiveMapTypeChanged: root.send("map_type_change", root.mapTypePayload(root.activeMapType) || { name: "" })
   onCopyrightLinkActivated: function(link) { root.send("copyright", { url: String(link) }) }
   onErrorChanged: if (Number(root.error) !== 0) root.renderer.componentError("map_failed", root.errorString, { native_code: Number(root.error) })
-  onSupportedMapTypesChanged: root.selectMapType()
-  Component.onCompleted: { configurePlugin(); selectMapType() }
+  onSupportedMapTypesChanged: { root.selectMapType(); root.publishMapTypes() }
+  Component.onCompleted: { configurePlugin(); selectMapType(); publishMapTypes() }
   Connections { target: renderer; function onNodeChanged() { root.configurePlugin(); root.selectMapType() } }
 }
