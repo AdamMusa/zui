@@ -111,6 +111,32 @@ class QmlContractTest < Minitest::Test
     assert_includes Zui::COMPONENTS.fetch(:recursive_blur)[1], :progress
   end
 
+  GRAPHICAL_EFFECT_COLOR_ADAPTERS = {
+    brightness_contrast: "BrightnessContrast", desaturate: "Desaturate",
+    gamma_adjust: "GammaAdjust", level_adjust: "LevelAdjust",
+    hue_saturation: "HueSaturation", hue_colorize: "Colorize",
+    color_overlay: "ColorOverlay"
+  }.freeze
+
+  def test_color_adjust_family_renders_through_the_native_graphical_effects_types
+    GRAPHICAL_EFFECT_COLOR_ADAPTERS.each do |component, type|
+      adapter_name = component.to_s.split("_").map(&:capitalize).join
+      adapter = File.read(File.join(ROOT, "Components", "Builtins", "#{adapter_name}.qml"))
+
+      assert_includes adapter, "import Qt5Compat.GraphicalEffects", "#{adapter_name} does not import its Qt module"
+      assert_includes adapter, "#{type} {", "#{adapter_name} does not instantiate #{type}"
+      refute_includes adapter, "MultiEffect", "#{adapter_name} falls back to another effect type"
+      assert_includes adapter, "source: sourceHost"
+      assert_includes adapter, 'renderer.prop("cached", false)'
+      assert_equal type, Zui::Mobile::ComponentCatalog::GRAPHICAL_EFFECTS.key(component)
+    end
+    level_adjust = File.read(File.join(ROOT, "Components", "Builtins", "LevelAdjust.qml"))
+
+    assert_includes level_adjust, "Qt.vector3d("
+    assert_includes level_adjust, 'renderer.prop("minimum_input", "#00000000")'
+    assert_includes level_adjust, 'renderer.prop("maximum_output", "#ffffffff")'
+  end
+
   def test_graphical_effects_reach_desktop_clients_and_static_mobile_builds
     cmake = File.read(File.join(ROOT, "native", "CMakeLists.txt"))
     audit = File.read(File.join(ROOT, "scripts", "audit_client.rb"))

@@ -129,7 +129,11 @@ module Zui
       GRAPHICAL_EFFECTS = {
         "FastBlur" => :fast_blur, "GaussianBlur" => :gaussian_blur,
         "DirectionalBlur" => :directional_blur, "RadialBlur" => :radial_blur,
-        "ZoomBlur" => :zoom_blur, "RecursiveBlur" => :recursive_blur
+        "ZoomBlur" => :zoom_blur, "RecursiveBlur" => :recursive_blur,
+        "BrightnessContrast" => :brightness_contrast, "Desaturate" => :desaturate,
+        "GammaAdjust" => :gamma_adjust, "LevelAdjust" => :level_adjust,
+        "HueSaturation" => :hue_saturation, "Colorize" => :hue_colorize,
+        "ColorOverlay" => :color_overlay
       }.freeze
 
       CORE = QUICK_CONTROLS.merge(QUICK_DIALOGS).merge(QUICK_LAYOUTS).freeze
