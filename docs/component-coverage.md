@@ -9,7 +9,8 @@ renderer, reactive property support, applicable events, tests, and reference doc
 ## Scope
 
 This catalog targets public, application-facing types from Qt Quick, Qt Quick Controls, Qt Quick
-Layouts, Qt Quick Dialogs, Qt Quick Effects, Qt Quick Shapes, and Qt Multimedia, plus useful
+Layouts, Qt Quick Dialogs, Qt Quick Effects, Qt Quick Shapes, Qt 5 Compatibility Graphical
+Effects, and Qt Multimedia, plus useful
 Zui-native controls and charts. Private `impl` types, style implementations, abstract base
 classes, QML compiler infrastructure, compositor protocols, and operating-system service objects
 are not widgets and are intentionally excluded. Framework concepts such as state, timers,
@@ -275,6 +276,12 @@ transitions, and animation groups receive Ruby APIs even though they are not vis
 - [x] drop_shadow
 - [x] colorize
 - [x] glow
+- [x] fast_blur
+- [x] gaussian_blur
+- [x] directional_blur
+- [x] radial_blur
+- [x] zoom_blur
+- [x] recursive_blur
 
 ## Multimedia and capture
 

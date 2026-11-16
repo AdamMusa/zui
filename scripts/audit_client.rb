@@ -22,6 +22,11 @@ forbidden = %r{
   (?:\A|/)qml/org/|(?:\A|/)QtQuick/Pdf(?:/|\z)
 }ix
 
+# The GPU effect components render through Qt5Compat.GraphicalEffects, so that
+# one QML module (and the private module its public types depend on) is the only
+# part of Qt5Compat a client may carry.
+permitted = %r{(?:\A|/)Qt5Compat/GraphicalEffects(?:/|\z)}
+
 entries = []
 Zlib::GzipReader.open(archive) do |gzip|
   Gem::Package::TarReader.new(gzip) do |tar|
@@ -30,7 +35,7 @@ Zlib::GzipReader.open(archive) do |gzip|
 end
 
 abort "client archive has no manifest" unless entries.include?("client.json")
-offender = entries.find { |entry| entry.match?(forbidden) }
+offender = entries.find { |entry| entry.match?(forbidden) && !entry.match?(permitted) }
 abort "client archive contains forbidden payload: #{offender}" if offender
 
 controls_plugin = if File.basename(archive).include?("macos")

@@ -2,6 +2,7 @@
 
 require "minitest/autorun"
 require_relative "../lib/zui"
+require_relative "../lib/zui/client_builder"
 
 class QmlContractTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
@@ -88,6 +89,39 @@ class QmlContractTest < Minitest::Test
       path = File.join(ROOT, "Components", "Builtins", "Shaders", "#{name}.frag.qsb")
       assert_operator File.size(path), :>, 100, "invalid precompiled shader: #{path}"
     end
+  end
+
+  GRAPHICAL_EFFECT_BLUR_ADAPTERS = {
+    fast_blur: "FastBlur", gaussian_blur: "GaussianBlur", directional_blur: "DirectionalBlur",
+    radial_blur: "RadialBlur", zoom_blur: "ZoomBlur", recursive_blur: "RecursiveBlur"
+  }.freeze
+
+  def test_blur_family_renders_through_the_native_graphical_effects_types
+    GRAPHICAL_EFFECT_BLUR_ADAPTERS.each do |component, type|
+      adapter = File.read(File.join(ROOT, "Components", "Builtins", "#{type}.qml"))
+
+      assert_includes adapter, "import Qt5Compat.GraphicalEffects", "#{type} does not import its Qt module"
+      assert_includes adapter, "#{type} {", "#{type} does not instantiate its Qt type"
+      refute_includes adapter, "MultiEffect", "#{type} falls back to another effect type"
+      assert_includes adapter, "source: sourceHost"
+      assert_includes adapter, 'renderer.prop("cached", false)'
+      assert_equal type, Zui::Mobile::ComponentCatalog::GRAPHICAL_EFFECTS.key(component)
+      assert Zui::COMPONENTS.key?(component), "#{component} has no registry schema"
+    end
+    assert_includes Zui::COMPONENTS.fetch(:recursive_blur)[1], :progress
+  end
+
+  def test_graphical_effects_reach_desktop_clients_and_static_mobile_builds
+    cmake = File.read(File.join(ROOT, "native", "CMakeLists.txt"))
+    audit = File.read(File.join(ROOT, "scripts", "audit_client.rb"))
+
+    assert_includes Zui::ClientBuilder::LINUX_QML_ROOTS, "Qt5Compat"
+    assert_includes audit, 'permitted = %r{(?:\A|/)Qt5Compat/GraphicalEffects(?:/|\z)}'
+    assert_includes audit, "entry.match?(forbidden) && !entry.match?(permitted)"
+    assert_includes cmake, "Qt6::qtgraphicaleffectsplugin"
+    assert_includes cmake, "Qt6::qtgraphicaleffectsprivate"
+    assert_includes cmake, "Qt6::qmlshapesplugin"
+    assert_includes cmake, "qt_import_plugins(zui-host INCLUDE ${zui_gpu_qml_plugin})"
   end
 
   def test_component_coverage_catalog_has_no_unimplemented_entries
