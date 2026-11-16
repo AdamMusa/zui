@@ -39,7 +39,8 @@ Item {
     id: nativeGroup
     system: particleGroupRoot.particleSystem
     name: String(particleGroupRoot.renderer ? particleGroupRoot.renderer.prop("name", "") : "")
-    duration: Number(particleGroupRoot.renderer ? particleGroupRoot.renderer.prop("duration", 1000) : 1000)
+    // Qt's own default is -1: the group has no lifetime of its own.
+    duration: Number(particleGroupRoot.renderer ? particleGroupRoot.renderer.prop("duration", -1) : -1)
     durationVariation: Number(particleGroupRoot.renderer ? particleGroupRoot.renderer.prop("duration_variation", 0) : 0)
     randomStart: particleGroupRoot.renderer ? particleGroupRoot.renderer.prop("random_start", false) === true : false
     to: particleGroupRoot.transitions()

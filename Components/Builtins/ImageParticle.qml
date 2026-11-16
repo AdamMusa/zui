@@ -88,6 +88,9 @@ Item {
     colorTable: imageParticleRoot.renderer ? imageParticleRoot.renderer.assetUrl(imageParticleRoot.renderer.prop("color_table", "")) : ""
     sizeTable: imageParticleRoot.renderer ? imageParticleRoot.renderer.assetUrl(imageParticleRoot.renderer.prop("size_table", "")) : ""
     opacityTable: imageParticleRoot.renderer ? imageParticleRoot.renderer.assetUrl(imageParticleRoot.renderer.prop("opacity_table", "")) : ""
+    // Qt leaves the texture unmodified until color is assigned, and its unset
+    // property reads back black. White is the identity multiplier, so this
+    // default matches Qt's visual default rather than its property default.
     color: imageParticleRoot.renderer ? imageParticleRoot.renderer.prop("color", "white") : "white"
     colorVariation: Number(imageParticleRoot.renderer ? imageParticleRoot.renderer.prop("color_variation", 0) : 0)
     redVariation: Number(imageParticleRoot.renderer ? imageParticleRoot.renderer.prop("red_variation", 0) : 0)
