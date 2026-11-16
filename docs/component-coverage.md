@@ -262,6 +262,12 @@ transitions, and animation groups receive Ruby APIs even though they are not vis
 - [x] state
 - [x] state_group
 - [x] property_changes
+- [x] state_machine
+- [x] machine_state
+- [x] final_state
+- [x] history_state
+- [x] signal_transition
+- [x] timeout_transition
 - [x] anchor_changes
 - [x] parent_change
 - [x] timer
