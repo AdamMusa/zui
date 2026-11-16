@@ -850,6 +850,30 @@ class QmlContractTest < Minitest::Test
                  Zui::Mobile::ComponentCatalog::QUICK3D_MATERIALS.fetch("PrincipledMaterial")
   end
 
+  def test_quick3d_textures_sample_assets_procedural_data_and_live_controls
+    texture = source("Components/Builtins/Texture3d.qml")
+    cube = source("Components/Builtins/CubeMapTexture.qml")
+    input = source("Components/Builtins/TextureInput.qml")
+    material = source("Components/Builtins/CustomMaterial.qml")
+    branch = source("Components/Builtins/Support/Scene3dBranch.qml")
+
+    assert_dynamic_component_route(source("ControlNode.qml"), "texture_3d")
+    assert_includes texture, "Texture {"
+    assert_includes texture, 'renderer.findRenderedItem(renderer.prop("source_item", ""))'
+    assert_includes texture, '"mirrored_repeat": Texture.MirroredRepeat'
+    assert_includes texture, '"light_probe": Texture.LightProbe'
+    assert_includes cube, "CubeMapTexture {"
+    # A texture input is a plain QObject with no 3D parent and no children.
+    assert_includes input, "TextureInput {"
+    assert_includes input, 'texture: renderer.sceneObject(renderer.prop("texture", ""))'
+    refute_includes input, "Prop3dBinding"
+    assert_equal false, Zui::DEFAULT_COMPONENTS.protocol_schema.dig("texture_input", "container")
+    assert_includes branch, 'if (target && object.hasOwnProperty("parent"))'
+    assert_includes material, "property TextureInput texture0:"
+    assert_includes Zui::COMPONENTS.fetch(:custom_material).first, :texture3
+    assert_equal :texture_3d, Zui::Mobile::ComponentCatalog::QUICK3D_TEXTURES.fetch("Texture")
+  end
+
   def test_optional_3d_properties_leave_qt_defaults_alone
     helper = source("Components/Builtins/Support/Prop3dBinding.qml")
 

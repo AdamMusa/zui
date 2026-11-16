@@ -23,6 +23,12 @@ CustomMaterial {
     property real amplitude: Number(renderer.prop("amplitude", 0.02))
     property color tint: renderer.prop("tint", "white")
     property color tint2: renderer.prop("tint2", "black")
+    // Texture uniforms, for the same reason. Each slot names a texture_input
+    // declared anywhere in the scene.
+    property TextureInput texture0: renderer.sceneObject(renderer.prop("texture0", ""))
+    property TextureInput texture1: renderer.sceneObject(renderer.prop("texture1", ""))
+    property TextureInput texture2: renderer.sceneObject(renderer.prop("texture2", ""))
+    property TextureInput texture3: renderer.sceneObject(renderer.prop("texture3", ""))
     property vector4d parameters: Value3d.vector4d(renderer.prop("parameters", null), 0, 0, 0, 0)
 
     Support.Prop3dBinding {

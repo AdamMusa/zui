@@ -110,6 +110,12 @@ Item {
         return host && host.sceneObjectId ? host.sceneObjectId(object) : ""
     }
 
+    // Reaches a two-dimensional Zui control by its Ruby id, which is how a
+    // texture takes a live Qt Quick item as its source.
+    function findRenderedItem(targetId) {
+        return host && host.findRenderedItem ? host.findRenderedItem(targetId) : null
+    }
+
     function childObjects(types) {
         return childHost.objectsOfType(types)
     }
@@ -140,7 +146,10 @@ Item {
         var object = adapterLoader.item
         if (!object)
             return
-        if (target) {
+        // A Qt Quick 3D resource that is not part of the object tree, such as a
+        // texture input handed to a shader, has no 3D parent to attach to. It is
+        // still published to the registry so another node can name it.
+        if (target && object.hasOwnProperty("parent")) {
             object.parent = target
             if (object.parent !== target) {
                 componentError("scene3d_attach_failed",

@@ -419,3 +419,13 @@ Ruby id of a texture node.
 - [x] default_material
 - [x] specular_glossy_material
 - [x] custom_material
+
+### Textures
+
+A texture is named by the material slot that samples it. TextureData is an
+abstract C++ base with no QML-creatable form; its concrete shapes are the
+procedural texture data helpers.
+
+- [x] texture_3d
+- [x] cube_map_texture
+- [x] texture_input

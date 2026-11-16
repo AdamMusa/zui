@@ -149,6 +149,12 @@ module Zui
         "SpecularGlossyMaterial" => :specular_glossy_material, "CustomMaterial" => :custom_material
       }.freeze
 
+      # Qt Quick 3D textures.
+      QUICK3D_TEXTURES = {
+        "Texture" => :texture_3d, "CubeMapTexture" => :cube_map_texture,
+        "TextureInput" => :texture_input
+      }.freeze
+
       CORE = QUICK_CONTROLS.merge(QUICK_DIALOGS).merge(QUICK_LAYOUTS).freeze
       ALL = CORE.merge(PERMISSIONS).merge(DEVICE_INFORMATION).merge(VIRTUAL_KEYBOARD)
                 .merge(SENSORS).merge(POSITIONING).merge(LOCATION)
@@ -156,7 +162,8 @@ module Zui
                 .merge(PDF).merge(TOUCH_INTERACTION).merge(QUICK3D_SCENE)
                 .merge(QUICK3D_CAMERAS)
                 .merge(QUICK3D_LIGHTS)
-                .merge(QUICK3D_MATERIALS).freeze
+                .merge(QUICK3D_MATERIALS)
+                .merge(QUICK3D_TEXTURES).freeze
     end
   end
 end

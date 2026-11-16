@@ -72,6 +72,11 @@ Item {
         return renderer.assetUrl(value)
     }
 
+    function findRenderedItem(targetId) {
+        var name = String(targetId === undefined || targetId === null ? "" : targetId)
+        return name === "" ? null : renderer.findRenderedItem(name)
+    }
+
     function componentError(code, message, payload) {
         renderer.componentError(code, message, payload)
     }
