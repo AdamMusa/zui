@@ -46,6 +46,7 @@ transitions, and animation groups receive Ruby APIs even though they are not vis
 - [x] border_image
 - [x] window
 - [x] application_window
+- [x] responsive_view
 
 ## Display, content, and media
 
@@ -230,6 +231,7 @@ transitions, and animation groups receive Ruby APIs even though they are not vis
 - [x] selection_rectangle
 - [x] scroll_bar
 - [x] scroll_indicator
+- [x] cursor_surface
 
 ## Animation, state, and timing
 

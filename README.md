@@ -13,7 +13,7 @@
   <a href="https://rubygems.org/gems/zui"><img alt="RubyGem" src="https://img.shields.io/gem/v/zui?style=flat-square&color=9cff57&labelColor=111711"></a>
   <a href="https://github.com/AdamMusa/zui/actions/workflows/platforms.yml"><img alt="Native platforms" src="https://github.com/AdamMusa/zui/actions/workflows/platforms.yml/badge.svg"></a>
   <img alt="Ruby 3.1 or newer" src="https://img.shields.io/badge/Ruby-%E2%89%A5%203.1-cc342d?style=flat-square&labelColor=111711">
-  <img alt="241 components" src="https://img.shields.io/badge/components-241-46e8ff?style=flat-square&labelColor=111711">
+  <img alt="306 components" src="https://img.shields.io/badge/components-306-46e8ff?style=flat-square&labelColor=111711">
   <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-a79cff?style=flat-square&labelColor=111711"></a>
 </p>
 
@@ -41,7 +41,7 @@ and complete component catalog. The result is a native application—not a web p
     <td width="33%"><strong>Private verified runtime</strong><br>Install a checksummed native client without changing system Qt or shell configuration.</td>
   </tr>
   <tr>
-    <td><strong>241 named components</strong><br>Use specific controls with validated properties and events instead of a generic markup escape hatch.</td>
+    <td><strong>306 named components</strong><br>Use specific controls with validated properties and events instead of a generic markup escape hatch.</td>
     <td><strong>Reactive by default</strong><br>Update only changed properties and publish multi-value transactions as atomic patch batches.</td>
     <td><strong>Portable source</strong><br>Run the same application on Linux, macOS, Windows, iOS, Android, or through an environment adapter such as Omarchy UI.</td>
   </tr>
@@ -268,23 +268,30 @@ uses a system Qt installation, or downloads an asset for a different platform. S
 
 ## Component catalog
 
-Zui 0.0.10 registers **241 built-in components**. Every entry has a named Ruby builder method,
+Zui 0.0.10 registers **306 built-in components**. Every entry has a named Ruby builder method,
 property and event schema, native QML renderer, reactive patch support, and contract tests.
 
 | Category | Count | Representative components |
 | --- | ---: | --- |
-| Foundation and layout | 28 | `container`, `grid_layout`, `scroll`, `split_view`, `application_window` |
-| Display, content, and media | 24 | `text`, `image`, `markdown`, `video`, `model_view_3d` |
-| Buttons and input | 36 | `button`, `text_field`, `slider`, `date_picker`, `multi_select` |
+| Foundation and layout | 30 | `container`, `grid_layout`, `scroll`, `split_view`, `application_window` |
+| Display, content, and media | 26 | `text`, `image`, `markdown`, `video`, `model_view_3d` |
+| Buttons and input | 37 | `button`, `text_field`, `slider`, `date_picker`, `multi_select` |
 | Navigation and structure | 20 | `tabs`, `drawer`, `stack_view`, `breadcrumb`, `key_catcher` |
-| Menus, dialogs, and feedback | 19 | `dialog`, `popup`, `toast`, `progress_ring`, `bottom_sheet` |
-| Data and collections | 22 | `list_view`, `grid_view`, `table_view`, `tree_view`, `calendar` |
+| Menus, dialogs, and feedback | 20 | `dialog`, `popup`, `toast`, `progress_ring`, `bottom_sheet` |
+| Data and collections | 23 | `list_view`, `grid_view`, `table_view`, `tree_view`, `calendar` |
 | Charts and visualization | 16 | `line_chart`, `candlestick_chart`, `heatmap`, `gauge`, `legend` |
-| Drawing and interaction | 16 | `canvas`, `shape`, `shader_effect`, `drag_area`, `particle_system` |
+| Drawing and interaction | 22 | `canvas`, `shape`, `shader_effect`, `drag_area`, `particle_system` |
 | Animation, state, and timing | 32 | `animation`, `transition`, `timer`, `state_group`, `spring_animation` |
 | Effects | 7 | `multi_effect`, `blur`, `drop_shadow`, `colorize`, `glow` |
 | Multimedia and capture | 12 | `media_player`, `camera`, `audio_input`, `video_output`, `screen_capture` |
-| Models and utilities | 9 | `list_model`, `settings`, `clipboard`, `standard_paths` |
+| Models and utilities | 10 | `list_model`, `settings`, `clipboard`, `standard_paths` |
+| Mobile permissions | 6 | `camera_permission`, `location_permission`, `contacts_permission` |
+| Mobile virtual keyboard | 5 | `virtual_keyboard`, `handwriting_input`, `keyboard_settings` |
+| Mobile sensors | 16 | `accelerometer`, `compass`, `gyroscope`, `magnetometer`, `tilt_sensor` |
+| Mobile positioning | 2 | `position_source`, `satellite_source` |
+| Mobile maps | 18 | `map`, `map_marker`, `map_route`, `geocode_model`, `place_search` |
+| Mobile speech | 1 | `text_to_speech` |
+| Mobile web content | 3 | `web_view`, `web_socket`, `web_socket_server` |
 
 Zui does not silently replace unavailable components with screenshots, generic controls, or
 application-specific fallbacks. A declared component either renders as that component or reports
@@ -337,7 +344,7 @@ are reported by the operation that encounters them.
                                │ declared component tree + patches
 ┌──────────────────────────────▼──────────────────────────────────────┐
 │ Platform-neutral renderer                                          │
-│ ControlNode · theme · controls · 241-component QML catalog         │
+│ ControlNode · theme · controls · 306-component QML catalog         │
 └──────────────────────────────┬──────────────────────────────────────┘
                                │
               Qt Quick · Controls · Multimedia · GPU · 3D
@@ -594,7 +601,7 @@ target.
 | Resource | Purpose |
 | --- | --- |
 | [Official documentation](https://zui.alkimist.dev) | Guides, concepts, and searchable API documentation |
-| [Component reference](https://zui.alkimist.dev/components) | Properties, events, container behavior, and validated Ruby examples for all 241 components |
+| [Component reference](https://zui.alkimist.dev/components) | Properties, events, container behavior, and validated Ruby examples for all 306 components |
 | [Platform support](docs/platforms.md) | Native-client setup, target matrix, and OS-specific bundle layouts |
 | [Component coverage](docs/component-coverage.md) | Complete built-in catalog checklist |
 | [GitHub Releases](https://github.com/AdamMusa/zui/releases) | Versioned native clients and SHA-256 checksums |
