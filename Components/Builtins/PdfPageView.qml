@@ -19,8 +19,10 @@ Item {
     id: ownDocument
     source: root.sharedDocumentItem ? "" : String(root.renderer.prop("source", ""))
     password: String(root.renderer.prop("password", ""))
-    onStatusChanged: if (status === PdfDocument.Error)
-      root.renderer.componentError("pdf_load_failed", String(error), { source: String(source) })
+    onStatusChanged: function(status) {
+      if (status === PdfDocument.Error)
+        root.renderer.componentError("pdf_load_failed", String(ownDocument.error), { source: String(ownDocument.source) })
+    }
   }
   // PdfPageView renders a single page at a time and, unlike the other two views, has no
   // pageRotation: it exposes zoomEnabled for its own pinch and wheel zoom instead.

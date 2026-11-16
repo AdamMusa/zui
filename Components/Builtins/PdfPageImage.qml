@@ -27,8 +27,10 @@ Item {
     id: ownDocument
     source: root.sharedDocumentItem ? "" : String(root.renderer.prop("source", ""))
     password: String(root.renderer.prop("password", ""))
-    onStatusChanged: if (status === PdfDocument.Error)
-      root.renderer.componentError("pdf_load_failed", String(error), { source: String(source) })
+    onStatusChanged: function(status) {
+      if (status === PdfDocument.Error)
+        root.renderer.componentError("pdf_load_failed", String(ownDocument.error), { source: String(ownDocument.source) })
+    }
   }
   // PdfPageImage derives from Image: the page is selected through currentFrame and the
   // rendered resolution through sourceSize, which is how Qt renders one page as an image.
@@ -43,14 +45,14 @@ Item {
     asynchronous: root.renderer.prop("asynchronous", true) !== false
     mipmap: root.renderer.prop("mipmap", false) === true
     smooth: root.renderer.prop("smooth", true) !== false
-    onStatusChanged: {
+    onStatusChanged: function(status) {
       root.renderer.bridge.sendEvent(root.renderer.surfaceName, root.renderer.controlId, "status",
         { value: root.statusName(status), native_status: Number(status), frame_count: Number(nativeImage.frameCount) })
       if (status === Image.Error)
         root.renderer.componentError("pdf_page_render_failed", "The PDF page could not be rendered",
           { page: Number(nativeImage.currentFrame) })
     }
-    onProgressChanged: root.renderer.bridge.sendEvent(root.renderer.surfaceName, root.renderer.controlId, "progress", { value: Number(progress) })
-    onFrameCountChanged: root.renderer.bridge.sendEvent(root.renderer.surfaceName, root.renderer.controlId, "page_count", { value: Number(frameCount) })
+    onProgressChanged: root.renderer.bridge.sendEvent(root.renderer.surfaceName, root.renderer.controlId, "progress", { value: Number(nativeImage.progress) })
+    onFrameCountChanged: root.renderer.bridge.sendEvent(root.renderer.surfaceName, root.renderer.controlId, "page_count", { value: Number(nativeImage.frameCount) })
   }
 }

@@ -70,6 +70,10 @@ transitions, and animation groups receive Ruby APIs even though they are not vis
 - [x] pdf_scrollable_page_view
 - [x] pdf_page_image
 - [x] pdf_page_navigator
+- [x] pdf_search_model
+- [x] pdf_selection
+- [x] pdf_link_model
+- [x] pdf_bookmark_model
 - [x] video
 - [x] audio
 - [x] avatar
