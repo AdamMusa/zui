@@ -10,6 +10,7 @@ module Zui
       shader_effect shader_effect_source multi_effect rectangular_shadow opacity_mask blur drop_shadow colorize glow
       drag_area drop_area pinch_area hover_area tap_area point_handler multi_touch_area wheel_area safe_area
       capture_session cursor_surface map map_marker map_item_group
+      item layout_mirroring accessible
     ].freeze
     VALUE_INPUTS = {
       text_field: :text,
@@ -578,6 +579,18 @@ module Zui
       component(:sequential_animation, id:, animations: normalize_animation_specs(animations), **props)
     end
     def frame_animation(id: nil, **props) = component(:frame_animation, id:, **props)
+    def shortcut(sequence = nil, id: nil, **props, &handler)
+      shortcut_props = props.dup
+      if sequence.is_a?(Array)
+        shortcut_props[:sequences] = sequence.map(&:to_s)
+      elsif !sequence.nil?
+        shortcut_props[:sequence] = sequence.to_s
+      end
+      node = component(:shortcut, id:, **shortcut_props)
+      @application.register_handler(node.id, :activate, handler) if handler
+      node
+    end
+
     def timer(interval, id: nil, **props) = component(:timer, id:, interval:, **props)
 
     def media_player(source = "", id: nil, **props) = component(:media_player, id:, source: source.to_s, **props)
