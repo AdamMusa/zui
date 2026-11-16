@@ -46,5 +46,11 @@
     <key>NSCameraUsageDescription</key>
     <string>Explain why this app needs camera access.</string>
     -->
+
+    <!-- Sensor components that read Core Motion (accelerometer, gyroscope, rotation_sensor,
+         tilt_sensor, magnetometer, compass) require a motion usage description:
+    <key>NSMotionUsageDescription</key>
+    <string>Explain why this app reads device motion.</string>
+    -->
 </dict>
 </plist>

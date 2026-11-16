@@ -66,23 +66,33 @@ module Zui
         "VirtualKeyboard" => :keyboard_context
       }.freeze
 
+      # QtSensors reading types and the Sensor/SensorReading/Range/OutputRange bases are
+      # uncreatable in QML: they are surfaced as "reading" and "metadata" event payloads on
+      # the sensor that owns them, so each one keeps the sensor that can produce it.
       SENSORS = {
-        "Accelerometer" => :accelerometer,
+        "QmlSensors" => :sensor_manager, "Sensor" => :sensor_manager,
+        "SensorReading" => :sensor_manager, "Range" => :sensor_manager,
+        "OutputRange" => :sensor_manager,
+        "Accelerometer" => :accelerometer, "AccelerometerReading" => :accelerometer,
         "AmbientLightSensor" => :ambient_light_sensor,
+        "AmbientLightReading" => :ambient_light_sensor,
         "AmbientTemperatureSensor" => :ambient_temperature_sensor,
-        "Compass" => :compass,
-        "Gyroscope" => :gyroscope,
-        "HumiditySensor" => :humidity_sensor,
+        "AmbientTemperatureReading" => :ambient_temperature_sensor,
+        "Compass" => :compass, "CompassReading" => :compass,
+        "Gyroscope" => :gyroscope, "GyroscopeReading" => :gyroscope,
+        "HumiditySensor" => :humidity_sensor, "HumidityReading" => :humidity_sensor,
         "IRProximitySensor" => :ir_proximity_sensor,
-        "LidSensor" => :lid_sensor,
-        "LightSensor" => :light_sensor,
-        "Magnetometer" => :magnetometer,
+        "IRProximityReading" => :ir_proximity_sensor,
+        "LidSensor" => :lid_sensor, "LidReading" => :lid_sensor,
+        "LightSensor" => :light_sensor, "LightReading" => :light_sensor,
+        "Magnetometer" => :magnetometer, "MagnetometerReading" => :magnetometer,
         "OrientationSensor" => :orientation_sensor,
-        "PressureSensor" => :pressure_sensor,
-        "ProximitySensor" => :proximity_sensor,
-        "RotationSensor" => :rotation_sensor,
-        "TapSensor" => :tap_sensor,
-        "TiltSensor" => :tilt_sensor
+        "OrientationReading" => :orientation_sensor,
+        "PressureSensor" => :pressure_sensor, "PressureReading" => :pressure_sensor,
+        "ProximitySensor" => :proximity_sensor, "ProximityReading" => :proximity_sensor,
+        "RotationSensor" => :rotation_sensor, "RotationReading" => :rotation_sensor,
+        "TapSensor" => :tap_sensor, "TapReading" => :tap_sensor,
+        "TiltSensor" => :tilt_sensor, "TiltReading" => :tilt_sensor
       }.freeze
 
       POSITIONING = {
