@@ -76,6 +76,12 @@ transitions, and animation groups receive Ruby APIs even though they are not vis
 - [x] font_loader
 - [x] text_metrics
 
+## Input validation
+
+- [x] int_validator
+- [x] double_validator
+- [x] regex_validator
+
 ## Buttons and input
 
 - [x] abstract_button
