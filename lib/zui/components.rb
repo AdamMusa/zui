@@ -181,6 +181,8 @@ module Zui
     effect_linear_gradient: [%i[width height colors stops start_x start_y end_x end_y cached visible], [], true],
     effect_radial_gradient: [%i[width height colors stops horizontal_offset vertical_offset horizontal_radius vertical_radius angle cached visible], [], true],
     effect_conical_gradient: [%i[width height colors stops angle horizontal_offset vertical_offset cached visible], [], true],
+    inner_shadow: [%i[width height radius samples spread color horizontal_offset vertical_offset fast cached visible], [], true],
+    rectangular_glow: [%i[width height glow_radius spread color corner_radius cached visible], [], true],
     particle_system: [%i[width height running paused emit_rate life_span life_span_variation maximum_emitted size end_size size_variation source color color_variation alpha alpha_variation rotation rotation_variation rotation_velocity rotation_velocity_variation auto_rotation emitter_x emitter_y emitter_width emitter_height velocity_angle velocity velocity_angle_variation velocity_variation acceleration_angle acceleration acceleration_angle_variation acceleration_variation gravity gravity_angle turbulence turbulence_x turbulence_y turbulence_width turbulence_height turbulence_grid_size particle_shape burst_count burst_x burst_y burst_revision visible], %i[start stop pause resume empty burst], false],
     drag_area: [%i[enabled target axis minimum_x maximum_x minimum_y maximum_y snap_x snap_y threshold cursor reset_revision width height visible], %i[click double_click drag_start drag drag_end cancel], true],
     drop_area: [%i[keys enabled width height visible], %i[enter move exit drop], true],
