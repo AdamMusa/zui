@@ -125,7 +125,9 @@ module Zui
       perspective_camera orthographic_camera frustum_camera custom_camera
       directional_light point_light spot_light principled_material
       default_material specular_glossy_material custom_material texture_3d
-      cube_map_texture texture_input
+      cube_map_texture texture_input scene_environment extended_scene_environment
+      fog debug_settings lightmapper baked_lightmap
+      reflection_probe resource_loader
     ].freeze
     SCENE_3D_COMPONENTS.each do |type|
       define_method(type) { |id: nil, **props, &block| component(type, id:, **props, &block) }

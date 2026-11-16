@@ -874,6 +874,52 @@ class QmlContractTest < Minitest::Test
     assert_equal :texture_3d, Zui::Mobile::ComponentCatalog::QUICK3D_TEXTURES.fetch("Texture")
   end
 
+  def test_quick3d_scene_environment_covers_background_tonemapping_and_post_processing
+    environment = source("Components/Builtins/SceneEnvironment.qml")
+    extended = source("Components/Builtins/ExtendedSceneEnvironment.qml")
+    scene = source("Components/Builtins/Support/View3dScene.qml")
+
+    assert_dynamic_component_route(source("ControlNode.qml"), "scene_environment")
+    assert_includes environment, "SceneEnvironment {"
+    assert_includes environment, '"skybox_cube_map": SceneEnvironment.SkyBoxCubeMap'
+    assert_includes environment, '"aces": SceneEnvironment.TonemapModeAces'
+    assert_includes environment, '"progressive": SceneEnvironment.ProgressiveAA'
+    assert_includes environment, 'renderer.childObjectOrReference(["fog"], "fog")'
+    assert_includes environment, "scissorRect: Qt.rect("
+    assert_includes extended, "import QtQuick3D.Helpers"
+    assert_includes extended, "ExtendedSceneEnvironment {"
+    # ExtendedSceneEnvironment is written in QML, so its post-processing surface
+    # is a set of aliases that no .qmltypes describes.
+    assert_includes extended, '"soft_light": ExtendedSceneEnvironment.SoftLight'
+    assert_includes extended, "Value3d.flags("
+    assert_includes scene, 'readonly property var environmentTypes: ["scene_environment", "extended_scene_environment"]'
+    extended_schema = Zui::COMPONENTS.fetch(:extended_scene_environment).first
+    %i[depth_of_field_enabled glow_enabled glow_level vignette_color lens_flare_enabled
+       lut_texture adjustment_saturation fxaa_enabled].each do |property|
+      assert_includes extended_schema, property
+    end
+  end
+
+  def test_quick3d_environment_resources_bind_without_a_default_property
+    %w[Fog DebugSettings Lightmapper BakedLightmap].each do |adapter|
+      qml = source("Components/Builtins/#{adapter}.qml")
+
+      assert_includes qml, "property list<QtObject> propertyBindings: ["
+      assert_includes qml, "Support.Prop3dBinding {"
+    end
+    assert_includes Zui::COMPONENTS.fetch(:fog).first, :height_curve
+    assert_includes Zui::COMPONENTS.fetch(:debug_settings).first, :material_override
+    assert_includes Zui::COMPONENTS.fetch(:lightmapper).first, :bounces
+    assert_includes source("Components/Builtins/DebugSettings.qml"),
+                    '"ambient_occlusion": DebugSettings.AmbientOcclusion'
+    probe = source("Components/Builtins/ReflectionProbe.qml")
+    assert_includes probe, '"individual_faces": ReflectionProbe.IndividualFaces'
+    assert_includes Zui::COMPONENTS.fetch(:reflection_probe).first, :parallax_correction
+    loader = source("Components/Builtins/ResourceLoader.qml")
+    assert_includes loader, 'Value3d.assetUrls(renderer, renderer.prop("mesh_sources", []))'
+    assert_equal :fog, Zui::Mobile::ComponentCatalog::QUICK3D_ENVIRONMENT.fetch("Fog")
+  end
+
   def test_optional_3d_properties_leave_qt_defaults_alone
     helper = source("Components/Builtins/Support/Prop3dBinding.qml")
 

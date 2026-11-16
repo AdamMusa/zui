@@ -155,6 +155,14 @@ module Zui
         "TextureInput" => :texture_input
       }.freeze
 
+      # Qt Quick 3D scene environment and rendering settings.
+      QUICK3D_ENVIRONMENT = {
+        "SceneEnvironment" => :scene_environment, "ExtendedSceneEnvironment" => :extended_scene_environment,
+        "Fog" => :fog, "DebugSettings" => :debug_settings,
+        "Lightmapper" => :lightmapper, "BakedLightmap" => :baked_lightmap,
+        "ReflectionProbe" => :reflection_probe, "ResourceLoader" => :resource_loader
+      }.freeze
+
       CORE = QUICK_CONTROLS.merge(QUICK_DIALOGS).merge(QUICK_LAYOUTS).freeze
       ALL = CORE.merge(PERMISSIONS).merge(DEVICE_INFORMATION).merge(VIRTUAL_KEYBOARD)
                 .merge(SENSORS).merge(POSITIONING).merge(LOCATION)
@@ -163,7 +171,8 @@ module Zui
                 .merge(QUICK3D_CAMERAS)
                 .merge(QUICK3D_LIGHTS)
                 .merge(QUICK3D_MATERIALS)
-                .merge(QUICK3D_TEXTURES).freeze
+                .merge(QUICK3D_TEXTURES)
+                .merge(QUICK3D_ENVIRONMENT).freeze
     end
   end
 end
