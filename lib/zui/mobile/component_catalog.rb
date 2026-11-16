@@ -143,13 +143,20 @@ module Zui
         "SpotLight" => :spot_light
       }.freeze
 
+      # Qt Quick 3D materials.
+      QUICK3D_MATERIALS = {
+        "PrincipledMaterial" => :principled_material, "DefaultMaterial" => :default_material,
+        "SpecularGlossyMaterial" => :specular_glossy_material, "CustomMaterial" => :custom_material
+      }.freeze
+
       CORE = QUICK_CONTROLS.merge(QUICK_DIALOGS).merge(QUICK_LAYOUTS).freeze
       ALL = CORE.merge(PERMISSIONS).merge(DEVICE_INFORMATION).merge(VIRTUAL_KEYBOARD)
                 .merge(SENSORS).merge(POSITIONING).merge(LOCATION)
                 .merge(TEXT_TO_SPEECH).merge(WEB).merge(WEB_SOCKETS).merge(LOTTIE)
                 .merge(PDF).merge(TOUCH_INTERACTION).merge(QUICK3D_SCENE)
                 .merge(QUICK3D_CAMERAS)
-                .merge(QUICK3D_LIGHTS).freeze
+                .merge(QUICK3D_LIGHTS)
+                .merge(QUICK3D_MATERIALS).freeze
     end
   end
 end

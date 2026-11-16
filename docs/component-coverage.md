@@ -408,3 +408,14 @@ light with a `scope` lights only that node and its children.
 - [x] directional_light
 - [x] point_light
 - [x] spot_light
+
+### Materials
+
+A material is declared inside the model that uses it, or anywhere in the
+scene and named through the model's `materials`. Texture slots take the
+Ruby id of a texture node.
+
+- [x] principled_material
+- [x] default_material
+- [x] specular_glossy_material
+- [x] custom_material

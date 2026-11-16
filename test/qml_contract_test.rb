@@ -822,6 +822,34 @@ class QmlContractTest < Minitest::Test
     assert_equal :spot_light, Zui::Mobile::ComponentCatalog::QUICK3D_LIGHTS.fetch("SpotLight")
   end
 
+  def test_quick3d_materials_cover_every_native_shading_workflow
+    {
+      principled_material: "PrincipledMaterial", default_material: "DefaultMaterial",
+      specular_glossy_material: "SpecularGlossyMaterial", custom_material: "CustomMaterial"
+    }.each do |component, qt_type|
+      qml = source("Components/Builtins/#{qt_type}.qml")
+
+      assert_dynamic_component_route(source("ControlNode.qml"), component.to_s)
+      assert_includes qml, "#{qt_type} {"
+      assert_includes qml, %("back": #{qt_type}.BackFaceCulling)
+      assert_includes qml, %("opaque_prepass": #{qt_type}.OpaquePrePassDepthDraw)
+    end
+    principled = Zui::COMPONENTS.fetch(:principled_material).first
+    %i[base_color base_color_map metalness roughness normal_map clearcoat_amount
+       transmission_factor thickness_factor attenuation_color index_of_refraction
+       height_map vertex_color_red_mask light_probe].each do |property|
+      assert_includes principled, property
+    end
+    assert_includes Zui::COMPONENTS.fetch(:default_material).first, :specular_model
+    assert_includes Zui::COMPONENTS.fetch(:specular_glossy_material).first, :glossiness
+    custom = source("Components/Builtins/CustomMaterial.qml")
+    assert_includes custom, '"src_alpha_saturate": CustomMaterial.SrcAlphaSaturate'
+    assert_includes custom, "property real time:"
+    assert_includes Zui::COMPONENTS.fetch(:custom_material).first, :parameters
+    assert_equal :principled_material,
+                 Zui::Mobile::ComponentCatalog::QUICK3D_MATERIALS.fetch("PrincipledMaterial")
+  end
+
   def test_optional_3d_properties_leave_qt_defaults_alone
     helper = source("Components/Builtins/Support/Prop3dBinding.qml")
 
