@@ -9,6 +9,16 @@ module Zui
     FEATURES = %w[
       gif ico jpeg network-reachability svg svg-icons tls webp
     ].freeze
+    # QtQuick3D ships its helper, particle, asset, effect and spatial-audio
+    # surfaces as separate QML modules that no qmldir "depends" line reaches.
+    # A project that asks for the GPU 3D stack wants all of them available to
+    # scenes assembled at runtime, so they travel together whenever the
+    # QtQuick3D QML module is retained.
+    QUICK3D_QML_MODULES = %w[
+      QtQuick3D QtQuick3D.AssetUtils QtQuick3D.Effects QtQuick3D.Helpers
+      QtQuick3D.Helpers.impl QtQuick3D.ParticleEffects QtQuick3D.Particles3D
+      QtQuick3D.SpatialAudio
+    ].freeze
     QT_NAME = /\A[A-Za-z][A-Za-z0-9_.+-]*\z/
     PLUGIN_NAME = /\A[A-Za-z0-9][A-Za-z0-9_.+-]*\/[A-Za-z0-9][A-Za-z0-9_.+-]*\z/
     RUBY_FEATURE = /\A[A-Za-z0-9][A-Za-z0-9_.\/-]*\z/
