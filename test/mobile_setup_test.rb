@@ -159,6 +159,11 @@ class MobileSetupTest < Minitest::Test
     assert_includes modules, "qtwebview"
     assert_includes modules, "qtmultimedia"
     assert_includes modules, "qtvirtualkeyboard"
+    assert_includes modules, "qtcharts"
+    assert_includes modules, "qtgraphs"
+    # QtGraphs and QtQuick3D both link QtShaderTools, and aqt installs only the
+    # modules it is given, so their QML plugins cannot load without it.
+    assert_includes modules, "qtshadertools"
     assert_includes Zui::Mobile::Setup::QT_IOS_MODULES, "qtpdf"
     refute_includes Zui::Mobile::Setup::QT_ANDROID_MODULES, "qtpdf"
   end
