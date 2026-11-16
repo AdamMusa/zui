@@ -90,6 +90,32 @@ class QmlContractTest < Minitest::Test
     end
   end
 
+  def test_particle_shape_adapters_expose_the_native_extruders
+    expected = {
+      "EllipseShape" => "EllipseShape {",
+      "RectangleShape" => "RectangleShape {",
+      "LineShape" => "LineShape {",
+      "MaskShape" => "MaskShape {"
+    }
+
+    expected.each do |adapter, native_type|
+      qml = File.read(File.join(ROOT, "Components", "Builtins", "#{adapter}.qml"))
+
+      assert_includes qml, "import QtQuick.Particles"
+      assert_includes qml, native_type
+      assert_includes qml, "readonly property var nativeExtruder"
+      refute_includes qml, "Rectangle {"
+    end
+  end
+
+  def test_particle_modules_are_linked_whenever_tree_shaking_keeps_their_adapters
+    cmake = File.read(File.join(ROOT, "native", "CMakeLists.txt"))
+
+    assert_includes cmake, "function(zui_framework_imports_qml_module"
+    assert_includes cmake, 'zui_framework_imports_qml_module("QtQuick\\\\.Particles" ZUI_USES_PARTICLES)'
+    assert_includes cmake, "target_link_libraries(zui-host PRIVATE Qt6::QuickParticlesPrivate)"
+  end
+
   def test_component_coverage_catalog_has_no_unimplemented_entries
     coverage = File.read(File.join(ROOT, "docs", "component-coverage.md"))
 
