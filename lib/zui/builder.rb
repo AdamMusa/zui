@@ -769,6 +769,11 @@ module Zui
       @application.register_handler(node.id, :finished, handler) if handler
       node
     end
+    def video_sink(id: nil, **props, &handler)
+      node = component(:video_sink, id:, **props)
+      @application.register_handler(node.id, :frame, handler) if handler
+      node
+    end
     def pdf_view(source, id: nil, **props, &handler)
       node = component(:pdf_view, id:, source: source.to_s, **props)
       @application.register_handler(node.id, :page_change, handler) if handler

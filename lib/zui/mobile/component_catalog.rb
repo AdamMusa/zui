@@ -112,6 +112,15 @@ module Zui
 
       WEB = { "WebView" => :web_view }.freeze
       WEB_SOCKETS = { "WebSocket" => :web_socket, "WebSocketServer" => :web_socket_server }.freeze
+      # AudioDevice, CameraDevice, MediaFormat and MediaMetaData are isCreatable: false -
+      # they reach QML only as properties of the components below, so each one is kept by
+      # the component that can produce it.
+      MULTIMEDIA_TYPES = {
+        "AudioDevice" => :media_devices, "CameraDevice" => :media_devices,
+        "MediaFormat" => :media_recorder, "MediaMetaData" => :media_player,
+        "VideoSink" => :video_sink
+      }.freeze
+
       LOTTIE = { "LottieAnimation" => :lottie_animation }.freeze
       PDF = %w[PdfDocument PdfMultiPageView PdfPageView PdfScrollablePageView PdfPageImage
                PdfPageNavigator PdfSearchModel PdfSelection].to_h { |name| [name, :pdf_view] }.freeze
@@ -127,7 +136,7 @@ module Zui
       ALL = CORE.merge(PERMISSIONS).merge(DEVICE_INFORMATION).merge(VIRTUAL_KEYBOARD)
                 .merge(SENSORS).merge(POSITIONING).merge(LOCATION)
                 .merge(TEXT_TO_SPEECH).merge(WEB).merge(WEB_SOCKETS).merge(LOTTIE)
-                .merge(PDF).merge(TOUCH_INTERACTION).freeze
+                .merge(PDF).merge(TOUCH_INTERACTION).merge(MULTIMEDIA_TYPES).freeze
     end
   end
 end

@@ -280,6 +280,7 @@ transitions, and animation groups receive Ruby APIs even though they are not vis
 
 - [x] media_player
 - [x] video_output
+- [x] video_sink
 - [x] sound_effect
 - [x] camera
 - [x] capture_session

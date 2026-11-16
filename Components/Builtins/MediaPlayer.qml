@@ -1,5 +1,6 @@
 import QtQuick
 import QtMultimedia
+import "Support" as Support
 
 Item {
   id: playerRoot
@@ -11,6 +12,7 @@ Item {
   function audioDevice(){var requested=String(renderer?renderer.prop("audio_device",""):"");var devices=mediaDevices.audioOutputs;if(requested==="")return mediaDevices.defaultAudioOutput;for(var index=0;index<devices.length;index++)if(String(devices[index].id)===requested||devices[index].description===requested)return devices[index];return null}
   function send(name,payload){if(renderer&&renderer.subscribed(name))renderer.bridge.sendEvent(renderer.surfaceName,renderer.controlId,name,payload||{})}
   function command(){if(!renderer)return;var revision=Number(renderer.prop("command_revision",0));if(revision===handledCommandRevision)return;handledCommandRevision=revision;var value=String(renderer.prop("command",renderer.prop("playback","")));if(value==="play")nativePlayer.play();else if(value==="pause")nativePlayer.pause();else if(value==="stop")nativePlayer.stop()}
+  Support.MediaMetaDataReader { id: metaDataReader }
   MediaDevices{id:mediaDevices}
   AudioOutput { id:nativeAudioOutput;device:playerRoot.audioDevice();volume:playerRoot.audioDeviceValid()?Math.max(0,Math.min(1,Number(renderer?renderer.prop("volume",1):1))):0;muted:!playerRoot.audioDeviceValid()||(renderer&&renderer.prop("muted",false)===true) }
   MediaPlayer {
@@ -22,6 +24,7 @@ Item {
     onDurationChanged:playerRoot.send("duration",{value:duration})
     onBufferProgressChanged:playerRoot.send("buffer",{value:bufferProgress})
     onTracksChanged:playerRoot.send("tracks",{audio:audioTracks.length,video:videoTracks.length,subtitles:subtitleTracks.length})
+    onMetaDataChanged:playerRoot.send("metadata",metaDataReader.payload(nativePlayer.metaData))
   }
   Component.onCompleted:command();Connections{target:renderer;function onNodeChanged(){playerRoot.command()}}
 }
