@@ -113,8 +113,16 @@ module Zui
       WEB = { "WebView" => :web_view }.freeze
       WEB_SOCKETS = { "WebSocket" => :web_socket, "WebSocketServer" => :web_socket_server }.freeze
       LOTTIE = { "LottieAnimation" => :lottie_animation }.freeze
-      PDF = %w[PdfDocument PdfMultiPageView PdfPageView PdfScrollablePageView PdfPageImage
-               PdfPageNavigator PdfSearchModel PdfSelection].to_h { |name| [name, :pdf_view] }.freeze
+      PDF = {
+        "PdfDocument" => :pdf_document,
+        "PdfMultiPageView" => :pdf_multi_page_view,
+        "PdfPageView" => :pdf_page_view,
+        "PdfScrollablePageView" => :pdf_scrollable_page_view,
+        "PdfPageImage" => :pdf_page_image,
+        "PdfPageNavigator" => :pdf_page_navigator,
+        "PdfSearchModel" => :pdf_view,
+        "PdfSelection" => :pdf_view
+      }.freeze
 
       TOUCH_INTERACTION = {
         "TapHandler" => :tap_area, "PointHandler" => :point_handler,
