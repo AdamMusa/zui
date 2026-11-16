@@ -607,6 +607,11 @@ module Zui
     def sort_filter_proxy_model(items = [], id: nil, **props) = component(:sort_filter_proxy_model, id:, items: Array(items), **props)
     def folder_list_model(folder = "", id: nil, **props) = component(:folder_list_model, id:, folder: folder.to_s, **props)
     def settings(values = {}, id: nil, **props) = component(:settings, id:, values:, **props)
+    def locale(name = "", id: nil, **props, &handler)
+      node = component(:locale, id:, name: name.to_s, **props)
+      @application.register_handler(node.id, :information, handler) if handler
+      node
+    end
     def standard_paths(location = :home, id: nil, **props) = component(:standard_paths, id:, location: location.to_s, **props)
     def system_info(id: nil, **props, &handler)
       node = component(:system_info, id:, **props)

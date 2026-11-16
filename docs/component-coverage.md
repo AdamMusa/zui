@@ -299,6 +299,7 @@ transitions, and animation groups receive Ruby APIs even though they are not vis
 - [x] sort_filter_proxy_model
 - [x] folder_list_model
 - [x] settings
+- [x] locale
 - [x] standard_paths
 - [x] system_info
 - [x] network_status
