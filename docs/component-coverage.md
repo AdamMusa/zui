@@ -219,6 +219,9 @@ transitions, and animation groups receive Ruby APIs even though they are not vis
 - [x] gradient
 - [x] shader_effect
 - [x] shader_effect_source
+- [x] grid_mesh
+- [x] border_image_mesh
+- [x] wavefront_mesh
 - [x] particle_system
 - [x] drag_area
 - [x] drop_area

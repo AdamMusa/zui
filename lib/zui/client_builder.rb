@@ -11,7 +11,7 @@ module Zui
     LINUX_QML_ROOTS = %w[QML Qt Qt5Compat QtCore QtMultimedia QtQml QtQuick QtQuick3D].freeze
     LINUX_QML_EXCLUSIONS = %w[
       Qt/labs/StyleKit Qt/labs/animation Qt/labs/settings Qt/labs/sharedimage Qt/labs/synchronizer
-      Qt/labs/wavefrontmesh Qt/test QtQuick/Controls/FluentWinUI3 QtQuick/Controls/Imagine
+      Qt/test QtQuick/Controls/FluentWinUI3 QtQuick/Controls/Imagine
       QtQuick/Controls/Material QtQuick/Controls/Universal QtQuick/Controls/designer QtQuick/LocalStorage
       QtQuick/Pdf QtQuick/Timeline QtQuick/tooling QtQuick3D/Effects QtQuick3D/Helpers
       QtQuick3D/MaterialEditor QtQuick3D/ParticleEffects QtQuick3D/Particles3D QtQuick3D/SpatialAudio

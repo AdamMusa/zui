@@ -156,12 +156,20 @@ module Zui
         "QtQuick.Shapes/ConicalGradient" => :gradient
       }.freeze
 
-      CORE =QUICK_CONTROLS.merge(QUICK_DIALOGS).merge(QUICK_LAYOUTS).freeze
+      # GPU geometry for ShaderEffect. ShaderEffectMesh itself is the abstract
+      # base Qt marks isCreatable: false, so these three concrete meshes are the
+      # whole surface. WavefrontMesh is the only one outside QtQuick.
+      SHADER_MESHES = {
+        "GridMesh" => :grid_mesh, "BorderImageMesh" => :border_image_mesh,
+        "WavefrontMesh" => :wavefront_mesh
+      }.freeze
+
+      CORE = QUICK_CONTROLS.merge(QUICK_DIALOGS).merge(QUICK_LAYOUTS).freeze
       ALL = CORE.merge(PERMISSIONS).merge(DEVICE_INFORMATION).merge(VIRTUAL_KEYBOARD)
                 .merge(SENSORS).merge(POSITIONING).merge(LOCATION)
                 .merge(TEXT_TO_SPEECH).merge(WEB).merge(WEB_SOCKETS).merge(LOTTIE)
                 .merge(PDF).merge(TOUCH_INTERACTION).merge(GRAPHICAL_EFFECTS)
-                .merge(VECTOR_SHAPES).freeze
+                .merge(VECTOR_SHAPES).merge(SHADER_MESHES).freeze
     end
   end
 end

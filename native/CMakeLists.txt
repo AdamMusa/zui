@@ -397,9 +397,10 @@ if(IOS OR ANDROID)
   qt_import_qml_plugins(zui-host)
 endif()
 
-# Qt5Compat.GraphicalEffects and QtQuick.Shapes are pure QML modules, so a static
-# iOS or Android build reaches them through the import scan above. Keep the GPU
-# effect and vector shape plugins named explicitly as well: an adapter that
+# Qt5Compat.GraphicalEffects, QtQuick.Shapes and Qt.labs.wavefrontmesh are pure
+# QML modules, so a static iOS or Android build reaches them through the import
+# scan above. Keep the GPU effect, vector shape and shader mesh plugins named
+# explicitly as well: an adapter that
 # cannot resolve its Qt type fails to load instead of degrading into another
 # type, so a scan that misses a generated resource tree would silently cost the
 # whole effects catalog on mobile.
@@ -408,6 +409,7 @@ if(IOS OR ANDROID)
     Qt6::qtgraphicaleffectsplugin
     Qt6::qtgraphicaleffectsprivate
     Qt6::qmlshapesplugin
+    Qt6::qmlwavefrontmeshplugin
   )
     if(TARGET ${zui_gpu_qml_plugin})
       qt_import_plugins(zui-host INCLUDE ${zui_gpu_qml_plugin})
