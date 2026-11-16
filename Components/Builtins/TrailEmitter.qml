@@ -10,7 +10,7 @@ import QtQuick.Particles
 // object that reproduces Qt's own default.
 //
 // `emit_width` and `emit_height` accept "particle_size" for
-// TrailEmitter.ParticleSize, which is also the default.
+// TrailEmitter.ParticleSize. Their default is Qt's own 0.
 Item {
   id: trailEmitterRoot
   property var renderer: null
@@ -33,7 +33,7 @@ Item {
   }
 
   function emitExtent(name) {
-    var value = renderer ? renderer.prop(name, "particle_size") : "particle_size"
+    var value = renderer ? renderer.prop(name, 0) : 0
     return String(value) === "particle_size" ? TrailEmitter.ParticleSize : Number(value)
   }
 
