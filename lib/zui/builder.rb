@@ -10,6 +10,7 @@ module Zui
       shader_effect shader_effect_source multi_effect rectangular_shadow opacity_mask blur drop_shadow colorize glow
       fast_blur gaussian_blur directional_blur radial_blur zoom_blur recursive_blur
       brightness_contrast desaturate gamma_adjust level_adjust hue_saturation hue_colorize color_overlay
+      effect_linear_gradient effect_radial_gradient effect_conical_gradient
       drag_area drop_area pinch_area hover_area tap_area point_handler multi_touch_area wheel_area safe_area
       capture_session cursor_surface map map_marker map_item_group
     ].freeze

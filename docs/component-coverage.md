@@ -289,6 +289,9 @@ transitions, and animation groups receive Ruby APIs even though they are not vis
 - [x] hue_saturation
 - [x] hue_colorize
 - [x] color_overlay
+- [x] effect_linear_gradient
+- [x] effect_radial_gradient
+- [x] effect_conical_gradient
 
 ## Multimedia and capture
 

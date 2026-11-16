@@ -137,6 +137,28 @@ class QmlContractTest < Minitest::Test
     assert_includes level_adjust, 'renderer.prop("maximum_output", "#ffffffff")'
   end
 
+  GRAPHICAL_EFFECT_GRADIENT_ADAPTERS = {
+    effect_linear_gradient: "LinearGradient", effect_radial_gradient: "RadialGradient",
+    effect_conical_gradient: "ConicalGradient"
+  }.freeze
+
+  def test_gradient_effects_paint_native_masked_gradients
+    GRAPHICAL_EFFECT_GRADIENT_ADAPTERS.each do |component, type|
+      adapter_name = component.to_s.split("_").map(&:capitalize).join
+      adapter = File.read(File.join(ROOT, "Components", "Builtins", "#{adapter_name}.qml"))
+
+      assert_includes adapter, "import Qt5Compat.GraphicalEffects", "#{adapter_name} does not import its Qt module"
+      assert_includes adapter, "#{type} {", "#{adapter_name} does not instantiate #{type}"
+      refute_includes adapter, "import QtQuick.Shapes", "#{adapter_name} falls back to a shape gradient"
+      assert_includes adapter, "source: gradientRoot.masked ? maskHost : undefined",
+                      "#{adapter_name} masks an unmasked gradient into nothing"
+      assert_includes adapter, "gradient: Gradient { stops: gradientRoot.createdStops }"
+      assert_equal "Qt5Compat.GraphicalEffects/#{type}",
+                   Zui::Mobile::ComponentCatalog::GRAPHICAL_EFFECTS.key(component)
+      assert_equal :gradient, Zui::Mobile::ComponentCatalog::VECTOR_SHAPES.fetch("QtQuick.Shapes/#{type}")
+    end
+  end
+
   def test_graphical_effects_reach_desktop_clients_and_static_mobile_builds
     cmake = File.read(File.join(ROOT, "native", "CMakeLists.txt"))
     audit = File.read(File.join(ROOT, "scripts", "audit_client.rb"))

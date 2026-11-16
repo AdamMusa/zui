@@ -133,14 +133,31 @@ module Zui
         "BrightnessContrast" => :brightness_contrast, "Desaturate" => :desaturate,
         "GammaAdjust" => :gamma_adjust, "LevelAdjust" => :level_adjust,
         "HueSaturation" => :hue_saturation, "Colorize" => :hue_colorize,
-        "ColorOverlay" => :color_overlay
+        "ColorOverlay" => :color_overlay,
+        "Qt5Compat.GraphicalEffects/LinearGradient" => :effect_linear_gradient,
+        "Qt5Compat.GraphicalEffects/RadialGradient" => :effect_radial_gradient,
+        "Qt5Compat.GraphicalEffects/ConicalGradient" => :effect_conical_gradient
       }.freeze
 
-      CORE = QUICK_CONTROLS.merge(QUICK_DIALOGS).merge(QUICK_LAYOUTS).freeze
+      # QtQuick.Shapes. LinearGradient, RadialGradient and ConicalGradient exist
+      # in both this module and Qt5Compat.GraphicalEffects and mean different
+      # things: here they fill a vector path, there they paint a masked gradient
+      # over an item. Both sets are module-qualified so neither hides the other,
+      # and the Ruby names keep the same split: `gradient` fills, `effect_*`
+      # paints. ShapeGradient itself is an abstract base Qt does not create.
+      VECTOR_SHAPES = {
+        "Shape" => :shape, "ShapeGradient" => :gradient,
+        "QtQuick.Shapes/LinearGradient" => :gradient,
+        "QtQuick.Shapes/RadialGradient" => :gradient,
+        "QtQuick.Shapes/ConicalGradient" => :gradient
+      }.freeze
+
+      CORE =QUICK_CONTROLS.merge(QUICK_DIALOGS).merge(QUICK_LAYOUTS).freeze
       ALL = CORE.merge(PERMISSIONS).merge(DEVICE_INFORMATION).merge(VIRTUAL_KEYBOARD)
                 .merge(SENSORS).merge(POSITIONING).merge(LOCATION)
                 .merge(TEXT_TO_SPEECH).merge(WEB).merge(WEB_SOCKETS).merge(LOTTIE)
-                .merge(PDF).merge(TOUCH_INTERACTION).merge(GRAPHICAL_EFFECTS).freeze
+                .merge(PDF).merge(TOUCH_INTERACTION).merge(GRAPHICAL_EFFECTS)
+                .merge(VECTOR_SHAPES).freeze
     end
   end
 end
