@@ -85,9 +85,16 @@ module Zui
         "TiltSensor" => :tilt_sensor
       }.freeze
 
+      # Position and GeoSatelliteInfo are uncreatable in QML, so they stay event payload shapes
+      # on the source that produces them.
       POSITIONING = {
         "PositionSource" => :position_source,
-        "SatelliteSource" => :satellite_source
+        "Position" => :position_source,
+        "SatelliteSource" => :satellite_source,
+        "GeoSatelliteInfo" => :satellite_source,
+        "Address" => :geo_address,
+        "Location" => :geo_location,
+        "CoordinateAnimation" => :coordinate_animation
       }.freeze
 
       LOCATION = {

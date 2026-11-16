@@ -344,6 +344,9 @@ transitions, and animation groups receive Ruby APIs even though they are not vis
 
 - [x] position_source
 - [x] satellite_source
+- [x] geo_address
+- [x] geo_location
+- [x] coordinate_animation
 
 ## Mobile maps
 
