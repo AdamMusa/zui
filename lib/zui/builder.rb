@@ -604,6 +604,8 @@ module Zui
     def list_model(items = [], id: nil, **props) = component(:list_model, id:, items: Array(items), **props)
     def delegate_model(items = [], id: nil, **props) = component(:delegate_model, id:, items: Array(items), **props)
     def delegate_model_group(items = [], id: nil, **props) = component(:delegate_model_group, id:, items: Array(items), **props)
+    def table_model(rows = [], id: nil, **props, &block) = component(:table_model, id:, rows: Array(rows), **props, &block)
+    def table_model_column(display = "", id: nil, **props) = component(:table_model_column, id:, display: display.to_s, **props)
     def sort_filter_proxy_model(items = [], id: nil, **props) = component(:sort_filter_proxy_model, id:, items: Array(items), **props)
     def folder_list_model(folder = "", id: nil, **props) = component(:folder_list_model, id:, folder: folder.to_s, **props)
     def settings(values = {}, id: nil, **props) = component(:settings, id:, values:, **props)

@@ -225,6 +225,8 @@ module Zui
     list_model: [%i[items revision visible], %i[count_change change], false],
     delegate_model: [%i[items filter_group revision visible], %i[count_change group_change change], false],
     delegate_model_group: [%i[items name include_by_default revision visible], %i[count_change change], false],
+    table_model: [%i[rows columns revision visible], %i[change row_count_change column_count_change error], true],
+    table_model_column: [%i[display decoration edit tool_tip status_tip whats_this font text_alignment background foreground check_state accessible_text accessible_description size_hint visible], %i[change], false],
     sort_filter_proxy_model: [%i[items filter filter_field filter_case_sensitive sort_field sort_order sort_case_sensitive dynamic recursive auto_accept_children revision visible], %i[count_change change], false],
     folder_list_model: [%i[folder root_folder name_filters show_files show_dirs show_dirs_first show_dot_and_dot_dot show_hidden show_only_readable sort_field sort_reversed case_sensitive revision visible], %i[count_change folder_change status error change], false],
     settings: [%i[category file_name values sync_revision visible], %i[loaded change synced error], false],

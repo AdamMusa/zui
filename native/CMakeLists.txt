@@ -59,6 +59,15 @@ if(ZUI_EMBEDDED_RUNTIME AND EXISTS "${ZUI_FRAMEWORK_ROOT}/Components/Builtins/Vi
   set(ZUI_USES_VIRTUAL_KEYBOARD ON)
 endif()
 
+# Qt.labs.qmlmodels is reached through the table adapters only, so a statically
+# linked mobile host carries it only when tree-shaking kept one of them.
+set(ZUI_USES_LABS_QML_MODELS OFF)
+if(ZUI_EMBEDDED_RUNTIME AND (EXISTS "${ZUI_FRAMEWORK_ROOT}/Components/Builtins/TableModel.qml"
+    OR EXISTS "${ZUI_FRAMEWORK_ROOT}/Components/Builtins/TableView.qml"))
+  find_package(Qt6 6.8 REQUIRED COMPONENTS LabsQmlModels)
+  set(ZUI_USES_LABS_QML_MODELS ON)
+endif()
+
 set(zui_host_sources
   main.cpp
   ZuiClipboard.cpp
@@ -171,6 +180,10 @@ endif()
 if(ZUI_USES_VIRTUAL_KEYBOARD)
   target_link_libraries(zui-host PRIVATE Qt6::VirtualKeyboard)
   target_compile_definitions(zui-host PRIVATE ZUI_USES_VIRTUAL_KEYBOARD=1)
+endif()
+
+if(ZUI_USES_LABS_QML_MODELS)
+  target_link_libraries(zui-host PRIVATE Qt6::LabsQmlModels)
 endif()
 
 if(ZUI_EMBEDDED_RUNTIME)
