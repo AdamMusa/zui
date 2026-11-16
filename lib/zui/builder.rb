@@ -14,6 +14,8 @@ module Zui
     VALUE_INPUTS = {
       text_field: :text,
       text_area: :text,
+      text_input: :text,
+      text_edit: :text,
       password_field: :text,
       number_field: :value,
       slider: :value,
@@ -862,7 +864,7 @@ module Zui
     def input_component(type, property, value, id:, props:, handler: nil)
       props = props.merge(property => value) unless value.equal?(UNSET)
       node = component(type, id:, **props)
-      event = %i[text_field password_field].include?(type) ? :input : :change
+      event = %i[text_field password_field text_input].include?(type) ? :input : :change
       @application.register_handler(node.id, event, handler) if handler
       node
     end

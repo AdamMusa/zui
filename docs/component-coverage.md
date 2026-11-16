@@ -76,6 +76,11 @@ transitions, and animation groups receive Ruby APIs even though they are not vis
 - [x] font_loader
 - [x] text_metrics
 
+## Raw text editing
+
+- [x] text_input
+- [x] text_edit
+
 ## Buttons and input
 
 - [x] abstract_button
