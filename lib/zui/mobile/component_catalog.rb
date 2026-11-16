@@ -137,12 +137,19 @@ module Zui
         "FrustumCamera" => :frustum_camera, "CustomCamera" => :custom_camera
       }.freeze
 
+      # Qt Quick 3D lights.
+      QUICK3D_LIGHTS = {
+        "DirectionalLight" => :directional_light, "PointLight" => :point_light,
+        "SpotLight" => :spot_light
+      }.freeze
+
       CORE = QUICK_CONTROLS.merge(QUICK_DIALOGS).merge(QUICK_LAYOUTS).freeze
       ALL = CORE.merge(PERMISSIONS).merge(DEVICE_INFORMATION).merge(VIRTUAL_KEYBOARD)
                 .merge(SENSORS).merge(POSITIONING).merge(LOCATION)
                 .merge(TEXT_TO_SPEECH).merge(WEB).merge(WEB_SOCKETS).merge(LOTTIE)
                 .merge(PDF).merge(TOUCH_INTERACTION).merge(QUICK3D_SCENE)
-                .merge(QUICK3D_CAMERAS).freeze
+                .merge(QUICK3D_CAMERAS)
+                .merge(QUICK3D_LIGHTS).freeze
     end
   end
 end

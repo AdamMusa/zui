@@ -800,6 +800,28 @@ class QmlContractTest < Minitest::Test
     assert_includes Zui::COMPONENTS.fetch(:custom_camera).first, :projection
   end
 
+  def test_quick3d_lights_adapt_every_native_light_and_shadow_control
+    {
+      directional_light: "DirectionalLight", point_light: "PointLight", spot_light: "SpotLight"
+    }.each do |component, qt_type|
+      qml = source("Components/Builtins/#{qt_type}.qml")
+
+      assert_dynamic_component_route(source("ControlNode.qml"), component.to_s)
+      assert_includes qml, "#{qt_type} {"
+      assert_includes qml, 'scope: renderer.sceneObject(renderer.prop("scope", ""))'
+      assert_includes qml, '"very_high": Light.ShadowMapQualityVeryHigh'
+      assert_includes qml, '"pcf64": Light.PCF64'
+      assert_includes qml, '"indirect": Light.BakeModeIndirect'
+      %i[color ambient_color brightness casts_shadow shadow_factor pcf_factor].each do |property|
+        assert_includes Zui::COMPONENTS.fetch(component).first, property
+      end
+    end
+    assert_includes Zui::COMPONENTS.fetch(:directional_light).first, :csm_num_splits
+    assert_includes Zui::COMPONENTS.fetch(:point_light).first, :quadratic_fade
+    assert_includes Zui::COMPONENTS.fetch(:spot_light).first, :inner_cone_angle
+    assert_equal :spot_light, Zui::Mobile::ComponentCatalog::QUICK3D_LIGHTS.fetch("SpotLight")
+  end
+
   def test_optional_3d_properties_leave_qt_defaults_alone
     helper = source("Components/Builtins/Support/Prop3dBinding.qml")
 

@@ -399,3 +399,12 @@ its `camera` property.
 - [x] orthographic_camera
 - [x] frustum_camera
 - [x] custom_camera
+
+### Lights
+
+Lights are nodes, so a light declared inside a node_3d moves with it. A
+light with a `scope` lights only that node and its children.
+
+- [x] directional_light
+- [x] point_light
+- [x] spot_light
