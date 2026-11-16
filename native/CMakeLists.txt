@@ -242,9 +242,14 @@ if(ZUI_EMBEDDED_RUNTIME)
   endif()
 
   file(GLOB zui_qml_entrypoints CONFIGURE_DEPENDS "${ZUI_FRAMEWORK_ROOT}/*.qml")
+  # Adapters also load shared JavaScript libraries and precompiled shaders from the framework
+  # tree, so those have to reach the resource alongside the QML they are loaded from.
   file(GLOB_RECURSE zui_qml_resources CONFIGURE_DEPENDS
     "${ZUI_FRAMEWORK_ROOT}/Components/*.qml"
+    "${ZUI_FRAMEWORK_ROOT}/Components/*.js"
+    "${ZUI_FRAMEWORK_ROOT}/Components/*.qsb"
     "${ZUI_FRAMEWORK_ROOT}/Controls/*.qml"
+    "${ZUI_FRAMEWORK_ROOT}/Controls/*.js"
     "${ZUI_FRAMEWORK_ROOT}/Controls/qmldir"
     "${ZUI_FRAMEWORK_ROOT}/Theme/*.qml"
     "${ZUI_FRAMEWORK_ROOT}/Theme/qmldir"
