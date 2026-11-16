@@ -206,6 +206,7 @@ module Zui
     transition: [%i[target from_state to_state animations loops running paused enabled revision visible], %i[start stop finish running_change], false],
     state: [%i[target name when properties restore_entry_values extend revision visible], %i[enter exit change], false],
     state_group: [%i[target current states revision visible], %i[change], false],
+    property_binding: [%i[target property source source_property value when delayed restore_mode revision visible], %i[change error], false],
     property_changes: [%i[target properties revision visible], %i[apply], false],
     anchor_changes: [%i[target anchors margins revision visible], %i[apply], false],
     parent_change: [%i[target parent x y width height scale rotation revision visible], %i[apply], false],

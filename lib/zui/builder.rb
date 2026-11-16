@@ -601,6 +601,14 @@ module Zui
     def screen_capture(id: nil, **props) = component(:screen_capture, id:, **props)
     def window_capture(id: nil, **props) = component(:window_capture, id:, **props)
 
+    # Not named binding (every object already answers Kernel#binding, and an
+    # application block is instance_eval'd in this builder) and not bind, which
+    # is already the reactive Ruby-side binding above.
+    def property_binding(target = nil, id: nil, **props)
+      props = props.merge(target: node_id(target)) unless target.nil?
+      props = props.merge(source: node_id(props.fetch(:source))) if props[:source]
+      component(:property_binding, id:, **props)
+    end
     def list_model(items = [], id: nil, **props) = component(:list_model, id:, items: Array(items), **props)
     def delegate_model(items = [], id: nil, **props) = component(:delegate_model, id:, items: Array(items), **props)
     def delegate_model_group(items = [], id: nil, **props) = component(:delegate_model_group, id:, items: Array(items), **props)

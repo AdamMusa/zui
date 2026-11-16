@@ -52,6 +52,12 @@ module Zui
         "MicrophonePermission" => :microphone_permission
       }.freeze
 
+      # QtQml. Connections and LoggingCategory are deliberately absent: Ruby
+      # event subscriptions and Ruby logging are their equivalents here.
+      QML_CORE = {
+        "Binding" => :property_binding
+      }.freeze
+
       DEVICE_INFORMATION = {
         "SystemInformation" => :system_info,
         "NetworkInformation" => :network_status
@@ -124,7 +130,7 @@ module Zui
       }.freeze
 
       CORE = QUICK_CONTROLS.merge(QUICK_DIALOGS).merge(QUICK_LAYOUTS).freeze
-      ALL = CORE.merge(PERMISSIONS).merge(DEVICE_INFORMATION).merge(VIRTUAL_KEYBOARD)
+      ALL = CORE.merge(QML_CORE).merge(PERMISSIONS).merge(DEVICE_INFORMATION).merge(VIRTUAL_KEYBOARD)
                 .merge(SENSORS).merge(POSITIONING).merge(LOCATION)
                 .merge(TEXT_TO_SPEECH).merge(WEB).merge(WEB_SOCKETS).merge(LOTTIE)
                 .merge(PDF).merge(TOUCH_INTERACTION).freeze
