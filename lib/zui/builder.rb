@@ -578,6 +578,12 @@ module Zui
       component(:sequential_animation, id:, animations: normalize_animation_specs(animations), **props)
     end
     def frame_animation(id: nil, **props) = component(:frame_animation, id:, **props)
+
+    TIMELINE_REFERENCES = %i[target timeline animation source1 source2].freeze
+    TIMELINE_LIST_REFERENCES = %i[keyframe_groups animations keyframes].freeze
+    %i[timeline keyframe keyframe_group timeline_animation timeline_animation_node blend_animation_node].each do |type|
+      define_method(type) { |id: nil, **props| component(type, id:, **normalize_timeline_references(props)) }
+    end
     def timer(interval, id: nil, **props) = component(:timer, id:, interval:, **props)
 
     def media_player(source = "", id: nil, **props) = component(:media_player, id:, source: source.to_s, **props)
@@ -819,6 +825,20 @@ module Zui
 
     def node_id(value)
       value.is_a?(Node) ? value.id : value.to_s
+    end
+
+    # Timeline building blocks reference each other by control id, so nodes
+    # passed for those properties become ids.
+    def normalize_timeline_references(props)
+      props.each_with_object({}) do |(key, value), normalized|
+        normalized[key] = if TIMELINE_REFERENCES.include?(key)
+                            node_id(value)
+                          elsif TIMELINE_LIST_REFERENCES.include?(key)
+                            Array(value).map { |entry| node_id(entry) }
+                          else
+                            value
+                          end
+      end
     end
 
     def normalize_animation_specs(animations)
