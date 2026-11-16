@@ -1,0 +1,37 @@
+{
+  "QtQuick.Pdf": {
+    "unavailable": {
+      "android": "Qt 6.8.3 ships no Android build of Qt PDF; the qtpdf add-on exists for host and iOS targets only."
+    },
+    "notes": "PDF rendering is an iOS-only mobile capability. An Android build that keeps a PDF adapter fails at configure time instead of starting without the module."
+  },
+  "QtQuick3D.Xr": {
+    "unavailable": {
+      "ios": "Qt Quick 3D Xr targets visionOS and Android XR; the iOS SDK ships no QtQuick3D.Xr module."
+    }
+  },
+  "QtQuick.Controls.macOS": {
+    "unavailable": {
+      "ios": "The macOS native style is a desktop style and ships only in the host SDK.",
+      "android": "The macOS native style is a desktop style and ships only in the host SDK."
+    }
+  },
+  "QtQuick.Controls.iOS": {
+    "unavailable": {
+      "android": "The iOS native style ships only in the host and iOS SDKs."
+    },
+    "notes": "Selected through the Qt Quick Controls style name, not imported directly."
+  },
+  "QtWebView": {
+    "notes": "QtWebView::initialize() has to run before the QGuiApplication is constructed; native/main.cpp does that behind ZUI_USES_WEBVIEW."
+  },
+  "QtQuick.VirtualKeyboard": {
+    "notes": "Needs QT_IM_MODULE=qtvirtualkeyboard in the environment before the platform input context is created; native/main.cpp does that behind ZUI_USES_VIRTUAL_KEYBOARD."
+  },
+  "QtQuick.LocalStorage": {
+    "notes": "Needs the sqlite SQL driver plugin; the tree shaker keeps plugins/sqldrivers when this module is retained."
+  },
+  "QtQuick3D": {
+    "notes": "Runtime asset loading (QtQuick3D.AssetUtils) also needs the assetimporters plugins, which the tree shaker keeps for any retained QtQuick3D module."
+  }
+}

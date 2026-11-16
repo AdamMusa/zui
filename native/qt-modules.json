@@ -1,0 +1,915 @@
+{
+  "format": 1,
+  "generated_by": "rake qt:modules",
+  "qt_version": "6.8.3",
+  "targets": [
+    "host",
+    "ios",
+    "android"
+  ],
+  "modules": [
+    {
+      "qml_module": "QML",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "Qt.labs.animation",
+      "cmake_component": "LabsAnimation",
+      "link_target": "Qt6::LabsAnimation",
+      "qml_plugin": "labsanimationplugin",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "Qt.labs.folderlistmodel",
+      "cmake_component": "LabsFolderListModel",
+      "link_target": "Qt6::LabsFolderListModel",
+      "qml_plugin": "qmlfolderlistmodelplugin",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "Qt.labs.lottieqt",
+      "cmake_component": "BodymovinPrivate",
+      "link_target": "Qt6::BodymovinPrivate",
+      "qml_plugin": "lottieqtplugin",
+      "sdk_module": "qtlottie",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "Qt.labs.platform",
+      "cmake_component": "LabsPlatform",
+      "link_target": "Qt6::LabsPlatform",
+      "qml_plugin": "LabsPlatformplugin",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "Qt.labs.qmlmodels",
+      "cmake_component": "LabsQmlModels",
+      "link_target": "Qt6::LabsQmlModels",
+      "qml_plugin": "labsmodelsplugin",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "Qt.labs.settings",
+      "cmake_component": "LabsSettings",
+      "link_target": "Qt6::LabsSettings",
+      "qml_plugin": "qmlsettingsplugin",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "Qt.labs.sharedimage",
+      "cmake_component": "LabsSharedImage",
+      "link_target": "Qt6::LabsSharedImage",
+      "qml_plugin": "sharedimageplugin",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "Qt.labs.wavefrontmesh",
+      "cmake_component": "LabsWavefrontMesh",
+      "link_target": "Qt6::LabsWavefrontMesh",
+      "qml_plugin": "qmlwavefrontmeshplugin",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "Qt3D.Animation",
+      "cmake_component": "3DAnimation",
+      "link_target": "Qt6::3DAnimation",
+      "qml_plugin": "quick3danimationplugin",
+      "sdk_module": "qt3d",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "Qt3D.Core",
+      "cmake_component": "3DCore",
+      "link_target": "Qt6::3DCore",
+      "qml_plugin": "quick3dcoreplugin",
+      "sdk_module": "qt3d",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "Qt3D.Extras",
+      "cmake_component": "3DExtras",
+      "link_target": "Qt6::3DExtras",
+      "qml_plugin": "quick3dextrasplugin",
+      "sdk_module": "qt3d",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "Qt3D.Input",
+      "cmake_component": "3DInput",
+      "link_target": "Qt6::3DInput",
+      "qml_plugin": "quick3dinputplugin",
+      "sdk_module": "qt3d",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "Qt3D.Logic",
+      "cmake_component": "3DLogic",
+      "link_target": "Qt6::3DLogic",
+      "qml_plugin": "quick3dlogicplugin",
+      "sdk_module": "qt3d",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "Qt3D.Render",
+      "cmake_component": "3DQuickRender",
+      "link_target": "Qt6::3DQuickRender",
+      "qml_plugin": "quick3drenderplugin",
+      "sdk_module": "qt3d",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "Qt5Compat.GraphicalEffects",
+      "qml_plugin": "qtgraphicaleffectsplugin",
+      "sdk_module": "qt5compat",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "QtCharts",
+      "cmake_component": "ChartsQml",
+      "link_target": "Qt6::ChartsQml",
+      "qml_plugin": "qtchartsqml2",
+      "sdk_module": "qtcharts",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "QtCore",
+      "cmake_component": "QmlCore",
+      "link_target": "Qt6::QmlCore",
+      "qml_plugin": "qtqmlcoreplugin",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "QtDataVisualization",
+      "cmake_component": "DataVisualizationQml",
+      "link_target": "Qt6::DataVisualizationQml",
+      "qml_plugin": "DataVisualizationQmlplugin",
+      "sdk_module": "qtdatavis3d",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "QtGraphs",
+      "cmake_component": "Graphs",
+      "link_target": "Qt6::Graphs",
+      "qml_plugin": "Graphsplugin",
+      "sdk_module": "qtgraphs",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "QtGrpc",
+      "cmake_component": "GrpcQuick",
+      "link_target": "Qt6::GrpcQuick",
+      "qml_plugin": "grpcquickplugin",
+      "sdk_module": "qtgrpc",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "QtLocation",
+      "cmake_component": "Location",
+      "link_target": "Qt6::Location",
+      "qml_plugin": "declarative_location",
+      "sdk_module": "qtlocation",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ],
+      "android_permissions": [
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
+    },
+    {
+      "qml_module": "QtMultimedia",
+      "cmake_component": "MultimediaQuickPrivate",
+      "link_target": "Qt6::MultimediaQuickPrivate",
+      "qml_plugin": "quickmultimedia",
+      "sdk_module": "qtmultimedia",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ],
+      "android_permissions": [
+        "android.permission.BLUETOOTH",
+        "android.permission.CAMERA",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    {
+      "qml_module": "QtNetwork",
+      "cmake_component": "QmlNetwork",
+      "link_target": "Qt6::QmlNetwork",
+      "qml_plugin": "QmlNetworkplugin",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "QtPositioning",
+      "cmake_component": "PositioningQuick",
+      "link_target": "Qt6::PositioningQuick",
+      "qml_plugin": "positioningquickplugin",
+      "sdk_module": "qtpositioning",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ],
+      "android_permissions": [
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
+    },
+    {
+      "qml_module": "QtProtobuf",
+      "cmake_component": "ProtobufQuick",
+      "link_target": "Qt6::ProtobufQuick",
+      "qml_plugin": "protobufquickplugin",
+      "sdk_module": "qtgrpc",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "QtQml",
+      "qml_plugin": "qmlplugin",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "QtQml.Models",
+      "qml_plugin": "modelsplugin",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "QtQml.StateMachine",
+      "cmake_component": "StateMachineQml",
+      "link_target": "Qt6::StateMachineQml",
+      "qml_plugin": "qtqmlstatemachine",
+      "sdk_module": "qtscxml",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "QtQml.WorkerScript",
+      "cmake_component": "QmlWorkerScript",
+      "link_target": "Qt6::QmlWorkerScript",
+      "qml_plugin": "workerscriptplugin",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "QtQml.XmlListModel",
+      "cmake_component": "QmlXmlListModel",
+      "link_target": "Qt6::QmlXmlListModel",
+      "qml_plugin": "qmlxmllistmodelplugin",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "QtQuick",
+      "qml_plugin": "qtquick2plugin",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "QtQuick.Controls",
+      "cmake_component": "QuickControls2",
+      "link_target": "Qt6::QuickControls2",
+      "qml_plugin": "qtquickcontrols2plugin",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "QtQuick.Controls.Basic",
+      "cmake_component": "QuickControls2",
+      "link_target": "Qt6::QuickControls2",
+      "qml_plugin": "qtquickcontrols2basicstyleplugin",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "QtQuick.Controls.FluentWinUI3",
+      "cmake_component": "QuickTemplates2",
+      "link_target": "Qt6::QuickTemplates2",
+      "qml_plugin": "qtquickcontrols2fluentwinui3styleplugin",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "QtQuick.Controls.Fusion",
+      "cmake_component": "QuickControls2",
+      "link_target": "Qt6::QuickControls2",
+      "qml_plugin": "qtquickcontrols2fusionstyleplugin",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "QtQuick.Controls.Imagine",
+      "cmake_component": "QuickControls2",
+      "link_target": "Qt6::QuickControls2",
+      "qml_plugin": "qtquickcontrols2imaginestyleplugin",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "QtQuick.Controls.Material",
+      "cmake_component": "QuickControls2",
+      "link_target": "Qt6::QuickControls2",
+      "qml_plugin": "qtquickcontrols2materialstyleplugin",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "QtQuick.Controls.Universal",
+      "cmake_component": "QuickControls2",
+      "link_target": "Qt6::QuickControls2",
+      "qml_plugin": "qtquickcontrols2universalstyleplugin",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "QtQuick.Controls.iOS",
+      "cmake_component": "QuickTemplates2",
+      "link_target": "Qt6::QuickTemplates2",
+      "qml_plugin": "qtquickcontrols2iosstyleplugin",
+      "targets": [
+        "host",
+        "ios"
+      ],
+      "unavailable": {
+        "android": "The iOS native style ships only in the host and iOS SDKs."
+      },
+      "notes": "Selected through the Qt Quick Controls style name, not imported directly."
+    },
+    {
+      "qml_module": "QtQuick.Controls.macOS",
+      "qml_plugin": "qtquickcontrols2macosstyleplugin",
+      "targets": [
+        "host"
+      ],
+      "unavailable": {
+        "ios": "The macOS native style is a desktop style and ships only in the host SDK.",
+        "android": "The macOS native style is a desktop style and ships only in the host SDK."
+      }
+    },
+    {
+      "qml_module": "QtQuick.Dialogs",
+      "cmake_component": "QuickDialogs2",
+      "link_target": "Qt6::QuickDialogs2",
+      "qml_plugin": "qtquickdialogsplugin",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "QtQuick.Dialogs.quickimpl",
+      "cmake_component": "QuickDialogs2QuickImpl",
+      "link_target": "Qt6::QuickDialogs2QuickImpl",
+      "qml_plugin": "qtquickdialogs2quickimplplugin",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "QtQuick.Effects",
+      "cmake_component": "QuickEffectsPrivate",
+      "link_target": "Qt6::QuickEffectsPrivate",
+      "qml_plugin": "effectsplugin",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "QtQuick.Layouts",
+      "cmake_component": "QuickLayouts",
+      "link_target": "Qt6::QuickLayouts",
+      "qml_plugin": "qquicklayoutsplugin",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "QtQuick.LocalStorage",
+      "cmake_component": "QmlLocalStorage",
+      "link_target": "Qt6::QmlLocalStorage",
+      "qml_plugin": "qmllocalstorageplugin",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ],
+      "notes": "Needs the sqlite SQL driver plugin; the tree shaker keeps plugins/sqldrivers when this module is retained."
+    },
+    {
+      "qml_module": "QtQuick.NativeStyle",
+      "cmake_component": "QuickTemplates2",
+      "link_target": "Qt6::QuickTemplates2",
+      "qml_plugin": "qtquickcontrols2nativestyleplugin",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "QtQuick.Particles",
+      "cmake_component": "QuickParticlesPrivate",
+      "link_target": "Qt6::QuickParticlesPrivate",
+      "qml_plugin": "particlesplugin",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "QtQuick.Pdf",
+      "cmake_component": "PdfQuick",
+      "link_target": "Qt6::PdfQuick",
+      "qml_plugin": "PdfQuickplugin",
+      "sdk_module": "qtpdf",
+      "targets": [
+        "host",
+        "ios"
+      ],
+      "unavailable": {
+        "android": "Qt 6.8.3 ships no Android build of Qt PDF; the qtpdf add-on exists for host and iOS targets only."
+      },
+      "notes": "PDF rendering is an iOS-only mobile capability. An Android build that keeps a PDF adapter fails at configure time instead of starting without the module."
+    },
+    {
+      "qml_module": "QtQuick.Scene2D",
+      "cmake_component": "3DRender",
+      "link_target": "Qt6::3DRender",
+      "qml_plugin": "qtquickscene2dplugin",
+      "sdk_module": "qt3d",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "QtQuick.Scene3D",
+      "cmake_component": "3DQuickScene3D",
+      "link_target": "Qt6::3DQuickScene3D",
+      "qml_plugin": "qtquickscene3dplugin",
+      "sdk_module": "qt3d",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "QtQuick.Shapes",
+      "cmake_component": "QuickShapesPrivate",
+      "link_target": "Qt6::QuickShapesPrivate",
+      "qml_plugin": "qmlshapesplugin",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "QtQuick.Templates",
+      "cmake_component": "QuickTemplates2",
+      "link_target": "Qt6::QuickTemplates2",
+      "qml_plugin": "qtquicktemplates2plugin",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "QtQuick.Timeline",
+      "cmake_component": "QuickTimeline",
+      "link_target": "Qt6::QuickTimeline",
+      "qml_plugin": "qtquicktimelineplugin",
+      "sdk_module": "qtquicktimeline",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "QtQuick.Timeline.BlendTrees",
+      "cmake_component": "QuickTimelineBlendTrees",
+      "link_target": "Qt6::QuickTimelineBlendTrees",
+      "qml_plugin": "qtquicktimelineblendtreesplugin",
+      "sdk_module": "qtquicktimeline",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "QtQuick.VectorImage",
+      "cmake_component": "QuickVectorImage",
+      "link_target": "Qt6::QuickVectorImage",
+      "qml_plugin": "qquickvectorimageplugin",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "QtQuick.VirtualKeyboard",
+      "cmake_component": "VirtualKeyboard",
+      "link_target": "Qt6::VirtualKeyboard",
+      "qml_plugin": "qtvkbplugin",
+      "sdk_module": "qtvirtualkeyboard",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ],
+      "native_initialization": "ZUI_USES_VIRTUAL_KEYBOARD",
+      "notes": "Needs QT_IM_MODULE=qtvirtualkeyboard in the environment before the platform input context is created; native/main.cpp does that behind ZUI_USES_VIRTUAL_KEYBOARD."
+    },
+    {
+      "qml_module": "QtQuick.VirtualKeyboard.Settings",
+      "cmake_component": "VirtualKeyboardSettings",
+      "link_target": "Qt6::VirtualKeyboardSettings",
+      "qml_plugin": "qtvkbsettingsplugin",
+      "sdk_module": "qtvirtualkeyboard",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "QtQuick.Window",
+      "qml_plugin": "quickwindow",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "QtQuick3D",
+      "cmake_component": "Quick3D",
+      "link_target": "Qt6::Quick3D",
+      "qml_plugin": "qquick3dplugin",
+      "sdk_module": "qtquick3d",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ],
+      "notes": "Runtime asset loading (QtQuick3D.AssetUtils) also needs the assetimporters plugins, which the tree shaker keeps for any retained QtQuick3D module."
+    },
+    {
+      "qml_module": "QtQuick3D.AssetUtils",
+      "cmake_component": "Quick3DAssetUtils",
+      "link_target": "Qt6::Quick3DAssetUtils",
+      "qml_plugin": "qtquick3dassetutilsplugin",
+      "sdk_module": "qtquick3d",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "QtQuick3D.Effects",
+      "cmake_component": "Quick3DEffects",
+      "link_target": "Qt6::Quick3DEffects",
+      "qml_plugin": "qtquick3deffectplugin",
+      "sdk_module": "qtquick3d",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "QtQuick3D.Helpers",
+      "cmake_component": "Quick3DHelpers",
+      "link_target": "Qt6::Quick3DHelpers",
+      "qml_plugin": "qtquick3dhelpersplugin",
+      "sdk_module": "qtquick3d",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "QtQuick3D.ParticleEffects",
+      "cmake_component": "Quick3DParticleEffects",
+      "link_target": "Qt6::Quick3DParticleEffects",
+      "qml_plugin": "qtquick3dparticleeffectsplugin",
+      "sdk_module": "qtquick3d",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "QtQuick3D.Particles3D",
+      "cmake_component": "Quick3DParticles",
+      "link_target": "Qt6::Quick3DParticles",
+      "qml_plugin": "qtquick3dparticles3dplugin",
+      "sdk_module": "qtquick3d",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "QtQuick3D.Physics",
+      "cmake_component": "Quick3DPhysics",
+      "link_target": "Qt6::Quick3DPhysics",
+      "qml_plugin": "qquick3dphysicsplugin",
+      "sdk_module": "qtquick3dphysics",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "QtQuick3D.Physics.Helpers",
+      "cmake_component": "Quick3DPhysicsHelpers",
+      "link_target": "Qt6::Quick3DPhysicsHelpers",
+      "qml_plugin": "qtquick3dphysicshelpersplugin",
+      "sdk_module": "qtquick3dphysics",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "QtQuick3D.SpatialAudio",
+      "cmake_component": "Quick3DSpatialAudioPrivate",
+      "link_target": "Qt6::Quick3DSpatialAudioPrivate",
+      "qml_plugin": "quick3dspatialaudio",
+      "sdk_module": "qtmultimedia",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ],
+      "android_permissions": [
+        "android.permission.BLUETOOTH",
+        "android.permission.CAMERA",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    {
+      "qml_module": "QtQuick3D.Xr",
+      "qml_plugin": "Quick3DXrplugin",
+      "sdk_module": "qtquick3d",
+      "targets": [
+        "host",
+        "android"
+      ],
+      "unavailable": {
+        "ios": "Qt Quick 3D Xr targets visionOS and Android XR; the iOS SDK ships no QtQuick3D.Xr module."
+      }
+    },
+    {
+      "qml_module": "QtRemoteObjects",
+      "cmake_component": "RemoteObjectsQml",
+      "link_target": "Qt6::RemoteObjectsQml",
+      "qml_plugin": "declarative_remoteobjects",
+      "sdk_module": "qtremoteobjects",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "QtScxml",
+      "cmake_component": "ScxmlQml",
+      "link_target": "Qt6::ScxmlQml",
+      "qml_plugin": "declarative_scxml",
+      "sdk_module": "qtscxml",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "QtSensors",
+      "cmake_component": "SensorsQuick",
+      "link_target": "Qt6::SensorsQuick",
+      "qml_plugin": "SensorsQuickplugin",
+      "sdk_module": "qtsensors",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "QtTextToSpeech",
+      "cmake_component": "TextToSpeech",
+      "link_target": "Qt6::TextToSpeech",
+      "qml_plugin": "TextToSpeechQml",
+      "sdk_module": "qtspeech",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ],
+      "android_permissions": [
+        "android.permission.BLUETOOTH",
+        "android.permission.CAMERA",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    {
+      "qml_module": "QtWebChannel",
+      "cmake_component": "WebChannelQuick",
+      "link_target": "Qt6::WebChannelQuick",
+      "qml_plugin": "WebChannelQuickplugin",
+      "sdk_module": "qtwebchannel",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "QtWebSockets",
+      "cmake_component": "WebSockets",
+      "link_target": "Qt6::WebSockets",
+      "qml_plugin": "qmlwebsockets",
+      "sdk_module": "qtwebsockets",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ]
+    },
+    {
+      "qml_module": "QtWebView",
+      "cmake_component": "WebViewQuick",
+      "link_target": "Qt6::WebViewQuick",
+      "qml_plugin": "qtwebviewquickplugin",
+      "sdk_module": "qtwebview",
+      "targets": [
+        "host",
+        "ios",
+        "android"
+      ],
+      "android_permissions": [
+        "android.permission.ACCESS_FINE_LOCATION"
+      ],
+      "native_initialization": "ZUI_USES_WEBVIEW",
+      "notes": "QtWebView::initialize() has to run before the QGuiApplication is constructed; native/main.cpp does that behind ZUI_USES_WEBVIEW."
+    }
+  ]
+}

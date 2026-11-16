@@ -173,6 +173,13 @@ if(ZUI_USES_VIRTUAL_KEYBOARD)
   target_compile_definitions(zui-host PRIVATE ZUI_USES_VIRTUAL_KEYBOARD=1)
 endif()
 
+# Every other Qt QML module the application's QML tree imports is wired from the registry in
+# native/qt-modules.json, which also records why a module cannot work on a given mobile target.
+include("${CMAKE_CURRENT_SOURCE_DIR}/ZuiQtModules.cmake")
+if(ZUI_EMBEDDED_RUNTIME)
+  zui_link_qt_modules(zui-host FRAMEWORK_ROOT "${ZUI_FRAMEWORK_ROOT}")
+endif()
+
 if(ZUI_EMBEDDED_RUNTIME)
   string(REPLACE "\\" "\\\\" zui_mobile_app_name_definition "${ZUI_MOBILE_APP_NAME}")
   string(REPLACE "\"" "\\\"" zui_mobile_app_name_definition "${zui_mobile_app_name_definition}")
