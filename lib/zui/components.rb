@@ -169,6 +169,7 @@ module Zui
     drag_area: [%i[enabled target axis minimum_x maximum_x minimum_y maximum_y snap_x snap_y threshold cursor reset_revision width height visible], %i[click double_click drag_start drag drag_end cancel], true],
     drop_area: [%i[keys enabled width height visible], %i[enter move exit drop], true],
     pinch_area: [%i[enabled target minimum_scale maximum_scale minimum_rotation maximum_rotation minimum_x maximum_x minimum_y maximum_y width height visible], %i[pinch_start pinch pinch_end cancel], true],
+    mouse_area: [%i[enabled hover_enabled accepted_buttons press_and_hold_interval cursor propagate_composed_events prevent_stealing scroll_gesture_enabled drag_target drag_axis drag_minimum_x drag_maximum_x drag_minimum_y drag_maximum_y drag_filter_children drag_smoothed drag_threshold width height visible], %i[click double_click press release press_and_hold move wheel enter exit cancel pressed_change drag_change], true],
     hover_area: [%i[enabled cursor blocking margin width height visible], %i[enter move exit hover], true],
     tap_area: [%i[enabled accepted_buttons gesture_policy long_press_threshold width height visible], %i[tap double_tap long_press press release cancel], true],
     point_handler: [%i[enabled accepted_buttons accepted_devices margin width height visible], %i[point active_change cancel], true],
