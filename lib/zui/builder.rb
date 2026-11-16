@@ -367,7 +367,15 @@ module Zui
     end
 
     def path(data = "", id: nil, **props)
+      return component(:path, id:, segments: data, **props) if data.is_a?(Array)
+
       component(:path, id:, data: data.to_s, **props)
+    end
+
+    def path_interpolator(progress = 0, id: nil, **props, &handler)
+      node = component(:path_interpolator, id:, progress:, **props)
+      @application.register_handler(node.id, :interpolate, handler) if handler
+      node
     end
 
     def circle(radius = 50, id: nil, **props)

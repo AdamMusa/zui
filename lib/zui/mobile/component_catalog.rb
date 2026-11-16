@@ -116,6 +116,15 @@ module Zui
       PDF = %w[PdfDocument PdfMultiPageView PdfPageView PdfScrollablePageView PdfPageImage
                PdfPageNavigator PdfSearchModel PdfSelection].to_h { |name| [name, :pdf_view] }.freeze
 
+      PATH_ELEMENTS = {
+        "PathLine" => :path, "PathMove" => :path, "PathQuad" => :path,
+        "PathCubic" => :path, "PathCurve" => :path, "PathArc" => :path,
+        "PathAngleArc" => :path, "PathSvg" => :path, "PathPolyline" => :path,
+        "PathMultiline" => :path, "PathRectangle" => :path, "PathText" => :path,
+        "PathAttribute" => :path, "PathPercent" => :path,
+        "PathInterpolator" => :path_interpolator
+      }.freeze
+
       TOUCH_INTERACTION = {
         "TapHandler" => :tap_area, "PointHandler" => :point_handler,
         "MultiPointTouchArea" => :multi_touch_area, "WheelHandler" => :wheel_area,
@@ -127,7 +136,7 @@ module Zui
       ALL = CORE.merge(PERMISSIONS).merge(DEVICE_INFORMATION).merge(VIRTUAL_KEYBOARD)
                 .merge(SENSORS).merge(POSITIONING).merge(LOCATION)
                 .merge(TEXT_TO_SPEECH).merge(WEB).merge(WEB_SOCKETS).merge(LOTTIE)
-                .merge(PDF).merge(TOUCH_INTERACTION).freeze
+                .merge(PDF).merge(TOUCH_INTERACTION).merge(PATH_ELEMENTS).freeze
     end
   end
 end
