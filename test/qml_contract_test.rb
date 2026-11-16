@@ -778,6 +778,36 @@ class QmlContractTest < Minitest::Test
     end
   end
 
+  def test_quick3d_cameras_adapt_each_native_projection
+    {
+      perspective_camera: "PerspectiveCamera", orthographic_camera: "OrthographicCamera",
+      frustum_camera: "FrustumCamera", custom_camera: "CustomCamera"
+    }.each do |component, qt_type|
+      renderer = source("ControlNode.qml")
+      qml = source("Components/Builtins/#{qt_type}.qml")
+
+      assert_dynamic_component_route(renderer, component.to_s)
+      assert_includes qml, "import QtQuick3D"
+      assert_includes qml, "#{qt_type} {"
+      assert_includes qml, 'lookAtNode: renderer.sceneObject(renderer.prop("look_at", ""))'
+      assert_equal :perspective_camera, Zui::Mobile::ComponentCatalog::QUICK3D_CAMERAS
+        .fetch("PerspectiveCamera")
+      assert_includes Zui::COMPONENTS.fetch(component).first, :frustum_culling
+    end
+    assert_includes source("Components/Builtins/PerspectiveCamera.qml"), '"horizontal": PerspectiveCamera.Horizontal'
+    assert_includes Zui::COMPONENTS.fetch(:orthographic_camera).first, :horizontal_magnification
+    assert_includes Zui::COMPONENTS.fetch(:frustum_camera).first, :top
+    assert_includes Zui::COMPONENTS.fetch(:custom_camera).first, :projection
+  end
+
+  def test_optional_3d_properties_leave_qt_defaults_alone
+    helper = source("Components/Builtins/Support/Prop3dBinding.qml")
+
+    assert_includes helper, "Binding {"
+    assert_includes helper, "when: renderer.hasProp(name)"
+    assert_includes helper, "restoreMode: Binding.RestoreBindingOrValue"
+  end
+
   def test_font_loader_has_a_specific_native_resource_renderer
     renderer = source("ControlNode.qml")
 

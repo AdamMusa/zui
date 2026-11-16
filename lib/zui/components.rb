@@ -320,7 +320,11 @@ module Zui
     node_3d: [%i[position x y z euler_rotation rotation_x rotation_y rotation_z rotation scale pivot opacity visible static_flags], %i[error], true],
     model_3d: [%i[source geometry materials morph_targets instancing instance_root skeleton skin baked_lightmap inverse_bind_poses pickable casts_shadows receives_shadows casts_reflections receives_reflections used_in_baked_lighting lightmap_base_resolution depth_bias instancing_lod_min instancing_lod_max level_of_detail_bias position x y z euler_rotation rotation_x rotation_y rotation_z rotation scale pivot opacity visible static_flags], %i[bounds error], true],
     loader_3d: [%i[active source asynchronous position x y z euler_rotation rotation_x rotation_y rotation_z rotation scale pivot opacity visible static_flags], %i[status loaded error], false],
-    repeater_3d: [%i[model spacing position x y z euler_rotation rotation_x rotation_y rotation_z rotation scale pivot opacity visible static_flags], %i[object_added object_removed error], true]
+    repeater_3d: [%i[model spacing position x y z euler_rotation rotation_x rotation_y rotation_z rotation scale pivot opacity visible static_flags], %i[object_added object_removed error], true],
+    perspective_camera: [%i[position x y z euler_rotation rotation_x rotation_y rotation_z rotation scale pivot opacity visible static_flags look_at clip_near clip_far field_of_view field_of_view_orientation frustum_culling level_of_detail_bias], %i[error], true],
+    orthographic_camera: [%i[position x y z euler_rotation rotation_x rotation_y rotation_z rotation scale pivot opacity visible static_flags look_at clip_near clip_far horizontal_magnification vertical_magnification frustum_culling level_of_detail_bias], %i[error], true],
+    frustum_camera: [%i[position x y z euler_rotation rotation_x rotation_y rotation_z rotation scale pivot opacity visible static_flags look_at bottom right left top clip_near clip_far field_of_view field_of_view_orientation frustum_culling level_of_detail_bias], %i[error], true],
+    custom_camera: [%i[position x y z euler_rotation rotation_x rotation_y rotation_z rotation scale pivot opacity visible static_flags look_at projection frustum_culling level_of_detail_bias], %i[error], true]
   }.freeze
 
   DEFAULT_COMPONENTS = ComponentRegistry.new

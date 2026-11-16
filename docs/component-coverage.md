@@ -382,8 +382,20 @@ Qt Quick 3D types. A 3D node is declared inside a `view_3d`, which owns the GPU
 scene. Resources such as materials and geometries may be declared inside the
 node that uses them, or anywhere in the scene and referenced by their Ruby id.
 
+### Viewport and scene graph
+
 - [x] view_3d
 - [x] node_3d
 - [x] model_3d
 - [x] loader_3d
 - [x] repeater_3d
+
+### Cameras
+
+A view_3d adopts the first camera declared inside it, or the one named by
+its `camera` property.
+
+- [x] perspective_camera
+- [x] orthographic_camera
+- [x] frustum_camera
+- [x] custom_camera
