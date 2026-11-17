@@ -48,13 +48,16 @@ Item {
   // pdf_page_image or pdf_page_view that keeps its own jump history.
   PdfPageNavigator {
     id: nativeNavigator
-    onCurrentPageChanged: root.publish()
-    onCurrentLocationChanged: root.publish()
-    onCurrentZoomChanged: root.publish()
-    onBackAvailableChanged: root.publish()
-    onForwardAvailableChanged: root.publish()
+    onCurrentPageChanged: publishTimer.restart()
+    onCurrentLocationChanged: publishTimer.restart()
+    onCurrentZoomChanged: publishTimer.restart()
+    onBackAvailableChanged: publishTimer.restart()
+    onForwardAvailableChanged: publishTimer.restart()
     onJumped: function(current) { root.send("jump", root.linkPayload(current)) }
   }
+  // One jump moves page, location, zoom and both availability flags, so coalesce the
+  // five signals into a single change event.
+  Timer { id: publishTimer; interval: 16; repeat: false; onTriggered: root.publish() }
   Connections { target: renderer; function onNodeChanged() { root.runCommand() } }
-  Component.onCompleted: { runCommand(); publish() }
+  Component.onCompleted: { runCommand(); publishTimer.restart() }
 }

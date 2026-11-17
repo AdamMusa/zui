@@ -120,8 +120,10 @@ module Zui
         "PdfScrollablePageView" => :pdf_scrollable_page_view,
         "PdfPageImage" => :pdf_page_image,
         "PdfPageNavigator" => :pdf_page_navigator,
-        "PdfSearchModel" => :pdf_view,
-        "PdfSelection" => :pdf_view
+        "PdfSearchModel" => :pdf_search_model,
+        "PdfSelection" => :pdf_selection,
+        "PdfLinkModel" => :pdf_link_model,
+        "PdfBookmarkModel" => :pdf_bookmark_model
       }.freeze
 
       TOUCH_INTERACTION = {

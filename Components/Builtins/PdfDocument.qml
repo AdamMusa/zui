@@ -46,13 +46,14 @@ Item {
     id: nativeDocument
     source: String(root.renderer.prop("source", ""))
     password: String(root.renderer.prop("password", ""))
-    onStatusChanged: {
+    onStatusChanged: function(status) {
       var name = root.statusName(status)
-      root.send("status", { value: name, native_status: Number(status), page_count: Number(pageCount) })
+      root.send("status", { value: name, native_status: Number(status), page_count: Number(nativeDocument.pageCount) })
       if (name === "ready") { root.publishMetadata(); root.publishPages() }
-      if (name === "error") root.renderer.componentError("pdf_load_failed", String(error), { source: String(source) })
+      if (name === "error")
+        root.renderer.componentError("pdf_load_failed", String(nativeDocument.error), { source: String(nativeDocument.source) })
     }
-    onPageCountChanged: root.send("page_count", { value: Number(pageCount) })
+    onPageCountChanged: function(pageCount) { root.send("page_count", { value: Number(pageCount) }) }
     onMetaDataChanged: root.publishMetadata()
     onPasswordRequired: root.send("password_required", {})
   }
