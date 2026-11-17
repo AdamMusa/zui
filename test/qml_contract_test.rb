@@ -240,6 +240,50 @@ class QmlContractTest < Minitest::Test
     assert_includes source("Components/Builtins/KeyboardTextField.qml"), "EnterKeyAction.actionId"
   end
 
+  def test_chart_bar_series_family_creates_native_qtcharts_objects_inside_its_chart
+    adapters = {
+      chart_bar_series: "BarSeries", chart_stacked_bar_series: "StackedBarSeries",
+      chart_percent_bar_series: "PercentBarSeries",
+      chart_horizontal_bar_series: "HorizontalBarSeries",
+      chart_horizontal_stacked_bar_series: "HorizontalStackedBarSeries",
+      chart_horizontal_percent_bar_series: "HorizontalPercentBarSeries"
+    }
+    wrapper = source("Components/Builtins/BarChart.qml")
+
+    adapters.each do |component, native|
+      name = component.to_s.split("_").map(&:capitalize).join
+      adapter = source("Components/Builtins/#{name}.qml")
+
+      assert_includes adapter, "import QtCharts"
+      assert_includes adapter, "#{native} {"
+      assert_includes adapter, "readonly property bool zuiSeriesHost: true"
+      assert_includes adapter, 'item["zuiChartHost"] === true'
+      assert_includes adapter, "seriesComponent.createObject(host)"
+      assert_includes adapter, "chart_series_without_chart_view"
+      assert_includes adapter, "delegate: renderer.childDelegateComponent"
+      refute_includes adapter, "Canvas {"
+      assert_equal true, Zui::COMPONENTS.fetch(component).fetch(2)
+      assert_includes Zui::COMPONENTS.fetch(component).fetch(1), :error
+    end
+
+    # The hand-drawn wrappers keep their own renderer; the Qt series are additive.
+    assert_includes wrapper, "Canvas {"
+    refute_includes wrapper, "import QtCharts"
+  end
+
+  def test_chart_bar_sets_are_owned_by_the_series_that_qtcharts_makes_them_from
+    barset = source("Components/Builtins/ChartBarSet.qml")
+
+    assert_includes barset, 'item["zuiSeriesHost"] === true'
+    assert_includes barset, "host.nativeSeries.append(String(renderer.prop(\"label\", \"\")), root.setValues())"
+    assert_includes barset, "if (!root.nativeSet) Qt.callLater(root.attachOrReport)"
+    assert_includes barset, "chart_bar_set_without_series"
+    assert_includes barset, "if (signature === root.appliedValues) return"
+    assert_includes barset, "target: root.nativeSet"
+    assert_equal :chart_bar_series, Zui::Mobile::ComponentCatalog::CHARTS.fetch("QtCharts/BarSeries")
+    assert_equal :chart_bar_set, Zui::Mobile::ComponentCatalog::CHARTS.fetch("QtCharts/BarSet")
+  end
+
   def test_chart_xy_series_create_native_qtcharts_objects_inside_their_chart
     adapters = {
       chart_line_series: "LineSeries", chart_spline_series: "SplineSeries",

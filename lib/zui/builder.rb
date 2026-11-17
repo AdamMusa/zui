@@ -526,6 +526,22 @@ module Zui
 
     def legend(items = [], id: nil, **props) = component(:legend, id:, items: Array(items), **props)
 
+    # Real QtCharts bar series. Unlike the high-level chart wrappers above they
+    # carry no values of their own: each series is declared inside a chart view
+    # and holds chart_bar_set children.
+    CHART_BAR_SERIES_COMPONENTS = %i[
+      chart_bar_series chart_stacked_bar_series chart_percent_bar_series
+      chart_horizontal_bar_series chart_horizontal_stacked_bar_series
+      chart_horizontal_percent_bar_series
+    ].freeze
+    CHART_BAR_SERIES_COMPONENTS.each do |type|
+      define_method(type) { |id: nil, **props, &block| component(type, id:, **props, &block) }
+    end
+
+    def chart_bar_set(values = [], id: nil, **props)
+      component(:chart_bar_set, id:, values: Array(values), **props)
+    end
+
     # Real QtCharts XY series. Unlike the high-level chart wrappers above they
     # carry no drawing of their own: they are declared inside a chart view and
     # take their points from an array or from chart_xy_point children.
