@@ -63,13 +63,15 @@ module Zui
       unless @components.fetch(node.type).properties.map(&:to_s).include?(property)
         raise ArgumentError, "unsupported bound property for #{node.type}: #{property}"
       end
-      value = normalize_value(evaluate(reader), property)
+      raw, reads = StateStore.capture { evaluate(reader) }
+      value = normalize_value(raw, property)
       node.props[property] = value
-      @bindings << Binding.new(node:, property:, reader:, last_value: value, animation:)
+      @bindings << Binding.new(node:, property:, reader:, last_value: value, animation:, reads:)
     end
 
-    def register_structure(node, renderer)
-      @structures << StructuralBinding.new(node:, renderer:, last_children: node.children.map(&:to_h))
+    def register_structure(node, renderer, reads: [])
+      @structures << StructuralBinding.new(node:, renderer:,
+                                           last_children: node.children.map(&:to_h), reads:)
     end
 
     def register_handler(control_id, event, handler)
@@ -177,14 +179,21 @@ module Zui
 
     private
 
-    def state_changed(_name, _previous, _value)
+    # Only the readers and renderers that actually read `name` are re-run.
+    # Without this every write re-evaluated every binding and rebuilt every
+    # `dynamic` in the application, so switching a page in a large interface
+    # cost as much as building the whole of it again.
+    def state_changed(changes)
+      keys = changes.map(&:first)
       @state_change_lock.synchronize do
         @patch_batch = []
         begin
           @structures.dup.each do |structure|
+            next unless structure.reads_any?(keys)
+
             reconcile_structure(structure) if @structures.include?(structure)
           end
-          @bindings.dup.each { |binding| update_binding(binding) }
+          @bindings.dup.each { |binding| update_binding(binding) if binding.reads_any?(keys) }
         ensure
           patches = @patch_batch
           @patch_batch = nil
@@ -197,6 +206,14 @@ module Zui
       return if patches.empty?
       return emit(patches.first) if patches.length == 1
 
+      # The client rejects a batch of more than MAX_PATCH_BATCH patches
+      # outright, so a bigger flush is split instead of sent and dropped.
+      patches.each_slice(MAX_PATCH_BATCH) { |slice| emit_patch_batch(slice) }
+    end
+
+    def emit_patch_batch(patches)
+      return emit(patches.first) if patches.length == 1
+
       batch = {
         "v" => PROTOCOL_VERSION, "type" => "patch", "op" => "batch",
         "patches" => patches.map { |patch| patch.reject { |key, _| %w[v type].include?(key) } }
@@ -207,7 +224,9 @@ module Zui
     end
 
     def update_binding(binding)
-      value = normalize_value(evaluate(binding.reader), binding.property)
+      raw, reads = StateStore.capture { evaluate(binding.reader) }
+      binding.reads = reads
+      value = normalize_value(raw, binding.property)
       return if value == binding.last_value
       binding.last_value = value
       binding.node.props[binding.property] = value
@@ -223,7 +242,8 @@ module Zui
       previous_children = structure.last_children
       structure.node.children.dup.each { |child| unregister_subtree(child) }
       structure.node.children.clear
-      @builder.rebuild(structure.node, &structure.renderer)
+      _, reads = StateStore.capture { @builder.rebuild(structure.node, &structure.renderer) }
+      structure.reads = reads
       children = structure.node.children.map(&:to_h)
       return if children == structure.last_children
       if patchable_trees?(previous_children, children)

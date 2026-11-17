@@ -91,8 +91,8 @@ module Zui
       raise ArgumentError, "dynamic component must be a container: #{type}" unless definition.container
 
       node = component(type, id:, **props)
-      within_dynamic(node, &renderer)
-      @application.register_structure(node, renderer)
+      _, reads = StateStore.capture { within_dynamic(node, &renderer) }
+      @application.register_structure(node, renderer, reads:)
       node
     end
 
