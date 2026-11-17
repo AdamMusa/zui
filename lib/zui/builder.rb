@@ -127,7 +127,8 @@ module Zui
       default_material specular_glossy_material custom_material texture_3d
       cube_map_texture texture_input scene_environment extended_scene_environment
       fog debug_settings lightmapper baked_lightmap
-      reflection_probe resource_loader
+      reflection_probe resource_loader skeleton_3d joint_3d
+      skin_3d morph_target
     ].freeze
     SCENE_3D_COMPONENTS.each do |type|
       define_method(type) { |id: nil, **props, &block| component(type, id:, **props, &block) }

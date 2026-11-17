@@ -144,6 +144,21 @@ function meshSource(renderer, value) {
     return renderer.assetUrl(source)
 }
 
+// An instance range bound is a number for a scalar property and a vector for a
+// position, scale, rotation or custom-data property. Qt takes whichever the
+// property expects, so the shape Ruby wrote decides.
+function rangeValue(value) {
+    if (Array.isArray(value)) {
+        if (value.length === 4)
+            return vector4d(value, 0, 0, 0, 0)
+        if (value.length === 3)
+            return vector3d(value, 0, 0, 0)
+        if (value.length === 2)
+            return vector2d(value, 0, 0)
+    }
+    return value
+}
+
 function assetUrls(renderer, value) {
     var sources = Array.isArray(value) ? value : [value]
     var urls = []
