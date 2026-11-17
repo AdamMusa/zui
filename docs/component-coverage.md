@@ -489,3 +489,20 @@ that camera by id.
 - [x] wasd_controller
 - [x] look_at_node
 - [x] lod_manager
+
+### Helpers: debug, grids and procedural geometry
+
+Qt's helper module. ExtrudedTextGeometry is not part of Qt 6.8.3 and so
+has no component here.
+
+- [x] axis_helper
+- [x] debug_view_3d
+- [x] infinite_grid
+- [x] grid_geometry
+- [x] height_field_geometry
+- [x] procedural_mesh
+- [x] procedural_mesh_subset
+- [x] procedural_texture_data
+- [x] procedural_sky_texture_data
+- [x] instance_model
+- [x] instance_repeater

@@ -189,6 +189,16 @@ module Zui
         "LookAtNode" => :look_at_node, "LodManager" => :lod_manager
       }.freeze
 
+      # Qt Quick 3D debug, grid and procedural geometry helpers.
+      QUICK3D_HELPERS = {
+        "AxisHelper" => :axis_helper, "DebugView" => :debug_view_3d,
+        "InfiniteGrid" => :infinite_grid, "GridGeometry" => :grid_geometry,
+        "HeightFieldGeometry" => :height_field_geometry, "ProceduralMesh" => :procedural_mesh,
+        "ProceduralMeshSubset" => :procedural_mesh_subset, "ProceduralTextureData" => :procedural_texture_data,
+        "ProceduralSkyTextureData" => :procedural_sky_texture_data, "InstanceModel" => :instance_model,
+        "InstanceRepeater" => :instance_repeater
+      }.freeze
+
       CORE = QUICK_CONTROLS.merge(QUICK_DIALOGS).merge(QUICK_LAYOUTS).freeze
       ALL = CORE.merge(PERMISSIONS).merge(DEVICE_INFORMATION).merge(VIRTUAL_KEYBOARD)
                 .merge(SENSORS).merge(POSITIONING).merge(LOCATION)
@@ -202,7 +212,8 @@ module Zui
                 .merge(QUICK3D_SKINNING)
                 .merge(QUICK3D_INSTANCING)
                 .merge(QUICK3D_CUSTOM_EFFECTS)
-                .merge(QUICK3D_HELPER_CONTROLLERS).freeze
+                .merge(QUICK3D_HELPER_CONTROLLERS)
+                .merge(QUICK3D_HELPERS).freeze
     end
   end
 end
