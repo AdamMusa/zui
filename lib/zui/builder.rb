@@ -128,7 +128,8 @@ module Zui
       cube_map_texture texture_input scene_environment extended_scene_environment
       fog debug_settings lightmapper baked_lightmap
       reflection_probe resource_loader skeleton_3d joint_3d
-      skin_3d morph_target
+      skin_3d morph_target instance_list instance_list_entry
+      random_instancing instance_range file_instancing
     ].freeze
     SCENE_3D_COMPONENTS.each do |type|
       define_method(type) { |id: nil, **props, &block| component(type, id:, **props, &block) }

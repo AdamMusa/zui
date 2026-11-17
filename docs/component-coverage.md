@@ -455,3 +455,14 @@ naming nodes declared elsewhere in the scene.
 - [x] joint_3d
 - [x] skin_3d
 - [x] morph_target
+
+### Instancing
+
+A model names the instance table that repeats it, so one mesh is drawn
+many times in a single GPU pass.
+
+- [x] instance_list
+- [x] instance_list_entry
+- [x] random_instancing
+- [x] instance_range
+- [x] file_instancing
