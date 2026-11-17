@@ -102,7 +102,11 @@ module Zui
         "PlaceSearchModel" => :place_search,
         "PlaceSearchSuggestionModel" => :place_suggestions,
         "CategoryModel" => :place_categories, "Place" => :place_details,
-        "Category" => :place_category
+        "Category" => :place_category,
+        # ReviewModel, ImageModel, EditorialModel and ContactDetails are isCreatable: false
+        # and reached only through Place, so they stay on place_details.
+        "ReviewModel" => :place_details, "ImageModel" => :place_details,
+        "EditorialModel" => :place_details, "ContactDetails" => :place_details
       }.freeze
 
       TEXT_TO_SPEECH = {

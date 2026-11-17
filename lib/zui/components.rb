@@ -277,7 +277,7 @@ module Zui
     place_search: [%i[plugin plugin_parameters term search_area limit recommendation_id relevance visibility incremental command command_revision visible], %i[results status error], false],
     place_suggestions: [%i[plugin plugin_parameters term search_area limit command command_revision visible], %i[suggestions status error], false],
     place_categories: [%i[plugin plugin_parameters hierarchical command command_revision visible], %i[categories status error], false],
-    place_details: [%i[plugin plugin_parameters place_id name latitude longitude altitude attribution visibility command command_revision visible], %i[details status saved removed error], false],
+    place_details: [%i[plugin plugin_parameters place_id name latitude longitude altitude attribution visibility batch_size command command_revision visible], %i[details content status saved removed error], false],
     place_category: [%i[plugin plugin_parameters category_id name visibility command command_revision visible], %i[details status saved removed error], false],
     text_to_speech: [%i[text engine engine_parameters volume rate pitch locale voice voice_gender voice_age command command_revision auto_speak visible], %i[state word voice_change engines error], false],
     web_view: [%i[url html base_url http_user_agent local_storage javascript allow_file_access local_content_file_access command command_revision script cookie_domain cookie_name cookie_value width height visible], %i[load progress title url_change navigation javascript cookie error], false],
