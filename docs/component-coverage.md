@@ -267,6 +267,9 @@ owns its axes and accepts series through addSeries, and the 3D graph types rende
 - [x] graph_pie_series
 - [x] graph_pie_slice
 - [x] graph_xy_point
+- [x] graph_value_axis
+- [x] graph_bar_category_axis
+- [x] graph_date_time_axis
 
 ## Drawing and interaction
 

@@ -557,6 +557,15 @@ module Zui
 
     def graph_xy_point(x = 0, y = 0, id: nil, **props) = component(:graph_xy_point, id:, x:, y:, **props)
 
+    # QtGraphs axes. A QtGraphs graph owns its axes, so these are declared
+    # inside the graph and their position property names the slot they fill.
+    GRAPH_AXIS_COMPONENTS = %i[
+      graph_value_axis graph_bar_category_axis graph_date_time_axis
+    ].freeze
+    GRAPH_AXIS_COMPONENTS.each do |type|
+      define_method(type) { |id: nil, **props| component(type, id:, **props) }
+    end
+
     # QtGraphs' 2D graph surface and its theme. QtGraphs is Qt's replacement for
     # QtDataVisualization and is separate from both the chart wrappers above and
     # the QtCharts primitives: its axes belong to the view, not to each series.

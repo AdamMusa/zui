@@ -579,6 +579,36 @@ class QmlContractTest < Minitest::Test
     assert_equal :chart_xy_point, Zui::Mobile::ComponentCatalog::CHARTS.fetch("QtCharts/XYPoint")
   end
 
+  def test_graph_axes_belong_to_the_graph_not_to_a_series
+    adapters = {
+      graph_value_axis: "ValueAxis", graph_bar_category_axis: "BarCategoryAxis",
+      graph_date_time_axis: "DateTimeAxis"
+    }
+
+    adapters.each do |component, native|
+      name = component.to_s.split("_").map(&:capitalize).join
+      adapter = source("Components/Builtins/#{name}.qml")
+
+      assert_includes adapter, "import QtGraphs"
+      assert_includes adapter, "#{native} {"
+      assert_includes adapter, "readonly property bool zuiAxisHost: true"
+      # QtGraphs puts the axes on the graph, so the host is the graph itself.
+      assert_includes adapter, 'item["zuiGraphsHost"] === true'
+      assert_includes adapter, 'var positions = { x: "axisX", y: "axisY", z: "axisZ" }'
+      assert_includes adapter, "host[property] = root.nativeAxis"
+      assert_includes adapter, "graph_axis_position_unsupported"
+      assert_includes adapter, "graph_axis_without_graph"
+      refute_includes adapter, "zuiSeriesHost"
+      assert_includes Zui::COMPONENTS.fetch(component).fetch(0), :position
+      assert_includes Zui::COMPONENTS.fetch(component).fetch(1), :error
+    end
+
+    assert_equal :graph_value_axis, Zui::Mobile::ComponentCatalog::GRAPHS.fetch("QtGraphs/ValueAxis")
+    assert_equal :graph_value_axis, Zui::Mobile::ComponentCatalog::GRAPHS.fetch("QtGraphs/AbstractAxis")
+    # QtCharts keeps its own ValueAxis on the series, so the two must not merge.
+    assert_equal :chart_value_axis, Zui::Mobile::ComponentCatalog::CHARTS.fetch("QtCharts/ValueAxis")
+  end
+
   def test_mobile_permissions_can_surface_native_failures
     %i[bluetooth_permission calendar_permission camera_permission contacts_permission
        location_permission microphone_permission].each do |component|

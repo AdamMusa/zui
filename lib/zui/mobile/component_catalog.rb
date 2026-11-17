@@ -198,7 +198,12 @@ module Zui
         "QtGraphs/PieSlice" => :graph_pie_slice,
         "QtGraphs/XYPoint" => :graph_xy_point,
         # Abstract base with no QML identity of its own.
-        "QtGraphs/QXYSeries" => :graph_line_series
+        "QtGraphs/QXYSeries" => :graph_line_series,
+        "QtGraphs/ValueAxis" => :graph_value_axis,
+        "QtGraphs/BarCategoryAxis" => :graph_bar_category_axis,
+        "QtGraphs/DateTimeAxis" => :graph_date_time_axis,
+        # Abstract base with no QML identity of its own.
+        "QtGraphs/AbstractAxis" => :graph_value_axis
       }.freeze
 
       TOUCH_INTERACTION = {
