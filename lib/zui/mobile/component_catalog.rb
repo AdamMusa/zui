@@ -125,6 +125,8 @@ module Zui
         "PathInterpolator" => :path_interpolator
       }.freeze
 
+      QUICK_VIEWS = { "PathView" => :carousel }.freeze
+
       TOUCH_INTERACTION = {
         "TapHandler" => :tap_area, "PointHandler" => :point_handler,
         "MultiPointTouchArea" => :multi_touch_area, "WheelHandler" => :wheel_area,
@@ -136,7 +138,7 @@ module Zui
       ALL = CORE.merge(PERMISSIONS).merge(DEVICE_INFORMATION).merge(VIRTUAL_KEYBOARD)
                 .merge(SENSORS).merge(POSITIONING).merge(LOCATION)
                 .merge(TEXT_TO_SPEECH).merge(WEB).merge(WEB_SOCKETS).merge(LOTTIE)
-                .merge(PDF).merge(TOUCH_INTERACTION).merge(PATH_ELEMENTS).freeze
+                .merge(PDF).merge(TOUCH_INTERACTION).merge(QUICK_VIEWS).merge(PATH_ELEMENTS).freeze
     end
   end
 end

@@ -342,7 +342,12 @@ module Zui
     def horizontal_header_delegate(text = "", id: nil, **props) = component(:horizontal_header_delegate, id:, text: text.to_s, **props)
     def vertical_header_delegate(text = "", id: nil, **props) = component(:vertical_header_delegate, id:, text: text.to_s, **props)
     def reorderable_list(items = [], id: nil, **props) = component(:reorderable_list, id:, items: Array(items), **props)
-    def carousel(items = [], id: nil, **props) = component(:carousel, id:, items: Array(items), **props)
+    def carousel(items = [], id: nil, **props, &handler)
+      node = component(:carousel, id:, items: Array(items), **props)
+      @application.register_handler(node.id, :activate, handler) if handler
+      node
+    end
+
     def calendar(date = nil, id: nil, **props)
       calendar_props = props.dup
       calendar_props[:date] = date.to_s unless date.nil?
