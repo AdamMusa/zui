@@ -769,7 +769,8 @@ module Zui
       @application.register_handler(node.id, :finished, handler) if handler
       node
     end
-    def video_sink(id: nil, **props, &handler)
+    def video_sink(source = nil, id: nil, **props, &handler)
+      props = props.merge(source: node_id(source)) unless source.nil?
       node = component(:video_sink, id:, **props)
       @application.register_handler(node.id, :frame, handler) if handler
       node
