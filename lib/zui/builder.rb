@@ -366,6 +366,10 @@ module Zui
       component(:shape, id:, path: path_data.to_s, **props)
     end
 
+    def shape_path(path_data = "", id: nil, **props)
+      component(:shape_path, id:, path: path_data.to_s, **props)
+    end
+
     def line(x1 = 0, y1 = 0, x2 = 100, y2 = 0, id: nil, **props)
       component(:line, id:, x1:, y1:, x2:, y2:, **props)
     end

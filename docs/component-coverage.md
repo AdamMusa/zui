@@ -212,6 +212,7 @@ transitions, and animation groups receive Ruby APIs even though they are not vis
 
 - [x] canvas
 - [x] shape
+- [x] shape_path
 - [x] line
 - [x] path
 - [x] circle

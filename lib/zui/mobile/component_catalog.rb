@@ -150,7 +150,7 @@ module Zui
       # and the Ruby names keep the same split: `gradient` fills, `effect_*`
       # paints. ShapeGradient itself is an abstract base Qt does not create.
       VECTOR_SHAPES = {
-        "Shape" => :shape, "ShapeGradient" => :gradient,
+        "Shape" => :shape, "ShapePath" => :shape_path, "ShapeGradient" => :gradient,
         "QtQuick.Shapes/LinearGradient" => :gradient,
         "QtQuick.Shapes/RadialGradient" => :gradient,
         "QtQuick.Shapes/ConicalGradient" => :gradient

@@ -205,6 +205,45 @@ class QmlContractTest < Minitest::Test
     refute_includes blend, 'return "normal"'
   end
 
+  def test_shape_path_covers_the_native_shapepath_surface
+    adapter = File.read(File.join(ROOT, "Components", "Builtins", "ShapePath.qml"))
+    schema = Zui::COMPONENTS.fetch(:shape_path).first
+
+    assert_includes adapter, "import QtQuick.Shapes"
+    assert_includes adapter, "ShapePath {"
+    %w[miterLimit strokeStyle dashPattern dashOffset pathHints fillTransform fillItem fillGradient].each do |member|
+      assert_includes adapter, "#{member}:", "shape_path does not drive #{member}"
+    end
+    assert_includes adapter, "scale: Qt.size("
+    assert_includes adapter, "LinearGradient {"
+    assert_includes adapter, "RadialGradient {"
+    assert_includes adapter, "ConicalGradient {"
+    assert_includes adapter, "ShapeGradient.ReflectSpread"
+    assert_includes adapter, "fill_item_missing"
+    assert_includes adapter, "path_hint_unsupported"
+    assert_includes schema, :spread
+    assert_includes Zui::COMPONENTS.fetch(:shape_path)[1], :error
+    assert_equal :shape_path, Zui::Mobile::ComponentCatalog::VECTOR_SHAPES.fetch("ShapePath")
+  end
+
+  def test_shape_and_gradient_expose_the_rest_of_their_qt_surface
+    shape = File.read(File.join(ROOT, "Components", "Builtins", "Shape.qml"))
+    gradient = File.read(File.join(ROOT, "Components", "Builtins", "Gradient.qml"))
+
+    assert_includes shape, "vendorExtensionsEnabled:"
+    assert_includes shape, "miterLimit:"
+    assert_includes shape, "fillMode:"
+    assert_includes shape, "horizontalAlignment:"
+    assert_includes shape, "verticalAlignment:"
+    assert_includes shape, "strokeStyle: shapeRoot.strokeStyle()"
+    assert_includes shape, "bounding_rect:"
+    assert_equal 3, gradient.scan("spread: gradientRoot.spreadMode()").length
+    assert_includes Zui::COMPONENTS.fetch(:gradient).first, :spread
+    %i[stroke_style miter_limit vendor_extensions fill_mode horizontal_alignment vertical_alignment].each do |property|
+      assert_includes Zui::COMPONENTS.fetch(:shape).first, property
+    end
+  end
+
   def test_graphical_effects_reach_desktop_clients_and_static_mobile_builds
     cmake = File.read(File.join(ROOT, "native", "CMakeLists.txt"))
     audit = File.read(File.join(ROOT, "scripts", "audit_client.rb"))

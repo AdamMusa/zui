@@ -8,6 +8,13 @@ Item {
   implicitWidth: Number(renderer.prop("width", 200))
   implicitHeight: Number(renderer.prop("height", 120))
 
+  function spreadMode() {
+    var spread = String(renderer.prop("spread", "pad"))
+    if (spread === "reflect") return ShapeGradient.ReflectSpread
+    if (spread === "repeat") return ShapeGradient.RepeatSpread
+    return ShapeGradient.PadSpread
+  }
+
   function stopPosition(index, count) {
     var stops = renderer.prop("stops", [])
     return Array.isArray(stops) && index < stops.length ? Number(stops[index]) : (count <= 1 ? 0 : index / (count - 1))
@@ -42,6 +49,7 @@ Item {
         id: linearGradient
         x1: Number(renderer.prop("start_x", 0)); y1: Number(renderer.prop("start_y", 0))
         x2: Number(renderer.prop("end_x", gradientRoot.width)); y2: Number(renderer.prop("end_y", 0))
+        spread: gradientRoot.spreadMode()
         stops: String(renderer.prop("type", "linear")) === "linear" ? gradientRoot.createdStops : []
       }
       PathRectangle { width: gradientRoot.width; height: gradientRoot.height; radius: Number(renderer.prop("radius", 0)) }
@@ -61,6 +69,7 @@ Item {
         centerRadius: Number(renderer.prop("center_radius", Math.max(gradientRoot.width, gradientRoot.height) / 2))
         focalX: Number(renderer.prop("focal_x", centerX)); focalY: Number(renderer.prop("focal_y", centerY))
         focalRadius: Number(renderer.prop("focal_radius", 0))
+        spread: gradientRoot.spreadMode()
         stops: String(renderer.prop("type", "linear")) === "radial" ? gradientRoot.createdStops : []
       }
       PathRectangle { width: gradientRoot.width; height: gradientRoot.height; radius: Number(renderer.prop("radius", 0)) }
@@ -78,6 +87,7 @@ Item {
         id: conicalGradient
         centerX: Number(renderer.prop("center_x", gradientRoot.width / 2)); centerY: Number(renderer.prop("center_y", gradientRoot.height / 2))
         angle: Number(renderer.prop("angle", 0))
+        spread: gradientRoot.spreadMode()
         stops: String(renderer.prop("type", "linear")) === "conical" ? gradientRoot.createdStops : []
       }
       PathRectangle { width: gradientRoot.width; height: gradientRoot.height; radius: Number(renderer.prop("radius", 0)) }
