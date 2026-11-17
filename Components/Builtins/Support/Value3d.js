@@ -91,6 +91,24 @@ function enumeration(value, table, fallback) {
     return table.hasOwnProperty(key) ? table[key] : fallback
 }
 
+// Combines several names from a flag enumeration into one bit mask. A single
+// name is accepted as well, so a one-flag value reads naturally.
+function flags(value, table, fallback) {
+    if (value === undefined || value === null)
+        return fallback
+    var names = Array.isArray(value) ? value : [value]
+    var mask = 0
+    var matched = false
+    for (var index = 0; index < names.length; index++) {
+        var key = String(names[index])
+        if (table.hasOwnProperty(key)) {
+            mask |= table[key]
+            matched = true
+        }
+    }
+    return matched ? mask : fallback
+}
+
 function flag(value, fallback) {
     if (value === undefined || value === null)
         return fallback === true
@@ -124,6 +142,17 @@ function meshSource(renderer, value) {
     if (source.charAt(0) === "#")
         return source
     return renderer.assetUrl(source)
+}
+
+function assetUrls(renderer, value) {
+    var sources = Array.isArray(value) ? value : [value]
+    var urls = []
+    for (var index = 0; index < sources.length; index++) {
+        var url = meshSource(renderer, sources[index])
+        if (url !== "")
+            urls.push(url)
+    }
+    return urls
 }
 
 function identifiers(value) {

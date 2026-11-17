@@ -429,3 +429,18 @@ procedural texture data helpers.
 - [x] texture_3d
 - [x] cube_map_texture
 - [x] texture_input
+
+### Scene environment
+
+A view_3d adopts the first scene environment declared inside it. Fog, a
+lightmapper and debug settings are declared inside the environment that
+uses them.
+
+- [x] scene_environment
+- [x] extended_scene_environment
+- [x] fog
+- [x] debug_settings
+- [x] lightmapper
+- [x] baked_lightmap
+- [x] reflection_probe
+- [x] resource_loader
