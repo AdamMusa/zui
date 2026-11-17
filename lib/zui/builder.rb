@@ -526,6 +526,26 @@ module Zui
 
     def legend(items = [], id: nil, **props) = component(:legend, id:, items: Array(items), **props)
 
+    # Real QtCharts XY series. Unlike the high-level chart wrappers above they
+    # carry no drawing of their own: they are declared inside a chart view and
+    # take their points from an array or from chart_xy_point children.
+    CHART_XY_SERIES_COMPONENTS = %i[
+      chart_line_series chart_spline_series chart_scatter_series
+    ].freeze
+    CHART_XY_SERIES_COMPONENTS.each do |type|
+      define_method(type) do |points = UNSET, id: nil, **props, &block|
+        props = props.merge(points: Array(points)) unless points.equal?(UNSET)
+        component(type, id:, **props, &block)
+      end
+    end
+
+    def chart_area_series(upper_points = UNSET, id: nil, **props, &block)
+      props = props.merge(upper_points: Array(upper_points)) unless upper_points.equal?(UNSET)
+      component(:chart_area_series, id:, **props, &block)
+    end
+
+    def chart_xy_point(x = 0, y = 0, id: nil, **props) = component(:chart_xy_point, id:, x:, y:, **props)
+
     def on_click(&handler)
       raise ArgumentError, "on_click must be inside a surface or control" if @stack.empty?
       on(@stack.last, :click, &handler)

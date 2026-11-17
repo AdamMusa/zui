@@ -126,7 +126,15 @@ module Zui
         # Grouped property types realized by the chart view adapter itself.
         "QtCharts/Legend" => :chart_view,
         "QtCharts/Margins" => :chart_view,
-        "QtCharts/DeclarativeAxes" => :chart_view
+        "QtCharts/DeclarativeAxes" => :chart_view,
+        "QtCharts/LineSeries" => :chart_line_series,
+        "QtCharts/SplineSeries" => :chart_spline_series,
+        "QtCharts/ScatterSeries" => :chart_scatter_series,
+        "QtCharts/AreaSeries" => :chart_area_series,
+        "QtCharts/XYPoint" => :chart_xy_point,
+        # Abstract bases with no QML identity of their own.
+        "QtCharts/XYSeries" => :chart_line_series,
+        "QtCharts/AbstractSeries" => :chart_line_series
       }.freeze
 
       TOUCH_INTERACTION = {

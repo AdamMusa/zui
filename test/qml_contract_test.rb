@@ -240,6 +240,50 @@ class QmlContractTest < Minitest::Test
     assert_includes source("Components/Builtins/KeyboardTextField.qml"), "EnterKeyAction.actionId"
   end
 
+  def test_chart_xy_series_create_native_qtcharts_objects_inside_their_chart
+    adapters = {
+      chart_line_series: "LineSeries", chart_spline_series: "SplineSeries",
+      chart_scatter_series: "ScatterSeries", chart_area_series: "AreaSeries"
+    }
+    wrapper = source("Components/Builtins/LineChart.qml")
+
+    adapters.each do |component, native|
+      name = component.to_s.split("_").map(&:capitalize).join
+      adapter = source("Components/Builtins/#{name}.qml")
+
+      assert_includes adapter, "import QtCharts"
+      assert_includes adapter, "#{native} {"
+      assert_includes adapter, "readonly property bool zuiSeriesHost: true"
+      assert_includes adapter, 'item["zuiChartHost"] === true'
+      assert_includes adapter, "seriesComponent.createObject(host)"
+      assert_includes adapter, "chart_series_without_chart_view"
+      assert_includes adapter, "delegate: renderer.childDelegateComponent"
+      refute_includes adapter, "Canvas {"
+      assert_equal true, Zui::COMPONENTS.fetch(component).fetch(2)
+      assert_includes Zui::COMPONENTS.fetch(component).fetch(1), :error
+    end
+
+    # The hand-drawn wrappers keep their own renderer; the Qt series are additive.
+    assert_includes wrapper, "Canvas {"
+    refute_includes wrapper, "import QtCharts"
+  end
+
+  def test_chart_series_data_is_declarative_without_clearing_point_children
+    line = source("Components/Builtins/ChartLineSeries.qml")
+    area = source("Components/Builtins/ChartAreaSeries.qml")
+    point = source("Components/Builtins/ChartXyPoint.qml")
+
+    assert_includes line, 'if (!root.nativeSeries || !renderer.hasProp("points")) return'
+    assert_includes line, "if (signature === root.appliedPoints) return"
+    assert_includes area, 'if (!renderer.hasProp("lower_points")) return'
+    assert_includes area, "upperSeries: LineSeries {}"
+    assert_includes point, 'item["zuiSeriesHost"] === true'
+    assert_includes point, "if (!root.attached) Qt.callLater(root.attachOrReport)"
+    assert_includes point, "chart_point_without_series"
+    assert_equal :chart_line_series, Zui::Mobile::ComponentCatalog::CHARTS.fetch("QtCharts/LineSeries")
+    assert_equal :chart_xy_point, Zui::Mobile::ComponentCatalog::CHARTS.fetch("QtCharts/XYPoint")
+  end
+
   def test_mobile_permissions_can_surface_native_failures
     %i[bluetooth_permission calendar_permission camera_permission contacts_permission
        location_permission microphone_permission].each do |component|
