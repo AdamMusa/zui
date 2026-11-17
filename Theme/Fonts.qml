@@ -15,9 +15,15 @@ QtObject {
     source: zuiBundledFontsReady ? "" : Qt.resolvedUrl("../Fonts/FontAwesome-Brands.otf")
   }
 
+  // Never hand Qt an empty family. Until the bundled faces finish loading this
+  // resolved to "", and a Text in RichText or MarkdownText format then falls
+  // back to the CSS default "Sans-serif", which no system provides. Resolving
+  // that miss makes Qt populate every font family alias on the machine, a
+  // one-off cost of over two seconds that lands squarely in application
+  // startup. The application's own default family always exists.
   readonly property string family: zuiBundledFontsReady ? zuiBundledTextFont
     : regularLoader.status === FontLoader.Ready
-    ? regularLoader.name : ""
+    ? regularLoader.name : Qt.application.font.family
   readonly property string iconFamily: zuiBundledFontsReady ? zuiBundledIconFont
     : iconLoader.status === FontLoader.Ready
     ? iconLoader.name : family
