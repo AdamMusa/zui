@@ -301,6 +301,7 @@ transitions, and animation groups receive Ruby APIs even though they are not vis
 - [x] settings
 - [x] standard_paths
 - [x] system_info
+- [x] system_tray_icon
 - [x] network_status
 - [x] clipboard
 
