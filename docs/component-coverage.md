@@ -546,3 +546,31 @@ Leaving `particles` unset lets it act on every particle in the system.
 - [x] repeller_3d
 - [x] point_rotator_3d
 - [x] scale_affector_3d
+
+### Post-processing effects
+
+Qt's ready-made effects. Each one is declared inside the scene
+environment that runs it, and a scene environment runs them in the
+order they are declared.
+
+- [x] additive_color_gradient
+- [x] blur_3d
+- [x] brush_strokes
+- [x] chromatic_aberration
+- [x] color_master
+- [x] depth_of_field_hq_blur
+- [x] desaturate_3d
+- [x] distortion_ripple
+- [x] distortion_sphere
+- [x] distortion_spiral
+- [x] edge_detect
+- [x] emboss
+- [x] flip
+- [x] fxaa
+- [x] gaussian_blur_3d
+- [x] hdr_bloom_tonemap
+- [x] motion_blur
+- [x] s_curve_tonemap
+- [x] scatter
+- [x] tilt_shift
+- [x] vignette_3d

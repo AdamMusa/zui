@@ -394,7 +394,28 @@ module Zui
     wander_3d: [%i[position x y z euler_rotation rotation_x rotation_y rotation_z rotation scale pivot opacity visible static_flags system particles global_amount global_pace global_pace_start unique_amount unique_pace unique_amount_variation unique_pace_variation fade_in_duration fade_out_duration enabled], %i[error], true],
     repeller_3d: [%i[position x y z euler_rotation rotation_x rotation_y rotation_z rotation scale pivot opacity visible static_flags system particles radius outer_radius strength enabled], %i[error], true],
     point_rotator_3d: [%i[position x y z euler_rotation rotation_x rotation_y rotation_z rotation scale pivot opacity visible static_flags system particles magnitude direction pivot_point enabled], %i[error], true],
-    scale_affector_3d: [%i[position x y z euler_rotation rotation_x rotation_y rotation_z rotation scale pivot opacity visible static_flags system particles min_size max_size duration type easing_curve enabled], %i[error], true]
+    scale_affector_3d: [%i[position x y z euler_rotation rotation_x rotation_y rotation_z rotation scale pivot opacity visible static_flags system particles min_size max_size duration type easing_curve enabled], %i[error], true],
+    additive_color_gradient: [%i[bottom_color top_color], %i[error], false],
+    blur_3d: [%i[amount], %i[error], false],
+    brush_strokes: [%i[noise_sample brush_length brush_size brush_angle], %i[error], false],
+    chromatic_aberration: [%i[mask_texture aberration_amount focus_depth], %i[error], false],
+    color_master: [%i[red_strength green_strength blue_strength saturation], %i[error], false],
+    depth_of_field_hq_blur: [%i[focus_distance focus_range blur_amount], %i[error], false],
+    desaturate_3d: [%i[amount], %i[error], false],
+    distortion_ripple: [%i[radius distortion_width distortion_height distortion_phase center], %i[error], false],
+    distortion_sphere: [%i[radius distortion_height center], %i[error], false],
+    distortion_spiral: [%i[radius distortion_strength center], %i[error], false],
+    edge_detect: [%i[edge_strength], %i[error], false],
+    emboss: [%i[amount], %i[error], false],
+    flip: [%i[flip_horizontally flip_vertically], %i[error], false],
+    fxaa: [%i[], %i[error], false],
+    gaussian_blur_3d: [%i[amount], %i[error], false],
+    hdr_bloom_tonemap: [%i[gamma exposure bloom_threshold blur_falloff tonemapping_lerp channel_threshold], %i[error], false],
+    motion_blur: [%i[fade_amount blur_quality], %i[error], false],
+    s_curve_tonemap: [%i[shoulder_slope shoulder_emphasis toe_slope toe_emphasis contrast_boost saturation_level gamma_value use_exposure white_point exposure_value], %i[error], false],
+    scatter: [%i[noise_sample amount direction randomize], %i[error], false],
+    tilt_shift: [%i[focus_position focus_width blur_amount is_vertical is_inverted], %i[error], false],
+    vignette_3d: [%i[vignette_strength vignette_color vignette_radius], %i[error], false]
   }.freeze
 
   DEFAULT_COMPONENTS = ComponentRegistry.new
