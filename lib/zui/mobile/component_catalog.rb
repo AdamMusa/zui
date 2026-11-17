@@ -134,7 +134,16 @@ module Zui
         "QtCharts/XYPoint" => :chart_xy_point,
         # Abstract bases with no QML identity of their own.
         "QtCharts/XYSeries" => :chart_line_series,
-        "QtCharts/AbstractSeries" => :chart_line_series
+        "QtCharts/AbstractSeries" => :chart_line_series,
+        "QtCharts/BarSeries" => :chart_bar_series,
+        "QtCharts/StackedBarSeries" => :chart_stacked_bar_series,
+        "QtCharts/PercentBarSeries" => :chart_percent_bar_series,
+        "QtCharts/HorizontalBarSeries" => :chart_horizontal_bar_series,
+        "QtCharts/HorizontalStackedBarSeries" => :chart_horizontal_stacked_bar_series,
+        "QtCharts/HorizontalPercentBarSeries" => :chart_horizontal_percent_bar_series,
+        "QtCharts/BarSet" => :chart_bar_set,
+        # Abstract base with no QML identity of its own.
+        "QtCharts/AbstractBarSeries" => :chart_bar_series
       }.freeze
 
       TOUCH_INTERACTION = {

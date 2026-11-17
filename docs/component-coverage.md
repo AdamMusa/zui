@@ -220,6 +220,13 @@ QtCharts composes them, for applications that need a chart assembled from series
 - [x] chart_scatter_series
 - [x] chart_area_series
 - [x] chart_xy_point
+- [x] chart_bar_series
+- [x] chart_stacked_bar_series
+- [x] chart_percent_bar_series
+- [x] chart_horizontal_bar_series
+- [x] chart_horizontal_stacked_bar_series
+- [x] chart_horizontal_percent_bar_series
+- [x] chart_bar_set
 
 ## Drawing and interaction
 
