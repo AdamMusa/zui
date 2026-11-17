@@ -159,6 +159,27 @@ class QmlContractTest < Minitest::Test
     end
   end
 
+  def test_inner_shadow_and_rectangular_glow_use_their_own_qt_types
+    inner = File.read(File.join(ROOT, "Components", "Builtins", "InnerShadow.qml"))
+    glow = File.read(File.join(ROOT, "Components", "Builtins", "RectangularGlow.qml"))
+
+    assert_includes inner, "import Qt5Compat.GraphicalEffects"
+    assert_includes inner, "InnerShadow {"
+    assert_includes inner, "source: sourceHost"
+    assert_includes inner, 'renderer.prop("fast", false)'
+    refute_includes inner, "MultiEffect"
+    assert_includes glow, "import Qt5Compat.GraphicalEffects"
+    assert_includes glow, "RectangularGlow {"
+    assert_includes glow, 'renderer.prop("corner_radius", glowRadius)'
+    refute_includes glow, "source:"
+    refute_includes glow, "RectangularShadow"
+    assert_equal :inner_shadow, Zui::Mobile::ComponentCatalog::GRAPHICAL_EFFECTS.fetch("InnerShadow")
+    assert_equal :rectangular_glow, Zui::Mobile::ComponentCatalog::GRAPHICAL_EFFECTS.fetch("RectangularGlow")
+    assert_equal :drop_shadow, Zui::Mobile::ComponentCatalog::GRAPHICAL_EFFECTS.fetch("DropShadow")
+    assert_equal :glow, Zui::Mobile::ComponentCatalog::GRAPHICAL_EFFECTS.fetch("Glow")
+    assert_equal :opacity_mask, Zui::Mobile::ComponentCatalog::GRAPHICAL_EFFECTS.fetch("OpacityMask")
+  end
+
   def test_graphical_effects_reach_desktop_clients_and_static_mobile_builds
     cmake = File.read(File.join(ROOT, "native", "CMakeLists.txt"))
     audit = File.read(File.join(ROOT, "scripts", "audit_client.rb"))
