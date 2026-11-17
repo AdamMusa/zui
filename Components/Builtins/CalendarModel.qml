@@ -11,11 +11,24 @@ Item {
     var result = new Date(value)
     return isNaN(result.getTime()) ? fallback : result
   }
+  function months() {
+    var values = []
+    for (var index = 0; index < nativeModel.count; index++) {
+      values.push({
+        index: index,
+        month: Number(nativeModel.monthAt(index)),
+        year: Number(nativeModel.yearAt(index))
+      })
+    }
+    return values
+  }
+
   function publish() {
     renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "change", {
       count: nativeModel.count,
       from: nativeModel.from.toISOString(),
-      to: nativeModel.to.toISOString()
+      to: nativeModel.to.toISOString(),
+      months: root.months()
     })
   }
   QQC.CalendarModel {
