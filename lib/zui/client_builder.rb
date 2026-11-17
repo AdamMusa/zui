@@ -129,13 +129,26 @@ module Zui
       FileUtils.mkdir_p(destination)
       # The roots come from the modules the registered components import, so a component that
       # lands without its Qt module available on the build host fails here rather than on a user's
-      # machine.
+      # machine. Whether a module may be missing is a property of the registration, not a decision
+      # taken here: ClientPayload::OPTIONAL lists the modules whose components probe for them.
       ClientPayload.qml_roots(framework_root: @framework_root).each do |name|
         path = File.join(source, name)
         unless File.directory?(path)
+          modules = ClientPayload.modules_in_root(name, framework_root: @framework_root)
+          required = modules.reject { |qml_module| ClientPayload.optional?(qml_module) }
+          if required.empty?
+            warn("optional Qt QML module not installed, skipping: #{modules.join(', ')} (#{path})")
+            next
+          end
+
+          components = required.flat_map do |qml_module|
+            ClientPayload.components_needing(qml_module, framework_root: @framework_root)
+          end.uniq.sort
           raise ArgumentError,
-                "Qt QML module required by a registered component is missing from this Qt " \
-                "installation: #{path}"
+                "Qt QML module #{required.join(', ')} is required for #{@platform.os} by " \
+                "#{components.length} registered component(s) " \
+                "(#{components.first(6).join(', ')}#{components.length > 6 ? ', …' : ''}) " \
+                "but is missing from this Qt installation: #{path}"
         end
 
         FileUtils.cp_r(path, destination)

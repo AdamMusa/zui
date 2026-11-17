@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "json"
+
 module Zui
   # Which Qt QML modules the released desktop client carries.
   #
@@ -49,6 +51,22 @@ module Zui
     # positioning and map component unloadable on a released client.
     FORBIDDEN_LIBRARIES = %w[Qt6WebEngine Qt6WebChannel].freeze
     FORBIDDEN_FILES = %w[qtwebengine qwebengine webchannel].freeze
+    # Modules a client build may be assembled without. Everything a registered component imports is
+    # required by default, because a client that omits it produces a component that cannot load -
+    # the silent fallback the framework forbids. A module is optional only when its components
+    # probe for it and report a component error when it is absent, which is what
+    # Support/ModelView3dScene.qml does behind a Loader for Qt Quick 3D.
+    #
+    # This is the property a build reads; it is not for a track to decide case by case in the
+    # builder.
+    OPTIONAL = {
+      "QtQuick3D" => "Support/ModelView3dScene.qml loads behind a Loader and model_view_3d reports " \
+                     "qtquick3d_unavailable when the module is absent",
+      "QtQuick3D.AssetUtils" => "loaded with QtQuick3D by the same probe"
+    }.freeze
+    # Where the measured payload cost of each root is recorded, so the cost of adding a module is
+    # visible in review rather than discovered when the release archive exceeds its budget.
+    BUDGET_PATH = File.expand_path("../../native/qt-payload-budget.json", __dir__)
     # Qt QML modules the framework imports although the desktop client does not carry them, with
     # the reason. A component built on one of them reports a missing-module error on the desktop
     # instead of silently rendering something else, and `test/client_payload_test.rb` names the
@@ -110,6 +128,51 @@ module Zui
       end
 
       def qt_module?(qml_module) = qml_module.to_s.match?(/\A(?:QML|Qt)/)
+
+      # Is a build allowed to continue without this module?
+      def optional?(qml_module) = OPTIONAL.key?(qml_module.to_s)
+
+      # Which registered components need a module, for a build error that names them.
+      def components_needing(qml_module, framework_root: FRAMEWORK_ROOT)
+        component_modules(framework_root:).select { |_name, modules| modules.include?(qml_module.to_s) }
+                                          .keys.sort
+      end
+
+      # The modules a root carries, so a cost or a failure can be reported per registered module
+      # rather than per directory.
+      def modules_in_root(root, framework_root: FRAMEWORK_ROOT)
+        component_modules(framework_root:).values.flatten.uniq
+                                          .select { |name| name.split(".").first == root }.sort
+      end
+
+      # The recorded payload cost: what the client carries today, and the budget it has to stay in.
+      def budget
+        @budget ||= JSON.parse(File.read(BUDGET_PATH))
+      end
+
+      def budget_bytes = budget.fetch("budget_bytes")
+
+      def recorded_bytes = budget.fetch("roots").values.sum
+
+      # Measures what `install_linux_qml` would copy for each root of an installed Qt tree: the
+      # module directories, minus the paths the client drops again.
+      def measure(qt_qml_root, framework_root: FRAMEWORK_ROOT)
+        qml_roots(framework_root:).to_h do |root|
+          directory = File.join(qt_qml_root, root)
+          bytes = Dir[File.join(directory, "**", "*")].sum do |path|
+            next 0 unless File.file?(path) && !File.symlink?(path)
+            # A macOS SDK ships a debug variant of every plugin; a Linux payload has none, so they
+            # are left out to keep the measurement comparable across hosts.
+            next 0 if File.basename(path).match?(/_debug\.[A-Za-z]+\z/)
+
+            relative = path.delete_prefix("#{qt_qml_root}/")
+            next 0 if QML_EXCLUSIONS.any? { |excluded| relative.start_with?("#{excluded}/") }
+
+            File.size(path)
+          end
+          [root, bytes]
+        end
+      end
 
       # Modules the framework imports that the client neither carries nor documents as absent.
       # Each one is a component that works in development and fails on a released client.

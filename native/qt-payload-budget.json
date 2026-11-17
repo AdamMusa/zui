@@ -1,0 +1,24 @@
+{
+  "format": 1,
+  "generated_by": "rake qt:payload WRITE=1",
+  "measured_on": "Qt 6.8.3 macos qml tree, release variants only, client exclusions applied",
+  "note": "The release audit enforces ZUI_MAX_CLIENT_ARCHIVE_MB (100 MiB) on the compressed client archive, which only a Linux client build can measure. This records the uncompressed QML payload of each root the client carries so the cost of registering a component's Qt module is visible in review, and so the total cannot drift past its budget across several PRs that cannot see each other.",
+  "budget_bytes": 272629760,
+  "total_bytes": 216636240,
+  "roots": {
+    "QML": 138399,
+    "Qt": 9857290,
+    "QtCore": 1369830,
+    "QtLocation": 1518189,
+    "QtMultimedia": 1739921,
+    "QtNetwork": 1371665,
+    "QtPositioning": 6395278,
+    "QtQml": 5549756,
+    "QtQuick": 164156548,
+    "QtQuick3D": 15842637,
+    "QtSensors": 1413476,
+    "QtTextToSpeech": 4103248,
+    "QtWebSockets": 3180003
+  },
+  "measured_at": "2026-11-17"
+}

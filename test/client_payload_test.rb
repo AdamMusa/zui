@@ -49,6 +49,44 @@ class ClientPayloadTest < Minitest::Test
     assert_includes Zui::ClientPayload::UNSUPPORTED.fetch("QtWebView"), "no platform web view"
   end
 
+  # The release audit enforces its budget on the compressed archive, which only a Linux client
+  # build produces, so nobody adding a Qt module could see what it cost. The recorded payload makes
+  # the cost visible in review and keeps the total from drifting past the budget across several PRs
+  # that cannot see each other.
+  def test_the_recorded_payload_stays_within_its_budget
+    payload = Zui::ClientPayload
+    recorded = payload.budget.fetch("roots")
+    total = payload.recorded_bytes
+
+    assert_operator total, :<=, payload.budget_bytes,
+                    "the recorded payload is #{(total - payload.budget_bytes) / 1_048_576} MiB over " \
+                    "budget; trim a root or raise the budget deliberately"
+    assert_equal payload.budget.fetch("total_bytes"), total
+    refute_empty payload.budget.fetch("measured_on")
+  end
+
+  # A module added to the payload without recording its cost would make the budget meaningless.
+  def test_every_root_the_client_carries_has_a_recorded_cost
+    unrecorded = Zui::ClientPayload.qml_roots - Zui::ClientPayload.budget.fetch("roots").keys
+
+    assert_empty unrecorded,
+                 "#{unrecorded.join(', ')} joined the client payload without a measurement; " \
+                 "run `rake qt:payload WRITE=1` with a Qt SDK and commit the result"
+  end
+
+  # Required is the default, because a client that omits a module a component needs produces a
+  # component that cannot load. Optional is for modules a component probes for.
+  def test_module_requirement_is_a_property_of_the_registration
+    assert Zui::ClientPayload.optional?("QtQuick3D")
+    assert Zui::ClientPayload.optional?("QtQuick3D.AssetUtils")
+    refute Zui::ClientPayload.optional?("QtLocation")
+    refute Zui::ClientPayload.optional?("QtQuick")
+    assert_includes Zui::ClientPayload.components_needing("QtLocation"), :map
+    assert_includes Zui::ClientPayload.components_needing("QtQuick3D"), :model_view_3d
+    assert_includes Zui::ClientPayload.modules_in_root("QtPositioning"), "QtPositioning"
+    Zui::ClientPayload::OPTIONAL.each_value { |reason| refute_empty reason }
+  end
+
   # The payload the builder copies and the payload the registry implies are the same list.
   def test_the_builder_roots_match_the_registered_components
     assert_equal Zui::ClientPayload.qml_roots, Zui::ClientBuilder::LINUX_QML_ROOTS.sort
