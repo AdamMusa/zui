@@ -797,22 +797,22 @@ module Zui
       node
     end
     def pdf_search_model(id: nil, **props, &handler)
-      node = component(:pdf_search_model, id:, **props)
+      node = component(:pdf_search_model, id:, **normalize_pdf_document_source(props))
       @application.register_handler(node.id, :results, handler) if handler
       node
     end
     def pdf_selection(id: nil, **props, &handler)
-      node = component(:pdf_selection, id:, **props)
+      node = component(:pdf_selection, id:, **normalize_pdf_document_source(props))
       @application.register_handler(node.id, :change, handler) if handler
       node
     end
     def pdf_link_model(id: nil, **props, &handler)
-      node = component(:pdf_link_model, id:, **props)
+      node = component(:pdf_link_model, id:, **normalize_pdf_document_source(props))
       @application.register_handler(node.id, :links, handler) if handler
       node
     end
     def pdf_bookmark_model(id: nil, **props, &handler)
-      node = component(:pdf_bookmark_model, id:, **props)
+      node = component(:pdf_bookmark_model, id:, **normalize_pdf_document_source(props))
       @application.register_handler(node.id, :bookmarks, handler) if handler
       node
     end
