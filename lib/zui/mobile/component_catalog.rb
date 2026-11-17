@@ -204,6 +204,18 @@ module Zui
         "RuntimeLoader" => :runtime_loader
       }.freeze
 
+      # Qt Quick 3D GPU particles.
+      QUICK3D_PARTICLES = {
+        "ParticleSystem3D" => :particle_system_3d, "SpriteParticle3D" => :sprite_particle_3d,
+        "LineParticle3D" => :line_particle_3d, "ModelParticle3D" => :model_particle_3d,
+        "ModelBlendParticle3D" => :model_blend_particle_3d, "SpriteSequence3D" => :sprite_sequence_3d,
+        "ParticleEmitter3D" => :particle_emitter_3d, "TrailEmitter3D" => :trail_emitter_3d,
+        "EmitBurst3D" => :emit_burst_3d, "DynamicBurst3D" => :dynamic_burst_3d,
+        "ParticleShape3D" => :particle_shape_3d, "ParticleModelShape3D" => :particle_model_shape_3d,
+        "ParticleCustomShape3D" => :particle_custom_shape_3d, "VectorDirection3D" => :vector_direction_3d,
+        "TargetDirection3D" => :target_direction_3d
+      }.freeze
+
       CORE = QUICK_CONTROLS.merge(QUICK_DIALOGS).merge(QUICK_LAYOUTS).freeze
       ALL = CORE.merge(PERMISSIONS).merge(DEVICE_INFORMATION).merge(VIRTUAL_KEYBOARD)
                 .merge(SENSORS).merge(POSITIONING).merge(LOCATION)
@@ -219,7 +231,8 @@ module Zui
                 .merge(QUICK3D_CUSTOM_EFFECTS)
                 .merge(QUICK3D_HELPER_CONTROLLERS)
                 .merge(QUICK3D_HELPERS)
-                .merge(QUICK3D_ASSETS).freeze
+                .merge(QUICK3D_ASSETS)
+                .merge(QUICK3D_PARTICLES).freeze
     end
   end
 end

@@ -1090,6 +1090,48 @@ class QmlContractTest < Minitest::Test
     assert_includes source("Components/Builtins/Support/ModelView3dScene.qml"), "RuntimeLoader {"
   end
 
+  def test_quick3d_particles_cover_every_native_particle_and_emitter
+    system = source("Components/Builtins/ParticleSystem3d.qml")
+    sprite = source("Components/Builtins/SpriteParticle3d.qml")
+    line = source("Components/Builtins/LineParticle3d.qml")
+    model = source("Components/Builtins/ModelParticle3d.qml")
+    blend = source("Components/Builtins/ModelBlendParticle3d.qml")
+    emitter = source("Components/Builtins/ParticleEmitter3d.qml")
+    trail = source("Components/Builtins/TrailEmitter3d.qml")
+    burst = source("Components/Builtins/DynamicBurst3d.qml")
+    shape = source("Components/Builtins/ParticleShape3d.qml")
+    branch = source("Components/Builtins/Support/Scene3dBranch.qml")
+
+    assert_dynamic_component_route(source("ControlNode.qml"), "particle_system_3d")
+    assert_includes system, "import QtQuick3D.Particles3D"
+    assert_includes system, "ParticleSystem3D {"
+    assert_includes Zui::COMPONENTS.fetch(:particle_system_3d).first, :use_random_seed
+    # Qt offers setSystem() on a particle but no settable system property, so a
+    # particle joins the system it is declared inside through the call.
+    assert_includes sprite, "setSystem(resolvedSystem)"
+    assert_includes sprite, "renderer.ownerOrReference(Scene3dTypes.particleSystems, \"system\")"
+    assert_includes branch, "function ancestorObject(types)"
+    assert_includes branch, "function ownerOrReference(types, referenceProperty)"
+    assert_includes sprite, '"distance": SpriteParticle3D.SortDistance'
+    assert_includes line, '"relative": LineParticle3D.Relative'
+    # A per-particle model is a Component, which cannot be made from an object
+    # that already exists, so the mesh is declared the way model_3d declares it.
+    assert_includes model, "delegate: Component {"
+    assert_includes model, "Value3d.meshSource("
+    assert_includes blend, '"construct": ModelBlendParticle3D.Construct'
+    assert_includes blend, '"activation": ModelBlendParticle3D.Activation'
+    assert_includes emitter, 'renderer.childObjectOrReference(Scene3dTypes.particles, "particle")'
+    assert_includes emitter, 'renderer.childObjectsAndReferences(Scene3dTypes.particleBursts, "bursts")'
+    assert_includes Zui::COMPONENTS.fetch(:particle_emitter_3d).first, :particle_rotation_velocity
+    assert_includes trail, "TrailEmitter3D {"
+    assert_includes burst, '"start": DynamicBurst3D.TriggerStart'
+    assert_includes shape, '"cylinder": ParticleShape3D.Cylinder'
+    assert_includes Zui::COMPONENTS.fetch(:sprite_sequence_3d).first, :animation_direction
+    assert_includes Zui::COMPONENTS.fetch(:target_direction_3d).first, :magnitude_variation
+    assert_equal :sprite_particle_3d,
+                 Zui::Mobile::ComponentCatalog::QUICK3D_PARTICLES.fetch("SpriteParticle3D")
+  end
+
   def test_optional_3d_properties_leave_qt_defaults_alone
     helper = source("Components/Builtins/Support/Prop3dBinding.qml")
 
