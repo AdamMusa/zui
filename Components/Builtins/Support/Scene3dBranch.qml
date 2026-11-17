@@ -113,6 +113,12 @@ Item {
         return host && host.sceneObjectId ? host.sceneObjectId(object) : ""
     }
 
+    // The viewport this node belongs to, which is what a debug overlay reports
+    // on when no other view is named.
+    function viewport() {
+        return host && host.viewport ? host.viewport : null
+    }
+
     // Reaches a two-dimensional Zui control by its Ruby id, which is how a
     // texture takes a live Qt Quick item as its source.
     function findRenderedItem(targetId) {

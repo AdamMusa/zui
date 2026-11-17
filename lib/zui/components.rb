@@ -361,7 +361,18 @@ module Zui
     orbit_camera_controller: [%i[origin camera x_speed y_speed x_invert y_invert mouse_enabled pan_enabled], %i[error], false],
     wasd_controller: [%i[controlled_object speed shift_speed forward_speed back_speed right_speed left_speed up_speed down_speed x_speed y_speed x_invert y_invert mouse_enabled keys_enabled], %i[error], false],
     look_at_node: [%i[position x y z euler_rotation rotation_x rotation_y rotation_z rotation scale pivot opacity visible static_flags target], %i[error], true],
-    lod_manager: [%i[position x y z euler_rotation rotation_x rotation_y rotation_z rotation scale pivot opacity visible static_flags camera distances fade_distance], %i[error], true]
+    lod_manager: [%i[position x y z euler_rotation rotation_x rotation_y rotation_z rotation scale pivot opacity visible static_flags camera distances fade_distance], %i[error], true],
+    axis_helper: [%i[position x y z euler_rotation rotation_x rotation_y rotation_z rotation scale pivot opacity visible static_flags grid_color grid_opacity xz_grid xy_grid yz_grid axis_lines], %i[error], true],
+    debug_view_3d: [%i[source resource_details], %i[error], false],
+    infinite_grid: [%i[visible grid_interval grid_axes], %i[error], false],
+    grid_geometry: [%i[horizontal_lines vertical_lines horizontal_step vertical_step], %i[error], false],
+    height_field_geometry: [%i[source smooth_shading extents height_map], %i[error], false],
+    procedural_mesh: [%i[subsets positions normals tangents binormals uv0s uv1s colors joints weights indexes primitive_mode], %i[error], true],
+    procedural_mesh_subset: [%i[offset count name], %i[error], false],
+    procedural_texture_data: [%i[format width height depth has_transparency texture_data], %i[error], false],
+    procedural_sky_texture_data: [%i[sky_top_color sky_horizon_color sky_curve sky_energy ground_bottom_color ground_horizon_color ground_curve ground_energy sun_color sun_latitude sun_longitude sun_angle_min sun_angle_max sun_curve sun_energy texture_quality], %i[error], false],
+    instance_model: [%i[instancing_table], %i[error], false],
+    instance_repeater: [%i[position x y z euler_rotation rotation_x rotation_y rotation_z rotation scale pivot opacity visible static_flags instancing_table], %i[object_added object_removed error], true]
   }.freeze
 
   DEFAULT_COMPONENTS = ComponentRegistry.new

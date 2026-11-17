@@ -132,7 +132,9 @@ module Zui
       random_instancing instance_range file_instancing effect_3d
       pass_3d shader_3d buffer_3d buffer_input
       set_uniform_value orbit_camera_controller wasd_controller look_at_node
-      lod_manager
+      lod_manager axis_helper debug_view_3d infinite_grid
+      grid_geometry height_field_geometry procedural_mesh procedural_mesh_subset
+      procedural_texture_data procedural_sky_texture_data instance_model instance_repeater
     ].freeze
     SCENE_3D_COMPONENTS.each do |type|
       define_method(type) { |id: nil, **props, &block| component(type, id:, **props, &block) }

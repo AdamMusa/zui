@@ -12,7 +12,7 @@ SceneEnvironment {
 
     required property var renderer
 
-    lightProbe: renderer.childObjectOrReference(["texture_3d", "cube_map_texture", "procedural_sky_texture_data"], "light_probe")
+    lightProbe: renderer.childObjectOrReference(Scene3dTypes.textures, "light_probe")
     skyBoxCubeMap: renderer.childObjectOrReference(["cube_map_texture"], "skybox_cube_map")
     fog: renderer.childObjectOrReference(["fog"], "fog")
     lightmapper: renderer.childObjectOrReference(["lightmapper"], "lightmapper")

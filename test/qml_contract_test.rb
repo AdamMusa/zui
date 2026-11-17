@@ -1041,6 +1041,39 @@ class QmlContractTest < Minitest::Test
     refute_includes branch, "adapterLoader"
   end
 
+  def test_quick3d_helpers_cover_debug_overlays_grids_and_procedural_geometry
+    axis = source("Components/Builtins/AxisHelper.qml")
+    debug_view = source("Components/Builtins/DebugView3d.qml")
+    grid = source("Components/Builtins/InfiniteGrid.qml")
+    mesh = source("Components/Builtins/ProceduralMesh.qml")
+    sky = source("Components/Builtins/ProceduralSkyTextureData.qml")
+    repeater = source("Components/Builtins/InstanceRepeater.qml")
+    branch = source("Components/Builtins/Support/Scene3dBranch.qml")
+
+    assert_dynamic_component_route(source("ControlNode.qml"), "axis_helper")
+    assert_includes axis, "AxisHelper {"
+    assert_includes Zui::COMPONENTS.fetch(:axis_helper).first, :xz_grid
+    # A debug overlay reports on the view it is declared inside.
+    assert_includes debug_view, 'renderer.sceneObject(renderer.prop("source", "")) || renderer.viewport()'
+    assert_includes branch, "function viewport()"
+    assert_includes grid, "InfiniteGrid {"
+    assert_includes Zui::COMPONENTS.fetch(:infinite_grid).first, :grid_interval
+    assert_includes mesh, '"triangle_strip": ProceduralMesh.TriangleStrip'
+    assert_includes Zui::COMPONENTS.fetch(:procedural_mesh).first, :uv0s
+    assert_includes Zui::COMPONENTS.fetch(:grid_geometry).first, :horizontal_step
+    assert_includes Zui::COMPONENTS.fetch(:height_field_geometry).first, :height_map
+    assert_includes sky, '"very_high": ProceduralSkyTextureData.SkyTextureQualityVeryHigh'
+    assert_includes Zui::COMPONENTS.fetch(:procedural_texture_data).first, :has_transparency
+    assert_includes repeater, "InstanceRepeater {"
+    assert_includes repeater, "property var sceneChildHosts: []"
+    assert_includes Zui::COMPONENTS.fetch(:instance_model).first, :instancing_table
+    assert_equal :grid_geometry, Zui::Mobile::ComponentCatalog::QUICK3D_HELPERS.fetch("GridGeometry")
+    # A light probe is a Texture, so generated texture data has to be wrapped
+    # in a texture_3d rather than assigned to the probe directly.
+    assert_includes source("Components/Builtins/SceneEnvironment.qml"),
+                    'renderer.childObjectOrReference(Scene3dTypes.textures, "light_probe")'
+  end
+
   def test_optional_3d_properties_leave_qt_defaults_alone
     helper = source("Components/Builtins/Support/Prop3dBinding.qml")
 
