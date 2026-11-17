@@ -16,6 +16,10 @@ Item {
   property var renderer: null
   property var appliedSprites: []
   property int lastPublishedStatus: -1
+  // ImageParticle declares statusChanged(Status arg), and that nested enum does
+  // not resolve as a signal parameter type, so the status is watched through a
+  // plain int of our own instead of a parameterised signal handler.
+  readonly property int nativeStatus: nativeImageParticle.status
 
   readonly property var particleSystem: nativeHandle(renderer ? renderer.prop("system", "") : "", "nativeParticleSystem")
   readonly property var horizontalVector: nativeHandle(renderer ? renderer.prop("x_vector", "") : "", "nativeDirection")
@@ -112,9 +116,10 @@ Item {
     width: Number(imageParticleRoot.renderer ? imageParticleRoot.renderer.prop("width", imageParticleRoot.parent ? imageParticleRoot.parent.width : 0) : 0)
     height: Number(imageParticleRoot.renderer ? imageParticleRoot.renderer.prop("height", imageParticleRoot.parent ? imageParticleRoot.parent.height : 0) : 0)
 
-    onStatusChanged: imageParticleRoot.publishStatus()
     onCountChanged: imageParticleRoot.send("count_change", {})
   }
+
+  onNativeStatusChanged: publishStatus()
 
   Connections {
     target: imageParticleRoot.renderer
