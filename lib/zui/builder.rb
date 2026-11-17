@@ -526,6 +526,21 @@ module Zui
 
     def legend(items = [], id: nil, **props) = component(:legend, id:, items: Array(items), **props)
 
+    # Real QtCharts axes. An axis is declared inside the series it scales, and
+    # its position property names the slot it fills: x, y, x_top, y_right, or
+    # angular and radial on a polar chart.
+    CHART_AXIS_COMPONENTS = %i[
+      chart_value_axis chart_log_value_axis chart_category_axis
+      chart_bar_category_axis chart_date_time_axis
+    ].freeze
+    CHART_AXIS_COMPONENTS.each do |type|
+      define_method(type) { |id: nil, **props, &block| component(type, id:, **props, &block) }
+    end
+
+    def chart_category_range(label = "", end_value = 0, id: nil, **props)
+      component(:chart_category_range, id:, label: label.to_s, end_value:, **props)
+    end
+
     # Real QtCharts candlestick series. Unlike the high-level chart wrappers
     # above it carries no values of its own: the series is declared inside a
     # chart view and holds chart_candlestick_set children.

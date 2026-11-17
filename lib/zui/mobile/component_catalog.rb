@@ -149,7 +149,18 @@ module Zui
         "QtCharts/BoxPlotSeries" => :chart_box_plot_series,
         "QtCharts/BoxSet" => :chart_box_set,
         "QtCharts/CandlestickSeries" => :chart_candlestick_series,
-        "QtCharts/CandlestickSet" => :chart_candlestick_set
+        "QtCharts/CandlestickSet" => :chart_candlestick_set,
+        "QtCharts/ValueAxis" => :chart_value_axis,
+        "QtCharts/LogValueAxis" => :chart_log_value_axis,
+        "QtCharts/CategoryAxis" => :chart_category_axis,
+        "QtCharts/CategoryRange" => :chart_category_range,
+        "QtCharts/BarCategoryAxis" => :chart_bar_category_axis,
+        "QtCharts/DateTimeAxis" => :chart_date_time_axis,
+        # Deprecated QtCharts 1.x spellings of the same two axis types.
+        "QtCharts/ValuesAxis" => :chart_value_axis,
+        "QtCharts/BarCategoriesAxis" => :chart_bar_category_axis,
+        # Abstract base with no QML identity of its own.
+        "QtCharts/AbstractAxis" => :chart_value_axis
       }.freeze
 
       TOUCH_INTERACTION = {

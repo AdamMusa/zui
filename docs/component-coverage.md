@@ -233,6 +233,12 @@ QtCharts composes them, for applications that need a chart assembled from series
 - [x] chart_box_set
 - [x] chart_candlestick_series
 - [x] chart_candlestick_set
+- [x] chart_value_axis
+- [x] chart_log_value_axis
+- [x] chart_category_axis
+- [x] chart_bar_category_axis
+- [x] chart_date_time_axis
+- [x] chart_category_range
 
 ## Drawing and interaction
 
