@@ -16,6 +16,20 @@ Item {
     return renderer.assetUrl(name)
   }
 
+  // ShaderEffect.mesh takes either a size, which Qt turns into a GridMesh, or a
+  // ShaderEffectMesh object. A `mesh_source` names a grid_mesh,
+  // border_image_mesh or wavefront_mesh component by id; an id that resolves to
+  // nothing reports rather than rendering on a mesh nobody asked for.
+  function meshValue() {
+    var target = String(renderer.prop("mesh_source", ""))
+    if (target === "")
+      return Qt.size(Math.max(1, Number(renderer.prop("mesh_width", 1))), Math.max(1, Number(renderer.prop("mesh_height", 1))))
+    var host = renderer.findRenderedItem(target)
+    if (host && host.shaderMesh) return host.shaderMesh
+    renderer.componentError("mesh_source_missing", "No shader mesh with id " + target, { mesh_source: target })
+    return Qt.size(1, 1)
+  }
+
   function sourceRectangle() {
     var value = renderer.prop("source_rect", {})
     return Qt.rect(Number(value.x || 0), Number(value.y || 0), Number(value.width === undefined ? width : value.width), Number(value.height === undefined ? height : value.height))
@@ -82,7 +96,7 @@ Item {
     vertexShader: renderer.assetUrl(renderer.prop("vertex_shader", ""))
     blending: renderer.prop("blending", true) !== false
     supportsAtlasTextures: renderer.prop("supports_atlas", false) === true
-    mesh: Qt.size(Math.max(1, Number(renderer.prop("mesh_width", 1))), Math.max(1, Number(renderer.prop("mesh_height", 1))))
+    mesh: shaderRoot.meshValue()
     cullMode: {
       var value = String(renderer.prop("cull_mode", "none"))
       if (value === "back") return ShaderEffect.BackFaceCulling

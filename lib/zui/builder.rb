@@ -370,6 +370,18 @@ module Zui
       component(:shape_path, id:, path: path_data.to_s, **props)
     end
 
+    def grid_mesh(columns = 1, rows = 1, id: nil, **props)
+      component(:grid_mesh, id:, columns:, rows:, **props)
+    end
+
+    def border_image_mesh(id: nil, **props)
+      component(:border_image_mesh, id:, **props)
+    end
+
+    def wavefront_mesh(source = "", id: nil, **props)
+      component(:wavefront_mesh, id:, source: source.to_s, **props)
+    end
+
     def line(x1 = 0, y1 = 0, x2 = 100, y2 = 0, id: nil, **props)
       component(:line, id:, x1:, y1:, x2:, y2:, **props)
     end

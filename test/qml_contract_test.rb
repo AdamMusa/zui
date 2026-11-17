@@ -244,6 +244,37 @@ class QmlContractTest < Minitest::Test
     end
   end
 
+  SHADER_MESH_ADAPTERS = {
+    grid_mesh: "GridMesh", border_image_mesh: "BorderImageMesh",
+    wavefront_mesh: "WavefrontMesh"
+  }.freeze
+
+  def test_shader_meshes_expose_native_geometry_to_shader_effect
+    SHADER_MESH_ADAPTERS.each do |component, type|
+      adapter = File.read(File.join(ROOT, "Components", "Builtins", "#{type}.qml"))
+
+      assert_includes adapter, "#{type} {", "#{type} does not instantiate its Qt type"
+      assert_includes adapter, "property alias shaderMesh: nativeMesh",
+                      "#{type} does not publish its mesh to shader_effect"
+      assert_equal component, Zui::Mobile::ComponentCatalog::SHADER_MESHES.fetch(type)
+      assert Zui::COMPONENTS.key?(component), "#{component} has no registry schema"
+    end
+    wavefront = File.read(File.join(ROOT, "Components", "Builtins", "WavefrontMesh.qml"))
+    shader = File.read(File.join(ROOT, "Components", "Builtins", "ShaderEffect.qml"))
+
+    assert_includes wavefront, "import Qt.labs.wavefrontmesh"
+    assert_includes wavefront, "WavefrontMesh.NoError"
+    assert_includes wavefront, "renderer.componentError("
+    assert_includes Zui::COMPONENTS.fetch(:wavefront_mesh)[1], :error
+    assert_includes shader, "mesh: shaderRoot.meshValue()"
+    assert_includes shader, "if (host && host.shaderMesh) return host.shaderMesh"
+    assert_includes shader, "mesh_source_missing"
+    assert_includes Zui::COMPONENTS.fetch(:shader_effect).first, :mesh_source
+    refute_includes Zui::Mobile::ComponentCatalog::SHADER_MESHES.keys, "ShaderEffectMesh"
+    refute_includes Zui::ClientBuilder::LINUX_QML_EXCLUSIONS, "Qt/labs/wavefrontmesh"
+    assert_includes File.read(File.join(ROOT, "native", "CMakeLists.txt")), "Qt6::qmlwavefrontmeshplugin"
+  end
+
   def test_graphical_effects_reach_desktop_clients_and_static_mobile_builds
     cmake = File.read(File.join(ROOT, "native", "CMakeLists.txt"))
     audit = File.read(File.join(ROOT, "scripts", "audit_client.rb"))
