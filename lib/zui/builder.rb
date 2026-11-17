@@ -691,8 +691,8 @@ module Zui
       node
     end
 
-    def coordinate_animation(id: nil, **props, &handler)
-      node = component(:coordinate_animation, id:, **props)
+    def coordinate_animation(target, id: nil, **props, &handler)
+      node = component(:coordinate_animation, id:, target: node_id(target), **props)
       @application.register_handler(node.id, :finish, handler) if handler
       node
     end
