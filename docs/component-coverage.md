@@ -239,6 +239,16 @@ QtCharts composes them, for applications that need a chart assembled from series
 - [x] chart_bar_category_axis
 - [x] chart_date_time_axis
 - [x] chart_category_range
+- [x] chart_h_bar_model_mapper
+- [x] chart_v_bar_model_mapper
+- [x] chart_h_pie_model_mapper
+- [x] chart_v_pie_model_mapper
+- [x] chart_h_xy_model_mapper
+- [x] chart_v_xy_model_mapper
+- [x] chart_h_box_plot_model_mapper
+- [x] chart_v_box_plot_model_mapper
+- [x] chart_h_candlestick_model_mapper
+- [x] chart_v_candlestick_model_mapper
 
 ## Drawing and interaction
 

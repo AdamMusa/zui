@@ -160,7 +160,23 @@ module Zui
         "QtCharts/ValuesAxis" => :chart_value_axis,
         "QtCharts/BarCategoriesAxis" => :chart_bar_category_axis,
         # Abstract base with no QML identity of its own.
-        "QtCharts/AbstractAxis" => :chart_value_axis
+        "QtCharts/AbstractAxis" => :chart_value_axis,
+        "QtCharts/HBarModelMapper" => :chart_h_bar_model_mapper,
+        "QtCharts/VBarModelMapper" => :chart_v_bar_model_mapper,
+        "QtCharts/HPieModelMapper" => :chart_h_pie_model_mapper,
+        "QtCharts/VPieModelMapper" => :chart_v_pie_model_mapper,
+        "QtCharts/HXYModelMapper" => :chart_h_xy_model_mapper,
+        "QtCharts/VXYModelMapper" => :chart_v_xy_model_mapper,
+        "QtCharts/HBoxPlotModelMapper" => :chart_h_box_plot_model_mapper,
+        "QtCharts/VBoxPlotModelMapper" => :chart_v_box_plot_model_mapper,
+        "QtCharts/HCandlestickModelMapper" => :chart_h_candlestick_model_mapper,
+        "QtCharts/VCandlestickModelMapper" => :chart_v_candlestick_model_mapper,
+        # Abstract bases with no QML identity of their own.
+        "QtCharts/BarModelMapper" => :chart_h_bar_model_mapper,
+        "QtCharts/PieModelMapper" => :chart_h_pie_model_mapper,
+        "QtCharts/XYModelMapper" => :chart_h_xy_model_mapper,
+        "QtCharts/BoxPlotModelMapper" => :chart_h_box_plot_model_mapper,
+        "QtCharts/CandlestickModelMapper" => :chart_h_candlestick_model_mapper
       }.freeze
 
       TOUCH_INTERACTION = {

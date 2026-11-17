@@ -240,6 +240,52 @@ class QmlContractTest < Minitest::Test
     assert_includes source("Components/Builtins/KeyboardTextField.qml"), "EnterKeyAction.actionId"
   end
 
+  def test_chart_model_mappers_bind_a_row_table_to_the_series_above_them
+    adapters = {
+      chart_h_bar_model_mapper: "HBarModelMapper", chart_v_bar_model_mapper: "VBarModelMapper",
+      chart_h_pie_model_mapper: "HPieModelMapper", chart_v_pie_model_mapper: "VPieModelMapper",
+      chart_h_xy_model_mapper: "HXYModelMapper", chart_v_xy_model_mapper: "VXYModelMapper",
+      chart_h_box_plot_model_mapper: "HBoxPlotModelMapper",
+      chart_v_box_plot_model_mapper: "VBoxPlotModelMapper",
+      chart_h_candlestick_model_mapper: "HCandlestickModelMapper",
+      chart_v_candlestick_model_mapper: "VCandlestickModelMapper"
+    }
+
+    adapters.each do |component, native|
+      name = component.to_s.split("_").map(&:capitalize).join
+      adapter = source("Components/Builtins/#{name}.qml")
+
+      assert_includes adapter, "import QtCharts"
+      assert_includes adapter, "#{native} {"
+      assert_includes adapter, 'item["zuiSeriesHost"] === true'
+      assert_includes adapter, "Support.ChartRowModel { id: rowModel; rowValues: root.modelRows() }"
+      assert_includes adapter, "root.nativeMapper.series = host.nativeSeries"
+      assert_includes adapter, "chart_model_mapper_without_series"
+      assert_includes adapter, "chart_model_row_too_wide"
+      assert_includes Zui::COMPONENTS.fetch(component).fetch(0), :rows
+      assert_includes Zui::COMPONENTS.fetch(component).fetch(1), :error
+    end
+  end
+
+  def test_chart_row_model_declares_its_column_budget_instead_of_growing_columns
+    model = source("Components/Builtins/Support/ChartRowModel.qml")
+
+    assert_includes model, "import Qt.labs.qmlmodels"
+    assert_includes model, "TableModel {"
+    assert_includes model, "readonly property int columnBudget: 16"
+    assert_equal 16, model.scan(/TableModelColumn \{ display: "c\d+" \}/).length
+    assert_includes model, 'TableModelColumn { display: "c15" }'
+    refute_includes model, "columns.push"
+    # Mappers default their column count to the real data width, so the unused
+    # budget never reaches a series as zero-valued points.
+    assert_includes source("Components/Builtins/ChartHXyModelMapper.qml"),
+                    'columnCount: Number(root.renderer.prop("column_count", root.dataColumns()))'
+    assert_equal :chart_h_xy_model_mapper,
+                 Zui::Mobile::ComponentCatalog::CHARTS.fetch("QtCharts/HXYModelMapper")
+    assert_equal :chart_h_xy_model_mapper,
+                 Zui::Mobile::ComponentCatalog::CHARTS.fetch("QtCharts/XYModelMapper")
+  end
+
   def test_chart_axes_bind_to_the_slot_their_position_names
     adapters = {
       chart_value_axis: "ValueAxis", chart_log_value_axis: "LogValueAxis",
