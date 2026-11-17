@@ -276,6 +276,13 @@ owns its axes and accepts series through addSeries, and the 3D graph types rende
 - [x] graph_bars_3d
 - [x] graph_bar_3d_series
 - [x] graph_item_model_bar_data_proxy
+- [x] graph_scatter_3d
+- [x] graph_surface_3d
+- [x] graph_scatter_3d_series
+- [x] graph_surface_3d_series
+- [x] graph_item_model_scatter_data_proxy
+- [x] graph_item_model_surface_data_proxy
+- [x] graph_height_map_surface_data_proxy
 
 ## Drawing and interaction
 

@@ -218,7 +218,18 @@ module Zui
         "QtGraphs/Scene3D" => :graph_bars_3d,
         "QtGraphs/Abstract3DSeries" => :graph_bar_3d_series,
         "QtGraphs/AbstractDataProxy" => :graph_item_model_bar_data_proxy,
-        "QtGraphs/AbstractItemModel" => :graph_item_model_bar_data_proxy
+        "QtGraphs/AbstractItemModel" => :graph_item_model_bar_data_proxy,
+        "QtGraphs/Scatter3D" => :graph_scatter_3d,
+        "QtGraphs/Surface3D" => :graph_surface_3d,
+        "QtGraphs/Scatter3DSeries" => :graph_scatter_3d_series,
+        "QtGraphs/QScatter3DSeries" => :graph_scatter_3d_series,
+        "QtGraphs/Surface3DSeries" => :graph_surface_3d_series,
+        "QtGraphs/QSurface3DSeries" => :graph_surface_3d_series,
+        "QtGraphs/ItemModelScatterDataProxy" => :graph_item_model_scatter_data_proxy,
+        "QtGraphs/ScatterDataProxy" => :graph_item_model_scatter_data_proxy,
+        "QtGraphs/ItemModelSurfaceDataProxy" => :graph_item_model_surface_data_proxy,
+        "QtGraphs/SurfaceDataProxy" => :graph_item_model_surface_data_proxy,
+        "QtGraphs/HeightMapSurfaceDataProxy" => :graph_height_map_surface_data_proxy
       }.freeze
 
       TOUCH_INTERACTION = {
