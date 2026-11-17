@@ -578,6 +578,17 @@ module Zui
       end
     end
 
+    # QtGraphs 3D bar graph. QtGraphs is Qt's replacement for
+    # QtDataVisualization, and these render on the GPU through QtQuick3D.
+    def graph_bars_3d(id: nil, **props, &block) = component(:graph_bars_3d, id:, **props, &block)
+    def graph_bar_3d_series(id: nil, **props, &block)
+      component(:graph_bar_3d_series, id:, **props, &block)
+    end
+
+    def graph_item_model_bar_data_proxy(rows = [], id: nil, **props)
+      component(:graph_item_model_bar_data_proxy, id:, rows: Array(rows), **props)
+    end
+
     # QtGraphs' 2D graph surface and its theme. QtGraphs is Qt's replacement for
     # QtDataVisualization and is separate from both the chart wrappers above and
     # the QtCharts primitives: its axes belong to the view, not to each series.

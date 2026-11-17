@@ -273,6 +273,9 @@ owns its axes and accepts series through addSeries, and the 3D graph types rende
 - [x] graph_bar_model_mapper
 - [x] graph_pie_model_mapper
 - [x] graph_xy_model_mapper
+- [x] graph_bars_3d
+- [x] graph_bar_3d_series
+- [x] graph_item_model_bar_data_proxy
 
 ## Drawing and interaction
 
