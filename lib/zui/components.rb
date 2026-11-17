@@ -273,7 +273,7 @@ module Zui
     map_copyright: [%i[style_sheet width height visible], %i[link error], false],
     geo_json_data: [%i[source model command command_path command_revision visible], %i[change saved error], false],
     geocode_model: [%i[plugin plugin_parameters query limit offset auto_update command command_revision visible], %i[results status error], false],
-    route_model: [%i[plugin plugin_parameters waypoints travel_mode optimization alternatives departure_time auto_update command command_revision visible], %i[routes status error], false],
+    route_model: [%i[plugin plugin_parameters waypoints travel_mode optimization alternatives departure_time segment_detail maneuver_detail excluded_areas feature_weights auto_update command command_revision visible], %i[routes status error], false],
     place_search: [%i[plugin plugin_parameters term search_area limit recommendation_id relevance visibility incremental command command_revision visible], %i[results status error], false],
     place_suggestions: [%i[plugin plugin_parameters term search_area limit command command_revision visible], %i[suggestions status error], false],
     place_categories: [%i[plugin plugin_parameters hierarchical command command_revision visible], %i[categories status error], false],
