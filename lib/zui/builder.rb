@@ -566,6 +566,18 @@ module Zui
       define_method(type) { |id: nil, **props| component(type, id:, **props) }
     end
 
+    # QtGraphs model mappers. QtGraphs folds QtCharts' separate H and V mappers
+    # into one type with an orientation, so a section is a column when the
+    # mapper is horizontal and a row when it is vertical.
+    GRAPH_MODEL_MAPPER_COMPONENTS = %i[
+      graph_bar_model_mapper graph_pie_model_mapper graph_xy_model_mapper
+    ].freeze
+    GRAPH_MODEL_MAPPER_COMPONENTS.each do |type|
+      define_method(type) do |rows = [], id: nil, **props|
+        component(type, id:, rows: Array(rows), **props)
+      end
+    end
+
     # QtGraphs' 2D graph surface and its theme. QtGraphs is Qt's replacement for
     # QtDataVisualization and is separate from both the chart wrappers above and
     # the QtCharts primitives: its axes belong to the view, not to each series.
