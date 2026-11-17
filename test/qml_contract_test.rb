@@ -945,6 +945,32 @@ class QmlContractTest < Minitest::Test
     assert_includes source("Components/Builtins/Skeleton.qml"), "shimmer"
   end
 
+  def test_quick3d_instancing_draws_one_mesh_many_times
+    list = source("Components/Builtins/InstanceList.qml")
+    entry = source("Components/Builtins/InstanceListEntry.qml")
+    random = source("Components/Builtins/RandomInstancing.qml")
+    range = source("Components/Builtins/InstanceRange.qml")
+    file = source("Components/Builtins/FileInstancing.qml")
+    model = source("Components/Builtins/Model3d.qml")
+
+    assert_dynamic_component_route(source("ControlNode.qml"), "instance_list")
+    assert_includes list, "InstanceList {"
+    assert_includes list, 'renderer.childObjectsAndReferences(["instance_list_entry"], "instances")'
+    assert_includes entry, "InstanceListEntry {"
+    assert_includes Zui::COMPONENTS.fetch(:instance_list_entry).first, :custom_data
+    # RandomInstancing and InstanceRange live in QtQuick3D.Helpers, not the core
+    # module. Importing the wrong one makes the adapter import itself.
+    assert_includes random, "import QtQuick3D.Helpers"
+    assert_includes range, "import QtQuick3D.Helpers"
+    assert_includes random, '"hsl": RandomInstancing.HSL'
+    assert_includes random, 'renderer.sceneObject(renderer.prop("position_range", ""))'
+    assert_includes range, "Value3d.rangeValue("
+    assert_includes file, "FileInstancing {"
+    assert_includes model,
+                    'readonly property var instancingTypes: ["instance_list", "random_instancing", "file_instancing"]'
+    assert_equal :instance_list, Zui::Mobile::ComponentCatalog::QUICK3D_INSTANCING.fetch("InstanceList")
+  end
+
   def test_optional_3d_properties_leave_qt_defaults_alone
     helper = source("Components/Builtins/Support/Prop3dBinding.qml")
 

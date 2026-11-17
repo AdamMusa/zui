@@ -346,7 +346,12 @@ module Zui
     skeleton_3d: [%i[position x y z euler_rotation rotation_x rotation_y rotation_z rotation scale pivot opacity visible static_flags], %i[error], true],
     joint_3d: [%i[position x y z euler_rotation rotation_x rotation_y rotation_z rotation scale pivot opacity visible static_flags skeleton_root index], %i[error], true],
     skin_3d: [%i[joints inverse_bind_poses], %i[error], true],
-    morph_target: [%i[weight attributes], %i[error], false]
+    morph_target: [%i[weight attributes], %i[error], false],
+    instance_list: [%i[instances instance_count_override has_transparency depth_sorting_enabled], %i[error], true],
+    instance_list_entry: [%i[position scale euler_rotation rotation color custom_data], %i[error], true],
+    random_instancing: [%i[position_range scale_range rotation_range color_range custom_data_range instance_count color_model random_seed instance_count_override has_transparency depth_sorting_enabled], %i[error], true],
+    instance_range: [%i[from proportional to], %i[error], false],
+    file_instancing: [%i[source instance_count_override has_transparency depth_sorting_enabled], %i[error], true]
   }.freeze
 
   DEFAULT_COMPONENTS = ComponentRegistry.new

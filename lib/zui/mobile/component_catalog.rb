@@ -169,6 +169,13 @@ module Zui
         "Skin" => :skin_3d, "MorphTarget" => :morph_target
       }.freeze
 
+      # Qt Quick 3D instanced rendering.
+      QUICK3D_INSTANCING = {
+        "InstanceList" => :instance_list, "InstanceListEntry" => :instance_list_entry,
+        "RandomInstancing" => :random_instancing, "InstanceRange" => :instance_range,
+        "FileInstancing" => :file_instancing
+      }.freeze
+
       CORE = QUICK_CONTROLS.merge(QUICK_DIALOGS).merge(QUICK_LAYOUTS).freeze
       ALL = CORE.merge(PERMISSIONS).merge(DEVICE_INFORMATION).merge(VIRTUAL_KEYBOARD)
                 .merge(SENSORS).merge(POSITIONING).merge(LOCATION)
@@ -179,7 +186,8 @@ module Zui
                 .merge(QUICK3D_MATERIALS)
                 .merge(QUICK3D_TEXTURES)
                 .merge(QUICK3D_ENVIRONMENT)
-                .merge(QUICK3D_SKINNING).freeze
+                .merge(QUICK3D_SKINNING)
+                .merge(QUICK3D_INSTANCING).freeze
     end
   end
 end
