@@ -240,6 +240,47 @@ class QmlContractTest < Minitest::Test
     assert_includes source("Components/Builtins/KeyboardTextField.qml"), "EnterKeyAction.actionId"
   end
 
+  def test_chart_pie_and_box_plot_series_create_native_qtcharts_objects
+    adapters = { chart_pie_series: "PieSeries", chart_box_plot_series: "BoxPlotSeries" }
+    wrapper = source("Components/Builtins/PieChart.qml")
+
+    adapters.each do |component, native|
+      name = component.to_s.split("_").map(&:capitalize).join
+      adapter = source("Components/Builtins/#{name}.qml")
+
+      assert_includes adapter, "import QtCharts"
+      assert_includes adapter, "#{native} {"
+      assert_includes adapter, "readonly property bool zuiSeriesHost: true"
+      assert_includes adapter, "seriesComponent.createObject(host)"
+      assert_includes adapter, "chart_series_without_chart_view"
+      assert_includes adapter, "delegate: renderer.childDelegateComponent"
+      refute_includes adapter, "Canvas {"
+      assert_equal true, Zui::COMPONENTS.fetch(component).fetch(2)
+      assert_includes Zui::COMPONENTS.fetch(component).fetch(1), :error
+    end
+
+    # The hand-drawn wrappers keep their own renderer; the Qt series are additive.
+    assert_includes wrapper, "Canvas {"
+    refute_includes wrapper, "import QtCharts"
+  end
+
+  def test_chart_slice_and_box_set_ownership_follows_what_qtcharts_accepts
+    slice = source("Components/Builtins/ChartPieSlice.qml")
+    boxset = source("Components/Builtins/ChartBoxSet.qml")
+
+    # PieSeries only accepts append(label, value), so the series makes the slice.
+    assert_includes slice, "host.nativeSeries.append(String(renderer.prop(\"label\", \"\")),"
+    assert_includes slice, "chart_pie_slice_without_series"
+    assert_includes slice, "target: root.nativeSlice"
+    # BoxPlotSeries accepts an already built set, so the set keeps its bindings.
+    assert_includes boxset, "setComponent.createObject(host.nativeSeries)"
+    assert_includes boxset, "root.ownerSeries.append(root.nativeSet)"
+    assert_includes boxset, "root.ownerSeries.remove(root.nativeSet)"
+    assert_includes boxset, "chart_box_set_without_series"
+    assert_equal :chart_pie_slice, Zui::Mobile::ComponentCatalog::CHARTS.fetch("QtCharts/PieSlice")
+    assert_equal :chart_box_set, Zui::Mobile::ComponentCatalog::CHARTS.fetch("QtCharts/BoxSet")
+  end
+
   def test_chart_bar_series_family_creates_native_qtcharts_objects_inside_its_chart
     adapters = {
       chart_bar_series: "BarSeries", chart_stacked_bar_series: "StackedBarSeries",

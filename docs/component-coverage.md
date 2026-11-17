@@ -227,6 +227,10 @@ QtCharts composes them, for applications that need a chart assembled from series
 - [x] chart_horizontal_stacked_bar_series
 - [x] chart_horizontal_percent_bar_series
 - [x] chart_bar_set
+- [x] chart_pie_series
+- [x] chart_pie_slice
+- [x] chart_box_plot_series
+- [x] chart_box_set
 
 ## Drawing and interaction
 

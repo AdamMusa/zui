@@ -526,6 +526,20 @@ module Zui
 
     def legend(items = [], id: nil, **props) = component(:legend, id:, items: Array(items), **props)
 
+    # Real QtCharts pie and box plot series. Unlike the high-level chart
+    # wrappers above they carry no values of their own: each series is declared
+    # inside a chart view and holds slice or box set children.
+    def chart_pie_series(id: nil, **props, &block) = component(:chart_pie_series, id:, **props, &block)
+    def chart_box_plot_series(id: nil, **props, &block) = component(:chart_box_plot_series, id:, **props, &block)
+
+    def chart_pie_slice(label = "", value = 0, id: nil, **props)
+      component(:chart_pie_slice, id:, label: label.to_s, value:, **props)
+    end
+
+    def chart_box_set(values = [], id: nil, **props)
+      component(:chart_box_set, id:, values: Array(values), **props)
+    end
+
     # Real QtCharts bar series. Unlike the high-level chart wrappers above they
     # carry no values of their own: each series is declared inside a chart view
     # and holds chart_bar_set children.
