@@ -231,6 +231,8 @@ QtCharts composes them, for applications that need a chart assembled from series
 - [x] chart_pie_slice
 - [x] chart_box_plot_series
 - [x] chart_box_set
+- [x] chart_candlestick_series
+- [x] chart_candlestick_set
 
 ## Drawing and interaction
 

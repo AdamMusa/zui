@@ -306,6 +306,8 @@ module Zui
     histogram: [%i[values bins labels width height color colors grid_color minimum maximum show_grid bar_spacing normalize cumulative visible], %i[select hover], false],
     candlestick_chart: [%i[values labels width height up_color down_color wick_color grid_color minimum maximum show_grid candle_spacing visible], %i[select hover], false],
     legend: [%i[items orientation spacing marker_size width height background foreground muted font_family font_size interactive selected visible], %i[select hover], false],
+    chart_candlestick_series: [%i[name maximum_column_width minimum_column_width body_width body_outline_visible caps_width caps_visible increasing_color decreasing_color use_open_gl visible opacity], %i[click double_click press release hover change error], true],
+    chart_candlestick_set: [%i[timestamp open high low close], %i[click double_click press release hover change error], false],
     chart_pie_series: [%i[name horizontal_position vertical_position size start_angle end_angle hole_size use_open_gl visible opacity], %i[click double_click press release hover change error], true],
     chart_pie_slice: [%i[label value label_visible label_position label_color label_font_family label_font_size label_arm_length_factor color border_color border_width exploded explode_distance_factor], %i[click double_click press release hover change error], false],
     chart_box_plot_series: [%i[name box_outline_visible box_width use_open_gl visible opacity], %i[click double_click press release hover change error], true],
