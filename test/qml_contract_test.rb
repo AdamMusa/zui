@@ -70,6 +70,29 @@ class QmlContractTest < Minitest::Test
     assert_empty undeclared
   end
 
+  # A surface larger than its content has to put that content somewhere. The
+  # default is still the centre, which is what padding looks like when the
+  # surface is sized by its content, but a card, container or rectangle given
+  # an explicit size can now hold its content at the padding origin instead.
+  # Without that, a grid of equal-height cards centres every heading at a
+  # different depth and opens dead space above and below the short ones.
+  def test_content_surfaces_can_align_their_content_to_the_padding_origin
+    %w[card container rectangle].each do |component|
+      properties = Zui::DEFAULT_COMPONENTS.protocol_schema.fetch(component).fetch("properties")
+
+      assert_includes properties, "alignment", "#{component} cannot align its content"
+
+      adapter = component.split("_").map(&:capitalize).join
+      qml = File.read(File.join(ROOT, "Components", "Builtins", "#{adapter}.qml"))
+
+      assert_includes qml, 'renderer.prop("alignment", "center")'
+      assert_match(/anchors\.top:[^\n]*"start"/, qml)
+      assert_match(/anchors\.bottom:[^\n]*"end"/, qml)
+      assert_match(/anchors\.verticalCenter: \w+\.centred/, qml)
+      assert_match(/anchors\.topMargin: \w+\.(pad|innerPadding)/, qml)
+    end
+  end
+
   def test_gpu_adapters_ship_native_effects_particles_and_precompiled_shaders
     shader = source("Components/Builtins/ShaderEffect.qml")
     effect = source("Components/Builtins/MultiEffect.qml")
