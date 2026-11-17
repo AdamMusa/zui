@@ -14,7 +14,7 @@ Model {
     readonly property var materialTypes: ["principled_material", "default_material",
         "specular_glossy_material", "custom_material"]
     readonly property var geometryTypes: ["grid_geometry", "height_field_geometry",
-        "procedural_mesh", "particle_custom_shape_3d"]
+        "procedural_mesh"]
     readonly property var instancingTypes: ["instance_list", "random_instancing", "file_instancing"]
 
     position: Value3d.vector3d(renderer.prop("position", null), renderer.prop("x", 0),

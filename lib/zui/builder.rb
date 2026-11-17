@@ -135,7 +135,10 @@ module Zui
       lod_manager axis_helper debug_view_3d infinite_grid
       grid_geometry height_field_geometry procedural_mesh procedural_mesh_subset
       procedural_texture_data procedural_sky_texture_data instance_model instance_repeater
-      runtime_loader
+      runtime_loader particle_system_3d sprite_particle_3d line_particle_3d
+      model_particle_3d model_blend_particle_3d sprite_sequence_3d particle_emitter_3d
+      trail_emitter_3d emit_burst_3d dynamic_burst_3d particle_shape_3d
+      particle_model_shape_3d particle_custom_shape_3d vector_direction_3d target_direction_3d
     ].freeze
     SCENE_3D_COMPONENTS.each do |type|
       define_method(type) { |id: nil, **props, &block| component(type, id:, **props, &block) }

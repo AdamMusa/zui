@@ -113,6 +113,26 @@ Item {
         return host && host.sceneObjectId ? host.sceneObjectId(object) : ""
     }
 
+    // The nearest enclosing object of one of the given types. Qt Quick 3D has
+    // several properties that name an owner a node is already declared inside,
+    // such as a particle's system, and repeating that name in Ruby would be
+    // noise.
+    function ancestorObject(types) {
+        var current = host
+        while (current) {
+            if (current.node && current.object3d
+                && types.indexOf(String(current.node.type)) >= 0)
+                return current.object3d
+            current = current.host ? current.host : null
+        }
+        return null
+    }
+
+    function ownerOrReference(types, referenceProperty) {
+        var referenced = sceneObjects(prop(referenceProperty, []))
+        return referenced.length > 0 ? referenced[0] : ancestorObject(types)
+    }
+
     // The viewport this node belongs to, which is what a debug overlay reports
     // on when no other view is named.
     function viewport() {
@@ -157,6 +177,8 @@ Item {
     // the viewport it belongs to through its QML parent. Each kind is placed
     // where Qt expects to find it.
     function creationParent() {
+        if (target)
+            return target
         return host && host.viewport ? host.viewport : branch
     }
 

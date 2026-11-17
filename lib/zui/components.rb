@@ -373,7 +373,22 @@ module Zui
     procedural_sky_texture_data: [%i[sky_top_color sky_horizon_color sky_curve sky_energy ground_bottom_color ground_horizon_color ground_curve ground_energy sun_color sun_latitude sun_longitude sun_angle_min sun_angle_max sun_curve sun_energy texture_quality], %i[error], false],
     instance_model: [%i[instancing_table], %i[error], false],
     instance_repeater: [%i[position x y z euler_rotation rotation_x rotation_y rotation_z rotation scale pivot opacity visible static_flags instancing_table], %i[object_added object_removed error], true],
-    runtime_loader: [%i[position x y z euler_rotation rotation_x rotation_y rotation_z rotation scale pivot opacity visible static_flags instancing source], %i[status loaded bounds error], true]
+    runtime_loader: [%i[position x y z euler_rotation rotation_x rotation_y rotation_z rotation scale pivot opacity visible static_flags instancing source], %i[status loaded bounds error], true],
+    particle_system_3d: [%i[position x y z euler_rotation rotation_x rotation_y rotation_z rotation scale pivot opacity visible static_flags running paused start_time time use_random_seed seed logging], %i[error], true],
+    sprite_particle_3d: [%i[sprite color_table sprite_sequence lights blend_mode billboard particle_scale offset_x offset_y casts_reflections max_amount color color_variation unified_color_variation fade_in_effect fade_out_effect fade_in_duration fade_out_duration align_mode align_target_position has_transparency sort_mode system], %i[error], true],
+    line_particle_3d: [%i[sprite color_table sprite_sequence lights segment_count alpha_fade scale_multiplier texcoord_multiplier length length_variation length_delta_min eol_fade_out_duration texcoord_mode blend_mode billboard particle_scale offset_x offset_y casts_reflections max_amount color color_variation unified_color_variation fade_in_effect fade_out_effect fade_in_duration fade_out_duration align_mode align_target_position has_transparency sort_mode system], %i[error], true],
+    model_particle_3d: [%i[max_amount color color_variation unified_color_variation fade_in_effect fade_out_effect fade_in_duration fade_out_duration align_mode align_target_position has_transparency sort_mode source materials geometry system], %i[error], true],
+    model_blend_particle_3d: [%i[end_node activation_node model_blend_mode end_time emit_mode max_amount color color_variation unified_color_variation fade_in_effect fade_out_effect fade_in_duration fade_out_duration align_mode align_target_position has_transparency sort_mode source materials geometry system], %i[error], true],
+    sprite_sequence_3d: [%i[frame_count frame_index interpolate duration duration_variation random_start animation_direction], %i[error], false],
+    particle_emitter_3d: [%i[position x y z euler_rotation rotation_x rotation_y rotation_z rotation scale pivot opacity visible static_flags system particle shape velocity bursts enabled emit_rate life_span life_span_variation particle_scale particle_end_scale particle_scale_variation particle_end_scale_variation particle_rotation particle_rotation_variation particle_rotation_velocity particle_rotation_velocity_variation depth_bias], %i[error], true],
+    trail_emitter_3d: [%i[position x y z euler_rotation rotation_x rotation_y rotation_z rotation scale pivot opacity visible static_flags system particle follow shape velocity bursts enabled emit_rate life_span life_span_variation particle_scale particle_end_scale particle_scale_variation particle_end_scale_variation particle_rotation particle_rotation_variation particle_rotation_velocity particle_rotation_velocity_variation depth_bias], %i[error], true],
+    emit_burst_3d: [%i[time amount duration], %i[error], false],
+    dynamic_burst_3d: [%i[enabled amount_variation trigger_mode time amount duration], %i[error], false],
+    particle_shape_3d: [%i[fill type extents], %i[error], false],
+    particle_model_shape_3d: [%i[fill source materials geometry], %i[error], false],
+    particle_custom_shape_3d: [%i[source randomize_data], %i[error], false],
+    vector_direction_3d: [%i[direction direction_variation normalized], %i[error], false],
+    target_direction_3d: [%i[position position_variation normalized magnitude magnitude_variation], %i[error], false]
   }.freeze
 
   DEFAULT_COMPONENTS = ComponentRegistry.new

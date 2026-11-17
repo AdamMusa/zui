@@ -513,3 +513,24 @@ model_view_3d remains the convenience orbit viewer built on this; the
 loader itself sits in a view_3d alongside anything else.
 
 - [x] runtime_loader
+
+### Particles: systems, particles and emitters
+
+Particles, emitters and affectors are declared inside the
+particle_system_3d that owns them, so none of them has to name it.
+
+- [x] particle_system_3d
+- [x] sprite_particle_3d
+- [x] line_particle_3d
+- [x] model_particle_3d
+- [x] model_blend_particle_3d
+- [x] sprite_sequence_3d
+- [x] particle_emitter_3d
+- [x] trail_emitter_3d
+- [x] emit_burst_3d
+- [x] dynamic_burst_3d
+- [x] particle_shape_3d
+- [x] particle_model_shape_3d
+- [x] particle_custom_shape_3d
+- [x] vector_direction_3d
+- [x] target_direction_3d
