@@ -240,6 +240,35 @@ class QmlContractTest < Minitest::Test
     assert_includes source("Components/Builtins/KeyboardTextField.qml"), "EnterKeyAction.actionId"
   end
 
+  def test_chart_candlestick_series_creates_native_qtcharts_objects
+    series = source("Components/Builtins/ChartCandlestickSeries.qml")
+    candlestick_set = source("Components/Builtins/ChartCandlestickSet.qml")
+    wrapper = source("Components/Builtins/CandlestickChart.qml")
+
+    assert_includes series, "import QtCharts"
+    assert_includes series, "CandlestickSeries {"
+    assert_includes series, "readonly property bool zuiSeriesHost: true"
+    assert_includes series, "seriesComponent.createObject(host)"
+    assert_includes series, "chart_series_without_chart_view"
+    assert_includes series, "delegate: renderer.childDelegateComponent"
+    refute_includes series, "Canvas {"
+    # CandlestickSeries accepts an already built set, so the set keeps bindings.
+    assert_includes candlestick_set, "CandlestickSet {"
+    assert_includes candlestick_set, "setComponent.createObject(host.nativeSeries)"
+    assert_includes candlestick_set, "root.ownerSeries.append(root.nativeSet)"
+    assert_includes candlestick_set, "root.ownerSeries.remove(root.nativeSet)"
+    assert_includes candlestick_set, "chart_candlestick_set_without_series"
+    assert_equal true, Zui::COMPONENTS.fetch(:chart_candlestick_series).fetch(2)
+    assert_includes Zui::COMPONENTS.fetch(:chart_candlestick_set).fetch(1), :error
+    assert_equal :chart_candlestick_series,
+                 Zui::Mobile::ComponentCatalog::CHARTS.fetch("QtCharts/CandlestickSeries")
+    assert_equal :chart_candlestick_set,
+                 Zui::Mobile::ComponentCatalog::CHARTS.fetch("QtCharts/CandlestickSet")
+    # The hand-drawn wrapper keeps its own renderer; the Qt series is additive.
+    assert_includes wrapper, "Canvas {"
+    refute_includes wrapper, "import QtCharts"
+  end
+
   def test_chart_pie_and_box_plot_series_create_native_qtcharts_objects
     adapters = { chart_pie_series: "PieSeries", chart_box_plot_series: "BoxPlotSeries" }
     wrapper = source("Components/Builtins/PieChart.qml")

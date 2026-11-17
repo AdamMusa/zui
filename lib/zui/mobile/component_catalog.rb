@@ -147,7 +147,9 @@ module Zui
         "QtCharts/PieSeries" => :chart_pie_series,
         "QtCharts/PieSlice" => :chart_pie_slice,
         "QtCharts/BoxPlotSeries" => :chart_box_plot_series,
-        "QtCharts/BoxSet" => :chart_box_set
+        "QtCharts/BoxSet" => :chart_box_set,
+        "QtCharts/CandlestickSeries" => :chart_candlestick_series,
+        "QtCharts/CandlestickSet" => :chart_candlestick_set
       }.freeze
 
       TOUCH_INTERACTION = {

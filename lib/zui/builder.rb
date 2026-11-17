@@ -526,6 +526,17 @@ module Zui
 
     def legend(items = [], id: nil, **props) = component(:legend, id:, items: Array(items), **props)
 
+    # Real QtCharts candlestick series. Unlike the high-level chart wrappers
+    # above it carries no values of its own: the series is declared inside a
+    # chart view and holds chart_candlestick_set children.
+    def chart_candlestick_series(id: nil, **props, &block)
+      component(:chart_candlestick_series, id:, **props, &block)
+    end
+
+    def chart_candlestick_set(open = 0, high = 0, low = 0, close = 0, id: nil, **props)
+      component(:chart_candlestick_set, id:, open:, high:, low:, close:, **props)
+    end
+
     # Real QtCharts pie and box plot series. Unlike the high-level chart
     # wrappers above they carry no values of their own: each series is declared
     # inside a chart view and holds slice or box set children.
