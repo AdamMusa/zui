@@ -129,7 +129,9 @@ module Zui
       fog debug_settings lightmapper baked_lightmap
       reflection_probe resource_loader skeleton_3d joint_3d
       skin_3d morph_target instance_list instance_list_entry
-      random_instancing instance_range file_instancing
+      random_instancing instance_range file_instancing effect_3d
+      pass_3d shader_3d buffer_3d buffer_input
+      set_uniform_value
     ].freeze
     SCENE_3D_COMPONENTS.each do |type|
       define_method(type) { |id: nil, **props, &block| component(type, id:, **props, &block) }

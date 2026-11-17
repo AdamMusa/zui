@@ -971,6 +971,33 @@ class QmlContractTest < Minitest::Test
     assert_equal :instance_list, Zui::Mobile::ComponentCatalog::QUICK3D_INSTANCING.fetch("InstanceList")
   end
 
+  def test_quick3d_custom_effects_compose_render_passes_and_buffers
+    effect = source("Components/Builtins/Effect3d.qml")
+    pass = source("Components/Builtins/Pass3d.qml")
+    shader = source("Components/Builtins/Shader3d.qml")
+    buffer = source("Components/Builtins/Buffer3d.qml")
+    input = source("Components/Builtins/BufferInput.qml")
+    uniform = source("Components/Builtins/SetUniformValue.qml")
+    environment = source("Components/Builtins/SceneEnvironment.qml")
+
+    assert_dynamic_component_route(source("ControlNode.qml"), "effect_3d")
+    assert_includes effect, "Effect {"
+    assert_includes effect, 'renderer.childObjectsAndReferences(["pass_3d"], "passes")'
+    assert_includes effect, "property TextureInput texture0:"
+    assert_includes pass, "Pass {"
+    assert_includes pass, 'renderer.childObjectsAndReferences(["shader_3d"], "shaders")'
+    assert_includes pass, 'renderer.childObjectOrReference(["buffer_3d"], "output")'
+    assert_includes shader, '"fragment": Shader.Fragment'
+    assert_includes buffer, '"scene_lifetime": Buffer.SceneLifetime'
+    assert_includes buffer, '"rgba16f": Buffer.RGBA16F'
+    assert_includes input, 'renderer.childObjectOrReference(["buffer_3d"], "buffer")'
+    assert_includes Zui::COMPONENTS.fetch(:buffer_input).first, :sampler
+    assert_includes Zui::COMPONENTS.fetch(:set_uniform_value).first, :target
+    assert_includes uniform, "SetUniformValue {"
+    assert_includes environment, "Scene3dTypes.effects"
+    assert_equal :effect_3d, Zui::Mobile::ComponentCatalog::QUICK3D_CUSTOM_EFFECTS.fetch("Effect")
+  end
+
   def test_optional_3d_properties_leave_qt_defaults_alone
     helper = source("Components/Builtins/Support/Prop3dBinding.qml")
 

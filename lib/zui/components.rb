@@ -351,7 +351,13 @@ module Zui
     instance_list_entry: [%i[position scale euler_rotation rotation color custom_data], %i[error], true],
     random_instancing: [%i[position_range scale_range rotation_range color_range custom_data_range instance_count color_model random_seed instance_count_override has_transparency depth_sorting_enabled], %i[error], true],
     instance_range: [%i[from proportional to], %i[error], false],
-    file_instancing: [%i[source instance_count_override has_transparency depth_sorting_enabled], %i[error], true]
+    file_instancing: [%i[source instance_count_override has_transparency depth_sorting_enabled], %i[error], true],
+    effect_3d: [%i[passes time intensity amount radius progress tint parameters texture0 texture1], %i[error], true],
+    pass_3d: [%i[shaders commands output], %i[error], true],
+    shader_3d: [%i[shader stage], %i[error], false],
+    buffer_3d: [%i[texture_filter_operation texture_coord_operation buffer_flags format size_multiplier name], %i[error], false],
+    buffer_input: [%i[buffer sampler], %i[error], false],
+    set_uniform_value: [%i[target value], %i[error], false]
   }.freeze
 
   DEFAULT_COMPONENTS = ComponentRegistry.new

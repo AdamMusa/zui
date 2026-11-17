@@ -176,6 +176,13 @@ module Zui
         "FileInstancing" => :file_instancing
       }.freeze
 
+      # Qt Quick 3D custom post-processing effects.
+      QUICK3D_CUSTOM_EFFECTS = {
+        "Effect" => :effect_3d, "Pass" => :pass_3d,
+        "Shader" => :shader_3d, "Buffer" => :buffer_3d,
+        "BufferInput" => :buffer_input, "SetUniformValue" => :set_uniform_value
+      }.freeze
+
       CORE = QUICK_CONTROLS.merge(QUICK_DIALOGS).merge(QUICK_LAYOUTS).freeze
       ALL = CORE.merge(PERMISSIONS).merge(DEVICE_INFORMATION).merge(VIRTUAL_KEYBOARD)
                 .merge(SENSORS).merge(POSITIONING).merge(LOCATION)
@@ -187,7 +194,8 @@ module Zui
                 .merge(QUICK3D_TEXTURES)
                 .merge(QUICK3D_ENVIRONMENT)
                 .merge(QUICK3D_SKINNING)
-                .merge(QUICK3D_INSTANCING).freeze
+                .merge(QUICK3D_INSTANCING)
+                .merge(QUICK3D_CUSTOM_EFFECTS).freeze
     end
   end
 end

@@ -466,3 +466,15 @@ many times in a single GPU pass.
 - [x] random_instancing
 - [x] instance_range
 - [x] file_instancing
+
+### Custom effects and render passes
+
+An effect belongs to the scene environment that runs it. Its passes,
+shaders, buffers and commands are declared inside it, or named by id.
+
+- [x] effect_3d
+- [x] pass_3d
+- [x] shader_3d
+- [x] buffer_3d
+- [x] buffer_input
+- [x] set_uniform_value
