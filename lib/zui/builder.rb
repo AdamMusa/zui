@@ -526,6 +526,12 @@ module Zui
 
     def legend(items = [], id: nil, **props) = component(:legend, id:, items: Array(items), **props)
 
+    # QtGraphs' 2D graph surface and its theme. QtGraphs is Qt's replacement for
+    # QtDataVisualization and is separate from both the chart wrappers above and
+    # the QtCharts primitives: its axes belong to the view, not to each series.
+    def graphs_view(id: nil, **props, &block) = component(:graphs_view, id:, **props, &block)
+    def graphs_theme(id: nil, **props) = component(:graphs_theme, id:, **props)
+
     # Real QtCharts model mappers. A mapper is declared inside the series it
     # drives and takes a table of row arrays, choosing which rows or columns
     # carry the values, labels or OHLC fields.

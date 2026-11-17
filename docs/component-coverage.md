@@ -250,6 +250,15 @@ QtCharts composes them, for applications that need a chart assembled from series
 - [x] chart_h_candlestick_model_mapper
 - [x] chart_v_candlestick_model_mapper
 
+## QtGraphs primitives
+
+QtGraphs is Qt's replacement for QtDataVisualization. These are its real QML types, separate
+from both Zui's high-level chart wrappers above and the QtCharts primitives: a QtGraphs graph
+owns its axes and accepts series through addSeries, and the 3D graph types render on the GPU.
+
+- [x] graphs_view
+- [x] graphs_theme
+
 ## Drawing and interaction
 
 - [x] canvas
