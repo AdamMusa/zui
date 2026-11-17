@@ -206,7 +206,19 @@ module Zui
         "QtGraphs/AbstractAxis" => :graph_value_axis,
         "QtGraphs/BarModelMapper" => :graph_bar_model_mapper,
         "QtGraphs/PieModelMapper" => :graph_pie_model_mapper,
-        "QtGraphs/XYModelMapper" => :graph_xy_model_mapper
+        "QtGraphs/XYModelMapper" => :graph_xy_model_mapper,
+        "QtGraphs/Bars3D" => :graph_bars_3d,
+        "QtGraphs/Bar3DSeries" => :graph_bar_3d_series,
+        "QtGraphs/QBar3DSeries" => :graph_bar_3d_series,
+        "QtGraphs/ItemModelBarDataProxy" => :graph_item_model_bar_data_proxy,
+        "QtGraphs/BarDataProxy" => :graph_item_model_bar_data_proxy,
+        # Abstract bases and enum namespaces with no QML identity of their own.
+        "QtGraphs/GraphsItem3D" => :graph_bars_3d,
+        "QtGraphs/Graphs3D" => :graph_bars_3d,
+        "QtGraphs/Scene3D" => :graph_bars_3d,
+        "QtGraphs/Abstract3DSeries" => :graph_bar_3d_series,
+        "QtGraphs/AbstractDataProxy" => :graph_item_model_bar_data_proxy,
+        "QtGraphs/AbstractItemModel" => :graph_item_model_bar_data_proxy
       }.freeze
 
       TOUCH_INTERACTION = {

@@ -644,6 +644,56 @@ class QmlContractTest < Minitest::Test
                  Zui::Mobile::ComponentCatalog::CHARTS.fetch("QtCharts/HXYModelMapper")
   end
 
+  def test_graphs_3d_bars_render_the_gpu_graph_and_take_series_through_add_series
+    graph = source("Components/Builtins/GraphBars3d.qml")
+    series = source("Components/Builtins/GraphBar3dSeries.qml")
+    proxy = source("Components/Builtins/GraphItemModelBarDataProxy.qml")
+
+    assert_includes graph, "import QtGraphs"
+    assert_includes graph, "Bars3D {"
+    assert_includes graph, "readonly property bool zuiGraphsHost: true"
+    # Bars3D's default property is seriesList, which takes only series, so the
+    # child delegate has to go into the item's data list explicitly.
+    assert_includes graph, "data: Repeater { model: renderer.node.children || []"
+    refute_includes graph, "import QtDataVisualization"
+    assert_includes series, "Bar3DSeries {"
+    assert_includes series, "host.addSeries(root.nativeSeries)"
+    assert_includes series, "root.ownerGraph.removeSeries(root.nativeSeries)"
+    assert_includes series, "graph_3d_series_without_graph"
+    assert_includes proxy, "ItemModelBarDataProxy {"
+    assert_includes proxy, "host.nativeSeries.dataProxy = root.nativeProxy"
+    assert_includes proxy, "graph_data_proxy_without_series"
+    assert_equal true, Zui::COMPONENTS.fetch(:graph_bars_3d).fetch(2)
+    assert_equal true, Zui::COMPONENTS.fetch(:graph_bar_3d_series).fetch(2)
+    assert_equal :graph_bars_3d, Zui::Mobile::ComponentCatalog::GRAPHS.fetch("QtGraphs/Bars3D")
+    assert_equal :graph_bars_3d, Zui::Mobile::ComponentCatalog::GRAPHS.fetch("QtGraphs/Graphs3D")
+  end
+
+  def test_graphs_3d_enums_and_vectors_are_read_from_json_node_properties
+    graph = source("Components/Builtins/GraphBars3d.qml")
+    series = source("Components/Builtins/GraphBar3dSeries.qml")
+    model = source("Components/Builtins/Support/GraphItemModel.qml")
+
+    # QtGraphs enforces scoped enums throughout the 3D types.
+    assert_includes graph, "Graphs3D.SelectionFlag.ItemAndRow"
+    assert_includes graph, "Graphs3D.ShadowQuality.SoftHigh"
+    assert_includes graph, "Graphs3D.CameraPreset.IsometricLeft"
+    assert_includes graph, "Graphs3D.GridLineType.Geometry"
+    assert_includes series, "Bar3DSeries.Mesh.BevelBar"
+    # selectionMode is a flag set, so an array of names combines into one value.
+    assert_includes graph, "if (!Array.isArray(requested)) requested = [requested]"
+    assert_includes graph, "flags |= flag"
+    # A vector arrives as [x, y, z] or {x:, y:, z:} over the JSON protocol.
+    assert_includes graph, "function vector3dFor(key, fallback)"
+    assert_includes graph, "return Qt.vector3d(Number(value[0])"
+    # Helpers must not shadow the inherited properties they feed.
+    refute_includes graph, "function selectionMode("
+    refute_includes graph, "function cameraPreset("
+    # The 3D proxies address data by role name, which TableModel cannot provide.
+    assert_includes model, "dynamicRoles: true"
+    assert_includes model, "import QtQml.Models"
+  end
+
   def test_mobile_permissions_can_surface_native_failures
     %i[bluetooth_permission calendar_permission camera_permission contacts_permission
        location_permission microphone_permission].each do |component|
