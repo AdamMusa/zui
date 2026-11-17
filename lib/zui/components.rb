@@ -372,7 +372,8 @@ module Zui
     procedural_texture_data: [%i[format width height depth has_transparency texture_data], %i[error], false],
     procedural_sky_texture_data: [%i[sky_top_color sky_horizon_color sky_curve sky_energy ground_bottom_color ground_horizon_color ground_curve ground_energy sun_color sun_latitude sun_longitude sun_angle_min sun_angle_max sun_curve sun_energy texture_quality], %i[error], false],
     instance_model: [%i[instancing_table], %i[error], false],
-    instance_repeater: [%i[position x y z euler_rotation rotation_x rotation_y rotation_z rotation scale pivot opacity visible static_flags instancing_table], %i[object_added object_removed error], true]
+    instance_repeater: [%i[position x y z euler_rotation rotation_x rotation_y rotation_z rotation scale pivot opacity visible static_flags instancing_table], %i[object_added object_removed error], true],
+    runtime_loader: [%i[position x y z euler_rotation rotation_x rotation_y rotation_z rotation scale pivot opacity visible static_flags instancing source], %i[status loaded bounds error], true]
   }.freeze
 
   DEFAULT_COMPONENTS = ComponentRegistry.new

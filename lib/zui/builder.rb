@@ -135,6 +135,7 @@ module Zui
       lod_manager axis_helper debug_view_3d infinite_grid
       grid_geometry height_field_geometry procedural_mesh procedural_mesh_subset
       procedural_texture_data procedural_sky_texture_data instance_model instance_repeater
+      runtime_loader
     ].freeze
     SCENE_3D_COMPONENTS.each do |type|
       define_method(type) { |id: nil, **props, &block| component(type, id:, **props, &block) }

@@ -199,6 +199,11 @@ module Zui
         "InstanceRepeater" => :instance_repeater
       }.freeze
 
+      # Qt Quick 3D runtime asset loading.
+      QUICK3D_ASSETS = {
+        "RuntimeLoader" => :runtime_loader
+      }.freeze
+
       CORE = QUICK_CONTROLS.merge(QUICK_DIALOGS).merge(QUICK_LAYOUTS).freeze
       ALL = CORE.merge(PERMISSIONS).merge(DEVICE_INFORMATION).merge(VIRTUAL_KEYBOARD)
                 .merge(SENSORS).merge(POSITIONING).merge(LOCATION)
@@ -213,7 +218,8 @@ module Zui
                 .merge(QUICK3D_INSTANCING)
                 .merge(QUICK3D_CUSTOM_EFFECTS)
                 .merge(QUICK3D_HELPER_CONTROLLERS)
-                .merge(QUICK3D_HELPERS).freeze
+                .merge(QUICK3D_HELPERS)
+                .merge(QUICK3D_ASSETS).freeze
     end
   end
 end

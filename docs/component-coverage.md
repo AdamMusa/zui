@@ -506,3 +506,10 @@ has no component here.
 - [x] procedural_sky_texture_data
 - [x] instance_model
 - [x] instance_repeater
+
+### Runtime asset loading
+
+model_view_3d remains the convenience orbit viewer built on this; the
+loader itself sits in a view_3d alongside anything else.
+
+- [x] runtime_loader

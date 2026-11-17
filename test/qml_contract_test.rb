@@ -1074,6 +1074,22 @@ class QmlContractTest < Minitest::Test
                     'renderer.childObjectOrReference(Scene3dTypes.textures, "light_probe")'
   end
 
+  def test_runtime_loader_reports_its_asset_through_the_framework_channels
+    loader = source("Components/Builtins/RuntimeLoader.qml")
+
+    assert_dynamic_component_route(source("ControlNode.qml"), "runtime_loader")
+    assert_includes loader, "import QtQuick3D.AssetUtils"
+    assert_includes loader, "RuntimeLoader {"
+    assert_includes loader, "if (status === RuntimeLoader.Success)"
+    assert_includes loader, 'renderer.componentError("model_load_failed", errorString'
+    assert_includes loader, 'renderer.emitEvent("bounds"'
+    assert_includes Zui::COMPONENTS.fetch(:runtime_loader).first, :instancing
+    assert_includes Zui::COMPONENTS.fetch(:runtime_loader)[1], :error
+    assert_equal :runtime_loader, Zui::Mobile::ComponentCatalog::QUICK3D_ASSETS.fetch("RuntimeLoader")
+    # The convenience orbit viewer keeps its own scene and behaviour.
+    assert_includes source("Components/Builtins/Support/ModelView3dScene.qml"), "RuntimeLoader {"
+  end
+
   def test_optional_3d_properties_leave_qt_defaults_alone
     helper = source("Components/Builtins/Support/Prop3dBinding.qml")
 
