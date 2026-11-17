@@ -998,6 +998,49 @@ class QmlContractTest < Minitest::Test
     assert_equal :effect_3d, Zui::Mobile::ComponentCatalog::QUICK3D_CUSTOM_EFFECTS.fetch("Effect")
   end
 
+  def test_quick3d_helper_controllers_drive_a_camera_over_the_viewport
+    orbit = source("Components/Builtins/OrbitCameraController.qml")
+    wasd = source("Components/Builtins/WasdController.qml")
+    look = source("Components/Builtins/LookAtNode.qml")
+    lod = source("Components/Builtins/LodManager.qml")
+    branch = source("Components/Builtins/Support/Scene3dBranch.qml")
+    scene = source("Components/Builtins/Support/View3dScene.qml")
+
+    assert_dynamic_component_route(source("ControlNode.qml"), "orbit_camera_controller")
+    assert_includes orbit, "import QtQuick3D.Helpers"
+    assert_includes orbit, "OrbitCameraController {"
+    assert_includes orbit, 'origin: renderer.sceneObject(renderer.prop("origin", ""))'
+    assert_includes wasd, 'renderer.sceneObject(renderer.prop("controlled_object", ""))'
+    assert_includes Zui::COMPONENTS.fetch(:wasd_controller).first, :shift_speed
+    assert_includes look, "LookAtNode {"
+    assert_includes lod, "LodManager {"
+    assert_includes Zui::COMPONENTS.fetch(:lod_manager).first, :distances
+    # A controller is an Item, not a scene object, so it is parented over the
+    # viewport instead of into the scene graph.
+    assert_includes branch, 'if (object.hasOwnProperty("anchors"))'
+    assert_includes branch, "object.anchors.fill = itemHost"
+    assert_includes scene, "readonly property var itemHost: controllerHost"
+    assert_equal :wasd_controller,
+                 Zui::Mobile::ComponentCatalog::QUICK3D_HELPER_CONTROLLERS.fetch("WasdController")
+  end
+
+  def test_scene_3d_branch_creates_each_object_under_the_parent_qt_expects
+    branch = source("Components/Builtins/Support/Scene3dBranch.qml")
+    scene = source("Components/Builtins/Support/View3dScene.qml")
+
+    # A Loader cannot choose the QML parent of what it creates, and a plain
+    # QObject helper finds its viewport through that parent.
+    assert_includes branch, "Qt.createComponent(url, Component.PreferSynchronous)"
+    assert_includes branch, "component.createObject(creationParent(), { \"renderer\": branch })"
+    assert_includes branch, "function creationParent()"
+    assert_includes branch, "host.viewport ? host.viewport : branch"
+    assert_includes branch, 'componentError("component_load_failed", component.errorString()'
+    assert_includes branch, "function releaseObject()"
+    assert_includes branch, "released.destroy()"
+    assert_includes scene, "readonly property var viewport: nativeView"
+    refute_includes branch, "adapterLoader"
+  end
+
   def test_optional_3d_properties_leave_qt_defaults_alone
     helper = source("Components/Builtins/Support/Prop3dBinding.qml")
 

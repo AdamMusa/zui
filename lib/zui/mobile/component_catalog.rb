@@ -183,6 +183,12 @@ module Zui
         "BufferInput" => :buffer_input, "SetUniformValue" => :set_uniform_value
       }.freeze
 
+      # Qt Quick 3D camera controllers and level of detail.
+      QUICK3D_HELPER_CONTROLLERS = {
+        "OrbitCameraController" => :orbit_camera_controller, "WasdController" => :wasd_controller,
+        "LookAtNode" => :look_at_node, "LodManager" => :lod_manager
+      }.freeze
+
       CORE = QUICK_CONTROLS.merge(QUICK_DIALOGS).merge(QUICK_LAYOUTS).freeze
       ALL = CORE.merge(PERMISSIONS).merge(DEVICE_INFORMATION).merge(VIRTUAL_KEYBOARD)
                 .merge(SENSORS).merge(POSITIONING).merge(LOCATION)
@@ -195,7 +201,8 @@ module Zui
                 .merge(QUICK3D_ENVIRONMENT)
                 .merge(QUICK3D_SKINNING)
                 .merge(QUICK3D_INSTANCING)
-                .merge(QUICK3D_CUSTOM_EFFECTS).freeze
+                .merge(QUICK3D_CUSTOM_EFFECTS)
+                .merge(QUICK3D_HELPER_CONTROLLERS).freeze
     end
   end
 end

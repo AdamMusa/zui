@@ -357,7 +357,11 @@ module Zui
     shader_3d: [%i[shader stage], %i[error], false],
     buffer_3d: [%i[texture_filter_operation texture_coord_operation buffer_flags format size_multiplier name], %i[error], false],
     buffer_input: [%i[buffer sampler], %i[error], false],
-    set_uniform_value: [%i[target value], %i[error], false]
+    set_uniform_value: [%i[target value], %i[error], false],
+    orbit_camera_controller: [%i[origin camera x_speed y_speed x_invert y_invert mouse_enabled pan_enabled], %i[error], false],
+    wasd_controller: [%i[controlled_object speed shift_speed forward_speed back_speed right_speed left_speed up_speed down_speed x_speed y_speed x_invert y_invert mouse_enabled keys_enabled], %i[error], false],
+    look_at_node: [%i[position x y z euler_rotation rotation_x rotation_y rotation_z rotation scale pivot opacity visible static_flags target], %i[error], true],
+    lod_manager: [%i[position x y z euler_rotation rotation_x rotation_y rotation_z rotation scale pivot opacity visible static_flags camera distances fade_distance], %i[error], true]
   }.freeze
 
   DEFAULT_COMPONENTS = ComponentRegistry.new
