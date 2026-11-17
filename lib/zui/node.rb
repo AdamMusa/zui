@@ -26,26 +26,44 @@ module Zui
   end
 
   class Binding
-    attr_accessor :last_value
+    # `reads` is the set of state keys the reader touched when it last ran, so
+    # a write only re-runs the readers that depend on it. Empty means the
+    # reader read no state at all, and such a reader is always re-run: its
+    # value may come from somewhere this cannot see.
+    attr_accessor :last_value, :reads
     attr_reader :node, :property, :reader, :animation
 
-    def initialize(node:, property:, reader:, last_value:, animation:)
+    def initialize(node:, property:, reader:, last_value:, animation:, reads: [])
       @node = node
       @property = property
       @reader = reader
       @last_value = last_value
       @animation = animation
+      @reads = reads
+    end
+
+    def reads_any?(keys)
+      return true if @reads.nil? || @reads.empty?
+
+      keys.any? { |key| @reads.include?(key) }
     end
   end
 
   class StructuralBinding
-    attr_accessor :last_children
+    attr_accessor :last_children, :reads
     attr_reader :node, :renderer
 
-    def initialize(node:, renderer:, last_children:)
+    def initialize(node:, renderer:, last_children:, reads: [])
       @node = node
       @renderer = renderer
       @last_children = last_children
+      @reads = reads
+    end
+
+    def reads_any?(keys)
+      return true if @reads.nil? || @reads.empty?
+
+      keys.any? { |key| @reads.include?(key) }
     end
   end
 end

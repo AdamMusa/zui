@@ -3,6 +3,10 @@
 module Zui
   PROTOCOL_VERSION = 1
   MAX_MESSAGE_BYTES = 1_048_576
+  # The native client validates at most this many patches in one batch
+  # (Service.qml, applyPatch) and rejects the whole batch past it, so a larger
+  # flush has to be split rather than sent and dropped.
+  MAX_PATCH_BATCH = 256
   class AsciiPattern
     def initialize(min:, max:, first: nil, rest:)
       @min = min
