@@ -1162,6 +1162,49 @@ class QmlContractTest < Minitest::Test
                  Zui::Mobile::ComponentCatalog::QUICK3D_PARTICLE_AFFECTORS.fetch("Wander3D")
   end
 
+  def test_quick3d_post_processing_effects_cover_the_whole_effects_module
+    expected = %i[
+      additive_color_gradient blur_3d brush_strokes chromatic_aberration color_master
+      depth_of_field_hq_blur desaturate_3d distortion_ripple distortion_sphere distortion_spiral
+      edge_detect emboss flip fxaa gaussian_blur_3d hdr_bloom_tonemap motion_blur s_curve_tonemap
+      scatter tilt_shift vignette_3d
+    ]
+
+    assert_equal 21, expected.length
+    expected.each do |component|
+      assert Zui::COMPONENTS.key?(component), "missing #{component}"
+      adapter = component.to_s.split("_").map(&:capitalize).join
+      qml = source("Components/Builtins/#{adapter}.qml")
+      assert_includes qml, "import QtQuick3D.Effects"
+      assert_equal false, Zui::DEFAULT_COMPONENTS.protocol_schema.dig(component.to_s, "container")
+    end
+    assert_dynamic_component_route(source("ControlNode.qml"), "gaussian_blur_3d")
+    # Four of Qt's 3D effects share a name with a two-dimensional Qt effect
+    # Zui already adapts. COMPONENTS is a Hash literal, so a shared name would
+    # replace the 2D component rather than fail, and these four carry the
+    # suffix the rest of the scene graph uses.
+    {
+      "Blur3d.qml" => "Blur {", "Vignette3d.qml" => "Vignette {",
+      "GaussianBlur3d.qml" => "GaussianBlur {", "Desaturate3d.qml" => "Desaturate {"
+    }.each do |adapter, native|
+      assert_includes source("Components/Builtins/#{adapter}"), native
+    end
+    %i[gaussian_blur desaturate].each do |two_dimensional|
+      refute Zui::COMPONENTS.key?(two_dimensional),
+             "#{two_dimensional} belongs to the two-dimensional effect catalog"
+    end
+    assert Zui::COMPONENTS.key?(:blur)
+    assert_includes Zui::COMPONENTS.fetch(:hdr_bloom_tonemap).first, :bloom_threshold
+    assert_includes Zui::COMPONENTS.fetch(:s_curve_tonemap).first, :shoulder_slope
+    # A noise sampler is a shader input, so it names a texture_input.
+    assert_includes source("Components/Builtins/Scatter.qml"),
+                    'scatter.renderer.sceneObject(scatter.renderer.prop("noise_sample"))'
+    effects = File.read(File.join(ROOT, "Components", "Builtins", "Support", "Scene3dTypes.js"))
+    expected.each { |component| assert_includes effects, %("#{component}") }
+    assert_equal :motion_blur,
+                 Zui::Mobile::ComponentCatalog::QUICK3D_POST_EFFECTS.fetch("MotionBlur")
+  end
+
   def test_optional_3d_properties_leave_qt_defaults_alone
     helper = source("Components/Builtins/Support/Prop3dBinding.qml")
 

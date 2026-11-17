@@ -21,9 +21,9 @@ var lights = ["directional_light", "point_light", "spot_light"]
 var environments = ["scene_environment", "extended_scene_environment"]
 
 var effects = ["effect_3d", "additive_color_gradient", "blur_3d", "brush_strokes",
-               "chromatic_aberration", "color_master", "depth_of_field_hq_blur", "desaturate",
+               "chromatic_aberration", "color_master", "depth_of_field_hq_blur", "desaturate_3d",
                "distortion_ripple", "distortion_sphere", "distortion_spiral", "edge_detect",
-               "emboss", "flip", "fxaa", "gaussian_blur", "hdr_bloom_tonemap", "motion_blur",
+               "emboss", "flip", "fxaa", "gaussian_blur_3d", "hdr_bloom_tonemap", "motion_blur",
                "s_curve_tonemap", "scatter", "tilt_shift", "vignette_3d"]
 
 var instancing = ["instance_list", "random_instancing", "file_instancing"]

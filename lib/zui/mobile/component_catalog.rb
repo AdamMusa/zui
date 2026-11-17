@@ -223,6 +223,21 @@ module Zui
         "PointRotator3D" => :point_rotator_3d, "ScaleAffector3D" => :scale_affector_3d
       }.freeze
 
+      # Qt Quick 3D post-processing effects.
+      QUICK3D_POST_EFFECTS = {
+        "AdditiveColorGradient" => :additive_color_gradient, "Blur" => :blur_3d,
+        "BrushStrokes" => :brush_strokes, "ChromaticAberration" => :chromatic_aberration,
+        "ColorMaster" => :color_master, "DepthOfFieldHQBlur" => :depth_of_field_hq_blur,
+        "Desaturate" => :desaturate_3d, "DistortionRipple" => :distortion_ripple,
+        "DistortionSphere" => :distortion_sphere, "DistortionSpiral" => :distortion_spiral,
+        "EdgeDetect" => :edge_detect, "Emboss" => :emboss,
+        "Flip" => :flip, "Fxaa" => :fxaa,
+        "GaussianBlur" => :gaussian_blur_3d, "HDRBloomTonemap" => :hdr_bloom_tonemap,
+        "MotionBlur" => :motion_blur, "SCurveTonemap" => :s_curve_tonemap,
+        "Scatter" => :scatter, "TiltShift" => :tilt_shift,
+        "Vignette" => :vignette_3d
+      }.freeze
+
       CORE = QUICK_CONTROLS.merge(QUICK_DIALOGS).merge(QUICK_LAYOUTS).freeze
       ALL = CORE.merge(PERMISSIONS).merge(DEVICE_INFORMATION).merge(VIRTUAL_KEYBOARD)
                 .merge(SENSORS).merge(POSITIONING).merge(LOCATION)
@@ -240,7 +255,8 @@ module Zui
                 .merge(QUICK3D_HELPERS)
                 .merge(QUICK3D_ASSETS)
                 .merge(QUICK3D_PARTICLES)
-                .merge(QUICK3D_PARTICLE_AFFECTORS).freeze
+                .merge(QUICK3D_PARTICLE_AFFECTORS)
+                .merge(QUICK3D_POST_EFFECTS).freeze
     end
   end
 end

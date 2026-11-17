@@ -140,7 +140,12 @@ module Zui
       trail_emitter_3d emit_burst_3d dynamic_burst_3d particle_shape_3d
       particle_model_shape_3d particle_custom_shape_3d vector_direction_3d target_direction_3d
       gravity_3d attractor_3d wander_3d repeller_3d
-      point_rotator_3d scale_affector_3d
+      point_rotator_3d scale_affector_3d additive_color_gradient blur_3d
+      brush_strokes chromatic_aberration color_master depth_of_field_hq_blur
+      desaturate_3d distortion_ripple distortion_sphere distortion_spiral
+      edge_detect emboss flip fxaa
+      gaussian_blur_3d hdr_bloom_tonemap motion_blur s_curve_tonemap
+      scatter tilt_shift vignette_3d
     ].freeze
     SCENE_3D_COMPONENTS.each do |type|
       define_method(type) { |id: nil, **props, &block| component(type, id:, **props, &block) }
