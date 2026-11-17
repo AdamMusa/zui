@@ -107,6 +107,19 @@ class QmlContractTest < Minitest::Test
     end
   end
 
+  def test_target_direction_accepts_a_node_for_the_item_it_aims_at
+    application = Zui::Application.new do
+      app do
+        hub = rectangle id: :hub, width: 24, height: 24
+        target_direction id: :pull, target_item: hub, magnitude: 120
+      end
+    end
+
+    node = application.tree.dig("main", "children").find { |child| child.fetch("id") == "pull" }
+
+    assert_equal "hub", node.dig("props", "target_item")
+  end
+
   def test_cumulative_direction_rebuilds_instead_of_caching_a_partial_sum
     qml = File.read(File.join(ROOT, "Components", "Builtins", "CumulativeDirection.qml"))
 

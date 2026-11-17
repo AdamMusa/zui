@@ -395,7 +395,11 @@ module Zui
 
     PARTICLE_DIRECTION_COMPONENTS = %i[angle_direction point_direction target_direction].freeze
     PARTICLE_DIRECTION_COMPONENTS.each do |type|
-      define_method(type) { |id: nil, **props| component(type, id:, **props) }
+      define_method(type) do |id: nil, **props|
+        # target_direction aims at a rendered node, referenced by control id.
+        props = props.merge(target_item: node_id(props.fetch(:target_item))) if props.key?(:target_item)
+        component(type, id:, **props)
+      end
     end
 
     def cumulative_direction(directions = [], id: nil, **props)
