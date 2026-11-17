@@ -3,6 +3,13 @@ import QtQuick.Controls as QQC
 import QtQml.Models
 import "../../Theme"
 
+// Qt 6.8.3 exposes no QML-creatable hierarchical model: Qt.labs.qmlmodels
+// exports TableModel, TableModelColumn, DelegateChoice and DelegateChooser and
+// nothing else, so QQC.TreeView has no model it can be given from QML. This
+// adapter therefore owns the hierarchy itself: it flattens the declared rows
+// into the list of currently visible nodes, keeps depth, expansion state and
+// the index path of every node, and renders them through TableView so that
+// selection, editing, keyboard navigation and item reuse stay native.
 Rectangle {
   id: treeRoot
 
@@ -12,6 +19,13 @@ Rectangle {
   readonly property string childrenField: String(renderer.prop("children_field", "children"))
   readonly property var effectiveColumns: inferColumns()
   readonly property real treePadding: Number(renderer.prop("padding", 0))
+  readonly property var requestedExpandedPaths: renderer.prop("expanded_paths", [])
+  readonly property int requestedExpandDepth: Number(renderer.prop("expand_depth", 0))
+  readonly property var requestedSelectedPath: renderer.prop("selected_path", [])
+  // Expansion is keyed by index path, which is what Ruby already speaks, so it
+  // survives row refreshes and never depends on a flat row number.
+  property var expandedKeys: ({})
+  property var visibleNodes: []
   property var treeModel: null
 
   function inferColumns() {
@@ -80,72 +94,16 @@ Rectangle {
     return column === 0 ? node : null
   }
 
-  function normalizeNode(node) {
-    var normalized = {}
-    for (var column = 0; column < effectiveColumns.length; column++)
-      normalized["_c" + column] = nodeCell(node, column)
-    var children = nodeChildren(node)
-    if (children.length > 0) {
-      normalized.rows = []
-      for (var index = 0; index < children.length; index++)
-        normalized.rows.push(normalizeNode(children[index]))
-    }
-    return normalized
-  }
-
-  function normalizedRows() {
-    var rows = []
-    for (var index = 0; index < sourceRows.length; index++) rows.push(normalizeNode(sourceRows[index]))
-    return rows
-  }
-
-  // Unversioned on purpose. TreeModel is the only QML-creatable hierarchical
-  // model Qt offers, and Qt.labs.qmlmodels did not gain it until after 6.8.3,
-  // so an explicit version pin only reports "version X is not installed" and
-  // hides the real cause. Unversioned means latest available, so this starts
-  // working the moment the bundled Qt ships TreeModel.
-  function modelSource() {
-    var source = "import Qt.labs.qmlmodels\nTreeModel {\n"
-    for (var column = 0; column < effectiveColumns.length; column++)
-      source += "  TableModelColumn { display: \"_c" + column + "\"; edit: \"_c" + column + "\" }\n"
-    return source + "}"
-  }
-
-  function rebuildModel() {
-    var previous = treeModel
-    treeModel = null
-    if (previous) previous.destroy()
-    if (effectiveColumns.length === 0) return
-    // Without this the exception escapes, treeModel stays null and the tree
-    // renders empty with nothing reported: exactly the silent failure the
-    // framework boundary forbids.
-    var created = null
-    try {
-      created = Qt.createQmlObject(modelSource(), treeRoot, "ZuiDynamicTreeModel")
-    } catch (error) {
-      renderer.componentError("tree_model_unavailable",
-        "This Qt build has no Qt.labs.qmlmodels TreeModel, which tree_view needs "
-          + "for its hierarchy: " + String(error.message),
-        { columns: effectiveColumns.length })
-      return
-    }
-    created.rows = normalizedRows()
-    treeModel = created
-    Qt.callLater(syncTreeState)
-  }
-
-  function syncRows() {
-    if (!treeModel) return rebuildModel()
-    treeModel.rows = normalizedRows()
-    Qt.callLater(syncTreeState)
-  }
-
   function cleanPath(value) {
     if (!Array.isArray(value)) return []
     var path = []
     for (var index = 0; index < value.length; index++) path.push(Number(value[index]))
     return path
   }
+
+  function pathKey(path) { return cleanPath(path).join("/") }
+
+  function isPathExpanded(path) { return expandedKeys[pathKey(path)] === true }
 
   function sourceNode(path) {
     var rows = sourceRows
@@ -159,82 +117,266 @@ Rectangle {
     return node
   }
 
-  function indexPath(modelIndex) {
-    var path = []
-    var current = modelIndex
-    while (current && current.valid) {
-      path.unshift(current.row)
-      current = current.parent
+  // The flattening step. Every visible node carries the bookkeeping the
+  // hierarchical model would otherwise have supplied: its index path, its
+  // depth, whether it has children and whether it is expanded.
+  function collectVisibleNodes(nodes, parentPath, depth, collected) {
+    for (var index = 0; index < nodes.length; index++) {
+      var node = nodes[index]
+      var path = parentPath.concat([index])
+      var children = nodeChildren(node)
+      var expanded = children.length > 0 && isPathExpanded(path)
+      collected.push({ node: node, path: path, depth: depth,
+        has_children: children.length > 0, expanded: expanded })
+      if (expanded) collectVisibleNodes(children, path, depth + 1, collected)
     }
-    return path
+    return collected
+  }
+
+  function flattenedNodes() {
+    return collectVisibleNodes(Array.isArray(sourceRows) ? sourceRows : [], [], 0, [])
+  }
+
+  function rowMeta(row) {
+    return row >= 0 && row < visibleNodes.length ? visibleNodes[row] : null
+  }
+
+  function rowForPath(path) {
+    var key = pathKey(path)
+    for (var index = 0; index < visibleNodes.length; index++)
+      if (pathKey(visibleNodes[index].path) === key) return index
+    return -1
+  }
+
+  function rowCellValue(row, column) {
+    var meta = rowMeta(row)
+    return meta === null ? null : nodeCell(meta.node, column)
+  }
+
+  function modelRow(node) {
+    var item = {}
+    for (var column = 0; column < effectiveColumns.length; column++) {
+      var value = nodeCell(node, column)
+      item["_c" + column] = value === undefined || value === null ? "" : value
+    }
+    return item
+  }
+
+  function normalizedRows() {
+    var rows = []
+    for (var index = 0; index < visibleNodes.length; index++)
+      rows.push(modelRow(visibleNodes[index].node))
+    return rows
+  }
+
+  // TableModel 1.0 is flat, which is exactly what the flattened node list
+  // needs, and it is a real QAbstractItemModel so ItemSelectionModel, the
+  // edit delegate and keyboard navigation all keep working.
+  function modelSource() {
+    var source = "import Qt.labs.qmlmodels 1.0\nTableModel {\n"
+    for (var column = 0; column < effectiveColumns.length; column++)
+      source += "  TableModelColumn { display: \"_c" + column + "\"; edit: \"_c" + column + "\" }\n"
+    return source + "}"
+  }
+
+  function rebuildModel() {
+    var previous = treeModel
+    treeModel = null
+    if (previous) previous.destroy()
+    visibleNodes = flattenedNodes()
+    if (effectiveColumns.length === 0) return
+    // Without this the exception escapes, treeModel stays null and the tree
+    // renders empty with nothing reported: exactly the silent failure the
+    // framework boundary forbids.
+    var created = null
+    try {
+      created = Qt.createQmlObject(modelSource(), treeRoot, "ZuiFlatTreeRowModel")
+    } catch (error) {
+      renderer.componentError("tree_model_unavailable",
+        "This Qt build cannot create the Qt.labs.qmlmodels TableModel that tree_view "
+          + "flattens its hierarchy into: " + String(error.message),
+        { columns: effectiveColumns.length })
+      return
+    }
+    created.rows = normalizedRows()
+    treeModel = created
+    Qt.callLater(syncTreeState)
+  }
+
+  function refreshRows() {
+    visibleNodes = flattenedNodes()
+    if (!treeModel) {
+      rebuildModel()
+      return
+    }
+    treeModel.rows = normalizedRows()
+  }
+
+  function expandRow(row) {
+    var meta = rowMeta(row)
+    if (meta === null || meta.has_children !== true) return
+    expandedKeys[pathKey(meta.path)] = true
+    meta.expanded = true
+    var inserted = collectVisibleNodes(nodeChildren(meta.node), meta.path, meta.depth + 1, [])
+    visibleNodes = visibleNodes.slice(0, row + 1).concat(inserted, visibleNodes.slice(row + 1))
+    if (treeModel) {
+      for (var index = 0; index < inserted.length; index++)
+        treeModel.insertRow(row + 1 + index, modelRow(inserted[index].node))
+    }
+    notifyExpansion(meta.path, true)
+  }
+
+  function collapseRow(row) {
+    var meta = rowMeta(row)
+    if (meta === null || meta.has_children !== true) return
+    delete expandedKeys[pathKey(meta.path)]
+    meta.expanded = false
+    var removed = 0
+    while (row + 1 + removed < visibleNodes.length
+      && visibleNodes[row + 1 + removed].depth > meta.depth) removed++
+    visibleNodes = visibleNodes.slice(0, row + 1).concat(visibleNodes.slice(row + 1 + removed))
+    if (treeModel && removed > 0) treeModel.removeRow(row + 1, removed)
+    notifyExpansion(meta.path, false)
+  }
+
+  function toggleRow(row) {
+    var meta = rowMeta(row)
+    if (meta === null || meta.has_children !== true) return
+    if (meta.expanded === true) collapseRow(row)
+    else expandRow(row)
+  }
+
+  function expandCurrentRow() {
+    if (renderer.prop("key_navigation_enabled", true) === false) return false
+    var meta = rowMeta(treeControl.currentRow)
+    if (meta === null || meta.has_children !== true || meta.expanded === true) return false
+    expandRow(treeControl.currentRow)
+    return true
+  }
+
+  function collapseCurrentRow() {
+    if (renderer.prop("key_navigation_enabled", true) === false) return false
+    var meta = rowMeta(treeControl.currentRow)
+    if (meta === null || meta.has_children !== true || meta.expanded !== true) return false
+    collapseRow(treeControl.currentRow)
+    return true
+  }
+
+  function collectExpandablePaths(nodes, parentPath, remaining, collected) {
+    if (remaining <= 0) return collected
+    for (var index = 0; index < nodes.length; index++) {
+      var children = nodeChildren(nodes[index])
+      if (children.length === 0) continue
+      var path = parentPath.concat([index])
+      collected.push(path)
+      collectExpandablePaths(children, path, remaining - 1, collected)
+    }
+    return collected
+  }
+
+  // Declared expansion is additive: it opens the requested nodes along with
+  // their ancestors, and never closes what the user opened.
+  function expandPaths(paths) {
+    var changed = []
+    for (var index = 0; index < paths.length; index++) {
+      var path = cleanPath(paths[index])
+      for (var depth = 1; depth <= path.length; depth++) {
+        var ancestor = path.slice(0, depth)
+        if (nodeChildren(sourceNode(ancestor)).length === 0) continue
+        var key = pathKey(ancestor)
+        if (expandedKeys[key] === true) continue
+        expandedKeys[key] = true
+        changed.push(ancestor)
+      }
+    }
+    if (changed.length === 0) return false
+    refreshRows()
+    for (var notified = 0; notified < changed.length; notified++)
+      notifyExpansion(changed[notified], true)
+    return true
+  }
+
+  function applyRequestedExpansion() {
+    var targets = collectExpandablePaths(Array.isArray(sourceRows) ? sourceRows : [], [],
+      requestedExpandDepth, [])
+    if (Array.isArray(requestedExpandedPaths)) {
+      for (var index = 0; index < requestedExpandedPaths.length; index++)
+        targets.push(cleanPath(requestedExpandedPaths[index]))
+    }
+    return expandPaths(targets)
   }
 
   function cellPayload(row, column, value) {
-    var modelIndex = treeControl.index(row, column)
-    var path = modelIndex && modelIndex.valid ? indexPath(modelIndex) : []
-    return { row: row, column: column, path: path,
-      depth: row >= 0 ? treeControl.depth(row) : -1,
+    var meta = rowMeta(row)
+    return { row: row, column: column,
+      path: meta === null ? [] : meta.path,
+      depth: meta === null ? -1 : meta.depth,
       key: column >= 0 && column < effectiveColumns.length ? columnKey(column) : null,
-      value: value, node: sourceNode(path),
-      expanded: row >= 0 ? treeControl.isExpanded(row) : false }
+      value: value,
+      node: meta === null ? null : meta.node,
+      expanded: meta === null ? false : meta.expanded === true }
+  }
+
+  function notifyExpansion(path, expanded) {
+    var row = rowForPath(path)
+    var payload = cellPayload(row, 0, nodeCell(sourceNode(cleanPath(path)), 0))
+    renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
+      expanded ? "expand" : "collapse", payload)
+    renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "expanded_change",
+      expanded ? { row: row, depth: 1, expanded: true }
+               : { row: row, recursively: false, expanded: false })
+  }
+
+  function commitEdit(row, column, value) {
+    if (!columnEditable(column)) return false
+    if (!treeModel || rowMeta(row) === null) return false
+    var current = treeModel.getRow(row)
+    var updated = {}
+    for (var key in current) updated[key] = current[key]
+    updated["_c" + column] = value
+    treeModel.setRow(row, updated)
+    return true
   }
 
   function syncTreeState() {
     if (!treeModel || effectiveColumns.length === 0) return
-    var depth = Number(renderer.prop("expand_depth", 0))
-    if (depth > 0) {
-      for (var rootRow = 0; rootRow < sourceRows.length; rootRow++) {
-        var rootIndex = treeModel.index([rootRow], 0)
-        var rootCell = treeControl.cellAtIndex(rootIndex)
-        if (rootCell.y >= 0) treeControl.expandRecursively(rootCell.y, depth - 1)
-      }
-    }
-    var expandedPaths = renderer.prop("expanded_paths", [])
-    if (Array.isArray(expandedPaths)) {
-      for (var index = 0; index < expandedPaths.length; index++) {
-        var expandedIndex = treeModel.index(cleanPath(expandedPaths[index]), 0)
-        if (!expandedIndex.valid) continue
-        treeControl.expandToIndex(expandedIndex)
-        var expandedCell = treeControl.cellAtIndex(expandedIndex)
-        if (expandedCell.y >= 0) treeControl.expand(expandedCell.y)
-      }
-    }
-    var path = cleanPath(renderer.prop("selected_path", []))
+    applyRequestedExpansion()
+    var path = cleanPath(requestedSelectedPath)
     if (path.length === 0) return
+    expandPaths([path.slice(0, path.length - 1)])
+    var row = rowForPath(path)
+    if (row < 0) return
     var column = Math.max(0, Math.min(effectiveColumns.length - 1,
       Number(renderer.prop("selected_column", 0))))
-    var selectedIndex = treeModel.index(path, column)
-    if (!selectedIndex.valid) return
-    treeControl.expandToIndex(selectedIndex)
-    treeSelection.setCurrentIndex(selectedIndex, ItemSelectionModel.ClearAndSelect)
+    treeSelection.setCurrentIndex(treeModel.index(row, column), ItemSelectionModel.ClearAndSelect)
   }
 
   function selectionBehaviorValue(value) {
     var name = String(value || "rows")
-    if (name === "none" || name === "disabled") return TreeView.SelectionDisabled
-    if (name === "cells") return TreeView.SelectCells
-    if (name === "columns") return TreeView.SelectColumns
-    return TreeView.SelectRows
+    if (name === "none" || name === "disabled") return TableView.SelectionDisabled
+    if (name === "cells") return TableView.SelectCells
+    if (name === "columns") return TableView.SelectColumns
+    return TableView.SelectRows
   }
 
   function selectionModeValue(value) {
     var name = String(value || "single")
-    if (name === "contiguous") return TreeView.ContiguousSelection
-    if (name === "extended" || name === "multiple") return TreeView.ExtendedSelection
-    return TreeView.SingleSelection
+    if (name === "contiguous") return TableView.ContiguousSelection
+    if (name === "extended" || name === "multiple") return TableView.ExtendedSelection
+    return TableView.SingleSelection
   }
 
   function editTriggersValue(value) {
-    if (renderer.prop("editable", false) !== true) return TreeView.NoEditTriggers
+    if (renderer.prop("editable", false) !== true) return TableView.NoEditTriggers
     var names = Array.isArray(value) ? value : [value || "edit_key"]
-    var result = TreeView.NoEditTriggers
+    var result = TableView.NoEditTriggers
     for (var index = 0; index < names.length; index++) {
       var name = String(names[index])
-      if (name === "single_tap") result |= TreeView.SingleTapped
-      if (name === "double_tap") result |= TreeView.DoubleTapped
-      if (name === "selected_tap") result |= TreeView.SelectedTapped
-      if (name === "edit_key") result |= TreeView.EditKeyPressed
-      if (name === "any_key") result |= TreeView.AnyKeyPressed
+      if (name === "single_tap") result |= TableView.SingleTapped
+      if (name === "double_tap") result |= TableView.DoubleTapped
+      if (name === "selected_tap") result |= TableView.SelectedTapped
+      if (name === "edit_key") result |= TableView.EditKeyPressed
+      if (name === "any_key") result |= TableView.AnyKeyPressed
     }
     return result
   }
@@ -293,7 +435,7 @@ Rectangle {
     }
   }
 
-  TreeView {
+  TableView {
     id: treeControl
     x: treeRoot.treePadding
     y: treeRoot.treePadding + headerClip.height
@@ -317,15 +459,46 @@ Rectangle {
     rowHeightProvider: function(row) { return Number(renderer.prop("row_height", 42)) }
     columnWidthProvider: function(column) { return treeRoot.columnWidth(column) }
 
-    delegate: QQC.TreeViewDelegate {
+    // Left and right collapse and expand the current node, the way a native
+    // tree does, and fall through to TableView's own navigation otherwise.
+    Keys.onRightPressed: function(event) { event.accepted = treeRoot.expandCurrentRow() }
+    Keys.onLeftPressed: function(event) { event.accepted = treeRoot.collapseCurrentRow() }
+
+    delegate: QQC.ItemDelegate {
       id: treeDelegate
+      required property int row
       required property int column
-      indentation: Number(renderer.prop("indentation", 22))
-      leftMargin: Number(renderer.prop("left_margin", Style.spacing.sm))
-      rightMargin: Number(renderer.prop("right_margin", Style.spacing.sm))
+      required property var model
+      property bool selected: false
+      property bool current: false
+      readonly property var nodeMeta: treeRoot.rowMeta(row)
+      readonly property int nodeDepth: nodeMeta === null ? 0 : nodeMeta.depth
+      readonly property bool nodeHasChildren: nodeMeta !== null && nodeMeta.has_children === true
+      readonly property bool nodeExpanded: nodeMeta !== null && nodeMeta.expanded === true
+      readonly property real indentation: Number(renderer.prop("indentation", 22))
+      readonly property real handleWidth: column === 0 ? indentation : 0
+
+      function refreshSelection() {
+        if (!treeRoot.treeModel) {
+          selected = false
+          current = false
+          return
+        }
+        var modelIndex = treeRoot.treeModel.index(row, column)
+        selected = treeSelection.isSelected(modelIndex)
+        current = treeSelection.currentIndex.valid
+          && treeSelection.currentIndex.row === row
+          && treeSelection.currentIndex.column === column
+      }
+
       text: String(model.display === undefined || model.display === null ? "" : model.display)
       font.family: String(renderer.prop("font_family", renderer.fontFamily))
       font.pixelSize: Number(renderer.prop("font_size", Style.font.body))
+      topPadding: 0
+      bottomPadding: 0
+      leftPadding: Number(renderer.prop("left_margin", Style.spacing.sm))
+        + (column === 0 ? nodeDepth * indentation : 0)
+      rightPadding: Number(renderer.prop("right_margin", Style.spacing.sm))
 
       background: Rectangle {
         color: treeDelegate.selected
@@ -337,59 +510,88 @@ Rectangle {
         border.color: renderer.prop("accent", Color.accent)
       }
 
-      contentItem: Text {
-        text: treeDelegate.text
-        color: treeDelegate.selected
-          ? renderer.prop("selected_foreground", renderer.prop("foreground", renderer.foreground))
-          : renderer.prop("foreground", renderer.foreground)
-        font: treeDelegate.font
-        horizontalAlignment: treeRoot.columnAlignment(treeDelegate.column)
-        verticalAlignment: Text.AlignVCenter
-        elide: Text.ElideRight
-        visible: !treeDelegate.editing
+      contentItem: Item {
+        implicitHeight: nodeLabel.implicitHeight
+
+        Text {
+          id: disclosure
+          width: treeDelegate.handleWidth
+          height: parent.height
+          visible: treeDelegate.column === 0 && treeDelegate.nodeHasChildren
+          text: treeDelegate.nodeExpanded ? "\u25be" : "\u25b8"
+          color: renderer.prop("muted", Color.muted)
+          font.family: treeDelegate.font.family
+          font.pixelSize: treeDelegate.font.pixelSize
+          horizontalAlignment: Text.AlignHCenter
+          verticalAlignment: Text.AlignVCenter
+          Accessible.role: Accessible.Button
+          Accessible.name: treeDelegate.nodeExpanded ? "Collapse" : "Expand"
+
+          MouseArea {
+            anchors.fill: parent
+            enabled: disclosure.visible
+            onClicked: treeRoot.toggleRow(treeDelegate.row)
+          }
+        }
+
+        Text {
+          id: nodeLabel
+          anchors.left: parent.left
+          anchors.leftMargin: treeDelegate.handleWidth
+          anchors.right: parent.right
+          height: parent.height
+          text: treeDelegate.text
+          color: treeDelegate.selected
+            ? renderer.prop("selected_foreground", renderer.prop("foreground", renderer.foreground))
+            : renderer.prop("foreground", renderer.foreground)
+          font: treeDelegate.font
+          horizontalAlignment: treeRoot.columnAlignment(treeDelegate.column)
+          verticalAlignment: Text.AlignVCenter
+          elide: Text.ElideRight
+        }
       }
 
       TableView.editDelegate: FocusScope {
         width: parent.width
         height: parent.height
         TableView.onCommit: {
-          if (!treeRoot.columnEditable(treeDelegate.column)) return
-          var sourceIndex = treeControl.index(treeDelegate.row, treeDelegate.column)
-          if (treeRoot.treeModel.setData(sourceIndex, editor.text, Qt.EditRole))
-            renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "edit",
-              treeRoot.cellPayload(treeDelegate.row, treeDelegate.column, editor.text))
+          if (!treeRoot.commitEdit(treeDelegate.row, treeDelegate.column, editor.text)) return
+          renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "edit",
+            treeRoot.cellPayload(treeDelegate.row, treeDelegate.column, editor.text))
         }
         QQC.TextField {
           id: editor
           anchors.fill: parent
-          text: String(treeDelegate.model.edit === undefined ? treeDelegate.model.display : treeDelegate.model.edit)
+          text: String(treeDelegate.model.edit === undefined
+            ? treeDelegate.model.display : treeDelegate.model.edit)
           enabled: treeRoot.columnEditable(treeDelegate.column)
           focus: true
           Component.onCompleted: selectAll()
         }
       }
 
-      onClicked: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
-        "cell_click", treeRoot.cellPayload(row, column, model.display))
+      onClicked: {
+        if (treeRoot.treeModel)
+          treeSelection.setCurrentIndex(treeRoot.treeModel.index(row, column),
+            ItemSelectionModel.ClearAndSelect)
+        renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
+          "cell_click", treeRoot.cellPayload(row, column, model.display))
+      }
       onDoubleClicked: {
         var payload = treeRoot.cellPayload(row, column, model.display)
         renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "cell_double_click", payload)
         renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "activate", payload)
       }
+      Component.onCompleted: refreshSelection()
+      onRowChanged: refreshSelection()
+      onColumnChanged: refreshSelection()
+      Connections {
+        target: treeSelection
+        function onSelectionChanged(selected, deselected) { treeDelegate.refreshSelection() }
+        function onCurrentChanged(current, previous) { treeDelegate.refreshSelection() }
+      }
     }
 
-    onExpanded: function(row, depth) {
-      renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "expand",
-        treeRoot.cellPayload(row, 0, treeRoot.treeModel.data(treeControl.index(row, 0), Qt.DisplayRole)))
-      renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "expanded_change",
-        { row: row, depth: depth, expanded: true })
-    }
-    onCollapsed: function(row, recursively) {
-      renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "collapse",
-        treeRoot.cellPayload(row, 0, treeRoot.treeModel.data(treeControl.index(row, 0), Qt.DisplayRole)))
-      renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "expanded_change",
-        { row: row, recursively: recursively, expanded: false })
-    }
     onRowsChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
       "row_count_change", { value: rows })
     onColumnsChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
@@ -413,10 +615,8 @@ Rectangle {
     target: treeSelection
     function onCurrentChanged(current, previous) {
       if (!current.valid) return
-      var cell = treeControl.cellAtIndex(current)
-      if (cell.y < 0) return
-      var payload = treeRoot.cellPayload(cell.y, current.column,
-        treeRoot.treeModel.data(current, Qt.DisplayRole))
+      var payload = treeRoot.cellPayload(current.row, current.column,
+        treeRoot.rowCellValue(current.row, current.column))
       renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "current_change", payload)
       renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "selection_change", payload)
     }
@@ -433,8 +633,11 @@ Rectangle {
 
   Component.onCompleted: rebuildModel()
   onEffectiveColumnsChanged: rebuildModel()
-  onSourceRowsChanged: syncRows()
+  onSourceRowsChanged: refreshRows()
   onChildrenFieldChanged: rebuildModel()
+  onRequestedExpandedPathsChanged: applyRequestedExpansion()
+  onRequestedExpandDepthChanged: applyRequestedExpansion()
+  onRequestedSelectedPathChanged: syncTreeState()
   onVisibleChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
     visible ? "show" : "hide", {})
 }

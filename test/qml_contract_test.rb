@@ -1940,23 +1940,52 @@ class QmlContractTest < Minitest::Test
     assert_includes renderer, '"column_count_change", { value: columns }'
   end
 
-  def test_tree_view_has_a_specific_dynamic_native_tree_renderer
+  def test_tree_view_renders_a_hierarchy_the_pinned_qt_can_actually_build
     renderer = source("ControlNode.qml")
+    tree = source("Components/Builtins/TreeView.qml")
 
     assert_dynamic_component_route(renderer, "tree_view")
-    assert_includes renderer, "TreeView {"
+
+    # Qt 6.8.3's Qt.labs.qmlmodels exports TableModel, TableModelColumn,
+    # DelegateChoice and DelegateChooser and nothing else, so neither a
+    # TreeModel nor the QQC.TreeView that needs one may appear here.
+    refute_includes tree, "TreeModel {"
+    refute_includes tree, "QQC.TreeViewDelegate"
+    refute_includes tree, "expandRecursively"
+    refute_includes tree, "expandToIndex"
+    assert_includes tree, '"import Qt.labs.qmlmodels 1.0\nTableModel {\n"'
+    assert_includes renderer, 'Qt.createQmlObject(modelSource(), treeRoot, "ZuiFlatTreeRowModel")'
+
+    # The hierarchy is the adapter's own: every visible node carries its index
+    # path, depth, child count and expansion state.
+    assert_includes renderer, "function collectVisibleNodes(nodes, parentPath, depth, collected)"
+    assert_includes renderer, "collected.push({ node: node, path: path, depth: depth,"
+    assert_includes renderer, "has_children: children.length > 0, expanded: expanded })"
+    assert_includes renderer, "if (expanded) collectVisibleNodes(children, path, depth + 1, collected)"
     assert_includes renderer, 'root.prop("children_field", "children")'
-    assert_includes renderer, 'Qt.createQmlObject(modelSource(), treeRoot, "ZuiDynamicTreeModel")'
-    assert_includes renderer, 'TreeModel {'
-    assert_includes renderer, 'normalized.rows = []'
-    assert_includes renderer, "delegate: QQC.TreeViewDelegate {"
-    assert_includes renderer, "treeControl.expandToIndex(expandedIndex)"
-    assert_includes renderer, "treeControl.expandRecursively(rootCell.y, depth - 1)"
-    assert_includes renderer, "treeModel.index(cleanPath(expandedPaths[index]), 0)"
-    assert_includes renderer, "current = current.parent"
+    assert_includes renderer, "expandedKeys[pathKey(meta.path)] = true"
+    assert_includes renderer, "delete expandedKeys[pathKey(meta.path)]"
+
+    # Expanding and collapsing move rows in the flat model instead of resetting
+    # it, so selection and the edit delegate survive a disclosure click.
+    assert_includes renderer, "treeModel.insertRow(row + 1 + index, modelRow(inserted[index].node))"
+    assert_includes renderer, "treeModel.removeRow(row + 1, removed)"
+    assert_includes renderer, "treeRoot.toggleRow(treeDelegate.row)"
+    assert_includes renderer, "Keys.onRightPressed: function(event) { event.accepted = treeRoot.expandCurrentRow() }"
+    assert_includes renderer, "Keys.onLeftPressed: function(event) { event.accepted = treeRoot.collapseCurrentRow() }"
+
+    # Depth becomes indentation and parents get a disclosure control.
+    assert_includes renderer, "+ (column === 0 ? nodeDepth * indentation : 0)"
+    assert_includes renderer, "visible: treeDelegate.column === 0 && treeDelegate.nodeHasChildren"
+    assert_includes renderer, 'text: treeDelegate.nodeExpanded ? "\u25be" : "\u25b8"'
+
+    # The Ruby-facing surface is unchanged.
     assert_includes renderer, "TableView.editDelegate: FocusScope {"
-    assert_includes renderer, '"expand",'
-    assert_includes renderer, '"collapse",'
+    assert_includes renderer, 'expanded ? "expand" : "collapse", payload)'
+    assert_includes renderer, '"expanded_change",'
+    assert_includes renderer, '"cell_click", treeRoot.cellPayload(row, column, model.display)'
     assert_includes renderer, '"selection_change", payload'
+    assert_includes renderer, '"row_count_change", { value: rows }'
+    assert_includes renderer, '"column_count_change", { value: columns }'
   end
 end

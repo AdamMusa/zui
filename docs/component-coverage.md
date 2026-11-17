@@ -15,6 +15,13 @@ classes, QML compiler infrastructure, compositor protocols, and operating-system
 are not widgets and are intentionally excluded. Framework concepts such as state, timers,
 transitions, and animation groups receive Ruby APIs even though they are not visual widgets.
 
+A component counts as complete only when it works on the Qt version Zui pins. Where a Qt type a
+component would otherwise wrap does not exist on that version, the adapter implements the control
+itself instead of wrapping a type that is not there. `tree_view` is built that way: Qt 6.8.3
+exposes no QML-creatable hierarchical model, so the adapter flattens the hierarchy into the list of
+visible nodes, keeps depth, expansion state and index paths itself, and renders them through
+`TableView`. The Ruby surface is unchanged.
+
 ## Foundation and layout
 
 - [x] control
