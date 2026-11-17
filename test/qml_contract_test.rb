@@ -1205,6 +1205,33 @@ class QmlContractTest < Minitest::Test
                  Zui::Mobile::ComponentCatalog::QUICK3D_POST_EFFECTS.fetch("MotionBlur")
   end
 
+  def test_quick3d_spatial_audio_places_sound_in_the_same_scene_as_geometry
+    engine = source("Components/Builtins/AudioEngine.qml")
+    listener = source("Components/Builtins/AudioListener.qml")
+    room = source("Components/Builtins/AudioRoom.qml")
+    sound = source("Components/Builtins/SpatialSound.qml")
+    ambient = source("Components/Builtins/AmbientSound.qml")
+
+    assert_dynamic_component_route(source("ControlNode.qml"), "spatial_sound")
+    assert_includes engine, "import QtQuick3D.SpatialAudio"
+    assert_includes engine, '"headphone": AudioEngine.Headphone'
+    assert_includes Zui::COMPONENTS.fetch(:audio_engine).first, :master_volume
+    # Three of these types inherit QQuick3DNode, which the SpatialAudio module
+    # does not declare a dependency on, so they import QtQuick3D themselves.
+    [listener, room, sound].each { |qml| assert_includes qml, "import QtQuick3D" }
+    assert_includes room, '"acoustic_ceiling_tiles": AudioRoom.AcousticCeilingTiles'
+    assert_includes room, '"polished_concrete_or_tile": AudioRoom.PolishedConcreteOrTile'
+    assert_includes Zui::COMPONENTS.fetch(:audio_room).first, :reverb_brightness
+    assert_includes Zui::COMPONENTS.fetch(:audio_room).first, :ceiling_material
+    assert_includes sound, '"manual_attenuation": SpatialSound.ManualAttenuation'
+    assert_includes Zui::COMPONENTS.fetch(:spatial_sound).first, :directivity_order
+    # A loop count is a plain integer with one reserved value per type, so Ruby
+    # may write a count or "infinite".
+    assert_includes sound, 'Value3d.loops(spatialSound.renderer.prop("loops"), SpatialSound.Infinite)'
+    assert_includes ambient, 'Value3d.loops(ambientSound.renderer.prop("loops"), AmbientSound.Infinite)'
+    assert_equal :audio_room, Zui::Mobile::ComponentCatalog::QUICK3D_SPATIAL_AUDIO.fetch("AudioRoom")
+  end
+
   def test_optional_3d_properties_leave_qt_defaults_alone
     helper = source("Components/Builtins/Support/Prop3dBinding.qml")
 

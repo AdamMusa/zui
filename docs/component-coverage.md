@@ -574,3 +574,14 @@ order they are declared.
 - [x] scatter
 - [x] tilt_shift
 - [x] vignette_3d
+
+### Spatial audio
+
+Sound placed in the same scene as the geometry, mixed through one
+audio_engine and heard from wherever the audio_listener sits.
+
+- [x] audio_engine
+- [x] audio_listener
+- [x] audio_room
+- [x] spatial_sound
+- [x] ambient_sound

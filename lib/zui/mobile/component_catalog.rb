@@ -238,6 +238,13 @@ module Zui
         "Vignette" => :vignette_3d
       }.freeze
 
+      # Qt Quick 3D spatial audio.
+      QUICK3D_SPATIAL_AUDIO = {
+        "AudioEngine" => :audio_engine, "AudioListener" => :audio_listener,
+        "AudioRoom" => :audio_room, "SpatialSound" => :spatial_sound,
+        "AmbientSound" => :ambient_sound
+      }.freeze
+
       CORE = QUICK_CONTROLS.merge(QUICK_DIALOGS).merge(QUICK_LAYOUTS).freeze
       ALL = CORE.merge(PERMISSIONS).merge(DEVICE_INFORMATION).merge(VIRTUAL_KEYBOARD)
                 .merge(SENSORS).merge(POSITIONING).merge(LOCATION)
@@ -256,7 +263,8 @@ module Zui
                 .merge(QUICK3D_ASSETS)
                 .merge(QUICK3D_PARTICLES)
                 .merge(QUICK3D_PARTICLE_AFFECTORS)
-                .merge(QUICK3D_POST_EFFECTS).freeze
+                .merge(QUICK3D_POST_EFFECTS)
+                .merge(QUICK3D_SPATIAL_AUDIO).freeze
     end
   end
 end
