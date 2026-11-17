@@ -9,6 +9,12 @@ import QtQuick.Timeline.BlendTrees
 // `timeline` and `animation` reference a timeline and a timeline_animation
 // component by control id. A blend_animation_node references this node the same
 // way and reads `nativeBlendTreeNode` from it.
+//
+// qmllint reports "No type found for property" for both assignments below. That
+// is a gap in Qt 6.8.3's own BlendTrees qmltypes, which names QQuickTimeline and
+// QQuickTimelineAnimation without the mapping qmllint needs; the same warning
+// appears for a pure-Qt file with no Zui involvement, and both assignments
+// resolve at runtime.
 Item {
   id: timelineAnimationNodeRoot
   property var renderer: null
