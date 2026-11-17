@@ -131,11 +131,18 @@ module Zui
         "Loader3D" => :loader_3d, "Repeater3D" => :repeater_3d
       }.freeze
 
+      # Qt Quick 3D cameras.
+      QUICK3D_CAMERAS = {
+        "PerspectiveCamera" => :perspective_camera, "OrthographicCamera" => :orthographic_camera,
+        "FrustumCamera" => :frustum_camera, "CustomCamera" => :custom_camera
+      }.freeze
+
       CORE = QUICK_CONTROLS.merge(QUICK_DIALOGS).merge(QUICK_LAYOUTS).freeze
       ALL = CORE.merge(PERMISSIONS).merge(DEVICE_INFORMATION).merge(VIRTUAL_KEYBOARD)
                 .merge(SENSORS).merge(POSITIONING).merge(LOCATION)
                 .merge(TEXT_TO_SPEECH).merge(WEB).merge(WEB_SOCKETS).merge(LOTTIE)
-                .merge(PDF).merge(TOUCH_INTERACTION).merge(QUICK3D_SCENE).freeze
+                .merge(PDF).merge(TOUCH_INTERACTION).merge(QUICK3D_SCENE)
+                .merge(QUICK3D_CAMERAS).freeze
     end
   end
 end

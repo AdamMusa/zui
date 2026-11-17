@@ -122,6 +122,7 @@ module Zui
     # properties of the Qt type it adapts.
     SCENE_3D_COMPONENTS = %i[
       view_3d node_3d loader_3d repeater_3d
+      perspective_camera orthographic_camera frustum_camera custom_camera
     ].freeze
     SCENE_3D_COMPONENTS.each do |type|
       define_method(type) { |id: nil, **props, &block| component(type, id:, **props, &block) }
