@@ -1232,6 +1232,31 @@ class QmlContractTest < Minitest::Test
     assert_equal :audio_room, Zui::Mobile::ComponentCatalog::QUICK3D_SPATIAL_AUDIO.fetch("AudioRoom")
   end
 
+  def test_quaternion_animation_turns_a_3d_node_along_the_shortest_arc
+    qml = source("Components/Builtins/QuaternionAnimation.qml")
+
+    assert_dynamic_component_route(source("ControlNode.qml"), "quaternion_animation")
+    assert_includes qml, "QuaternionAnimation {"
+    assert_includes qml, '"nlerp": QuaternionAnimation.Nlerp'
+    # The target is a scene object, not a rendered item: a 3D node is not part
+    # of the two-dimensional item tree the other animations search.
+    assert_includes qml, 'renderer.sceneObject(renderer.prop("target", ""))'
+    refute_includes qml, "findRenderedItem"
+    # A QQuickPropertyAnimation has no default property.
+    assert_includes qml, "property list<QtObject> drivers: ["
+    assert_includes qml, "function synchronize(restart)"
+    assert_includes qml, "Value3d.easingType("
+    # from/to and the per-axis angles are two ways to say the same thing, so
+    # only what Ruby declared is applied.
+    assert_includes qml, 'name: "from_x_rotation"'
+    assert_includes qml, 'name: "to_z_rotation"'
+    %i[start stop finish running_change].each do |event|
+      assert_includes Zui::COMPONENTS.fetch(:quaternion_animation)[1], event
+    end
+    assert_equal :quaternion_animation,
+                 Zui::Mobile::ComponentCatalog::QUICK3D_ANIMATION.fetch("QuaternionAnimation")
+  end
+
   def test_optional_3d_properties_leave_qt_defaults_alone
     helper = source("Components/Builtins/Support/Prop3dBinding.qml")
 

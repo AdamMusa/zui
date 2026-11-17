@@ -376,7 +376,7 @@ transitions, and animation groups receive Ruby APIs even though they are not vis
 - [x] web_socket
 - [x] web_socket_server
 
-## GPU 3D scene graph
+## 3D and spatial
 
 Qt Quick 3D types. A 3D node is declared inside a `view_3d`, which owns the GPU
 scene. Resources such as materials and geometries may be declared inside the
@@ -585,3 +585,10 @@ audio_engine and heard from wherever the audio_listener sits.
 - [x] audio_room
 - [x] spatial_sound
 - [x] ambient_sound
+
+### Orientation animation
+
+Interpolating Euler angles separately swings a node through poses nobody asked
+for, so a 3D rotation is animated as a quaternion.
+
+- [x] quaternion_animation

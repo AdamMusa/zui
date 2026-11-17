@@ -245,6 +245,11 @@ module Zui
         "AmbientSound" => :ambient_sound
       }.freeze
 
+      # Qt Quick 3D orientation animation.
+      QUICK3D_ANIMATION = {
+        "QuaternionAnimation" => :quaternion_animation
+      }.freeze
+
       CORE = QUICK_CONTROLS.merge(QUICK_DIALOGS).merge(QUICK_LAYOUTS).freeze
       ALL = CORE.merge(PERMISSIONS).merge(DEVICE_INFORMATION).merge(VIRTUAL_KEYBOARD)
                 .merge(SENSORS).merge(POSITIONING).merge(LOCATION)
@@ -264,7 +269,8 @@ module Zui
                 .merge(QUICK3D_PARTICLES)
                 .merge(QUICK3D_PARTICLE_AFFECTORS)
                 .merge(QUICK3D_POST_EFFECTS)
-                .merge(QUICK3D_SPATIAL_AUDIO).freeze
+                .merge(QUICK3D_SPATIAL_AUDIO)
+                .merge(QUICK3D_ANIMATION).freeze
     end
   end
 end
