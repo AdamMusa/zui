@@ -25,6 +25,47 @@ class ClientPayloadTest < Minitest::Test
     end
   end
 
+  # The check that matters: a registered component whose Qt module is not in the shipped payload
+  # works in a development tree and cannot load for a user. Six such cases - Qt5Compat,
+  # QtQuick/Timeline, QtQml/XmlListModel, QtQuick/Pdf, the QtQuick3D submodules and the whole
+  # positioning family - were each found separately before this test existed.
+  def test_every_registered_component_ships_the_qt_modules_it_imports
+    unshipped = Zui::ClientPayload.unshipped_components
+
+    assert_empty unshipped,
+                 "these components import a Qt module the desktop client does not carry: " \
+                 "#{unshipped.map { |component, modules| "#{component} (#{modules.join(', ')})" }.join('; ')}. " \
+                 "Add the module to the payload, or record in Zui::ClientPayload::UNSUPPORTED why " \
+                 "the client cannot ship it."
+  end
+
+  # Components the client cannot support have to be few, named and explained, because each one is a
+  # component that reports an error instead of rendering on the desktop.
+  def test_components_the_client_cannot_support_are_named_with_a_reason
+    affected = Zui::ClientPayload.unsupported_components
+
+    assert_equal({ web_view: ["QtWebView"] }, affected)
+    assert_equal %w[QtWebView], Zui::ClientPayload::UNSUPPORTED.keys
+    assert_includes Zui::ClientPayload::UNSUPPORTED.fetch("QtWebView"), "no platform web view"
+  end
+
+  # The payload the builder copies and the payload the registry implies are the same list.
+  def test_the_builder_roots_match_the_registered_components
+    assert_equal Zui::ClientPayload.qml_roots, Zui::ClientBuilder::LINUX_QML_ROOTS.sort
+    assert_equal Zui::ClientPayload.qml_roots, Zui::ClientPayload::QML_ROOTS.sort
+  end
+
+  # The modules that were missing from the payload until this PR, as a regression guard.
+  def test_the_payload_carries_the_modules_that_were_missing
+    %w[QtPositioning QtLocation QtSensors QtTextToSpeech QtTextToSpeech QtWebSockets QtNetwork
+       QtQuick.Pdf].each do |qml_module|
+      assert Zui::ClientPayload.ships?(qml_module), "#{qml_module} does not reach the client"
+      refute_match Zui::ClientPayload.forbidden_pattern, "qml/#{qml_module.tr('.', '/')}/qmldir"
+    end
+    refute_match Zui::ClientPayload.forbidden_pattern, "lib/libQt6Positioning.so.6"
+    refute_match Zui::ClientPayload.forbidden_pattern, "plugins/position/libqtposition_geoclue2.so"
+  end
+
   def test_every_qt_module_the_framework_imports_is_carried_or_explained
     unresolved = Zui::ClientPayload.unresolved(framework_imports)
 
@@ -77,11 +118,12 @@ class ClientPayloadTest < Minitest::Test
     refute_includes audit, "QtWebEngine"
   end
 
-  def test_the_forbidden_pattern_still_rejects_what_it_always_rejected
+  # The deny-list keeps rejecting a browser engine and the third-party toolkits, and no longer
+  # rejects the positioning and PDF payload that registered components need.
+  def test_the_forbidden_pattern_rejects_browser_payload_only
     %w[
       qml/QtWebEngine/x.qml lib/libQt6WebEngineCore.so.6 qml/QtWebChannel/qmldir
-      plugins/position/libqtposition_geoclue2.so qml/QtPositioning/qmldir lib/libQt6Positioning.so.6
-      qml/QtQuick/Pdf/qmldir qml/org/kde/x.qml qml/Qt5Compat/GraphicalEffects/qmldir
+      qml/org/kde/x.qml qml/Qt5Compat/GraphicalEffects/qmldir
       qml/Quickshell/x.qml qml/SddmComponents/x.qml lib/libqwebengineview.so
     ].each do |entry|
       assert_match Zui::ClientPayload.forbidden_pattern, entry
@@ -90,7 +132,9 @@ class ClientPayloadTest < Minitest::Test
     %w[
       client.json qml/QtQuick/Controls/libqtquickcontrols2plugin.so qml/QtNetwork/qmldir
       qml/QtQuick3D/qmldir lib/libQt6Network.so.6 lib/libQt6Core5Compat.so
-      qml/QtQuick/Controls/Material/qmldir
+      qml/QtQuick/Controls/Material/qmldir qml/QtPositioning/qmldir lib/libQt6Positioning.so.6
+      plugins/position/libqtposition_geoclue2.so qml/QtQuick/Pdf/qmldir
+      plugins/geoservices/libqtgeoservices_osm.so
     ].each do |entry|
       refute_match Zui::ClientPayload.forbidden_pattern, entry
     end
