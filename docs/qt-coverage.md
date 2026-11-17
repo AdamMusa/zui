@@ -36,8 +36,11 @@ reaches a device.
 | Zui components | 306 |
 | Zui components that render a Qt type | 215 |
 | Zui components with no Qt counterpart | 91 |
+| Components registered more than once | 0 |
 
 Every catalog entry names a type the Qt 6.8.3 SDK declares.
+
+Every component is registered once; a repeated key in the `COMPONENTS` Hash would replace the earlier component without changing the registry size.
 
 ## Adapters the pinned Qt cannot satisfy
 
