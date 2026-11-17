@@ -207,6 +207,15 @@ transitions, and animation groups receive Ruby APIs even though they are not vis
 - [x] candlestick_chart
 - [x] legend
 
+## QtCharts primitives
+
+The components above are Zui's own high-level chart wrappers: one component that takes a value
+array and draws itself. The components below are the real QtCharts QML types, composed the way
+QtCharts composes them, for applications that need a chart assembled from series, axes and sets.
+
+- [x] chart_view
+- [x] polar_chart_view
+
 ## Drawing and interaction
 
 - [x] canvas

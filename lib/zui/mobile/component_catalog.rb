@@ -116,6 +116,19 @@ module Zui
       PDF = %w[PdfDocument PdfMultiPageView PdfPageView PdfScrollablePageView PdfPageImage
                PdfPageNavigator PdfSearchModel PdfSelection].to_h { |name| [name, :pdf_view] }.freeze
 
+      # QtCharts and QtGraphs export several identically named types (BarSeries,
+      # LineSeries, ValueAxis and friends), so chart and graph catalogs are keyed
+      # by the qualified QML type name. A bare key would let one module silently
+      # shadow the other in ALL.
+      CHARTS = {
+        "QtCharts/ChartView" => :chart_view,
+        "QtCharts/PolarChartView" => :polar_chart_view,
+        # Grouped property types realized by the chart view adapter itself.
+        "QtCharts/Legend" => :chart_view,
+        "QtCharts/Margins" => :chart_view,
+        "QtCharts/DeclarativeAxes" => :chart_view
+      }.freeze
+
       TOUCH_INTERACTION = {
         "TapHandler" => :tap_area, "PointHandler" => :point_handler,
         "MultiPointTouchArea" => :multi_touch_area, "WheelHandler" => :wheel_area,
@@ -127,7 +140,7 @@ module Zui
       ALL = CORE.merge(PERMISSIONS).merge(DEVICE_INFORMATION).merge(VIRTUAL_KEYBOARD)
                 .merge(SENSORS).merge(POSITIONING).merge(LOCATION)
                 .merge(TEXT_TO_SPEECH).merge(WEB).merge(WEB_SOCKETS).merge(LOTTIE)
-                .merge(PDF).merge(TOUCH_INTERACTION).freeze
+                .merge(PDF).merge(TOUCH_INTERACTION).merge(CHARTS).freeze
     end
   end
 end
