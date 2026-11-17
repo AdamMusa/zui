@@ -694,6 +694,63 @@ class QmlContractTest < Minitest::Test
     assert_includes model, "import QtQml.Models"
   end
 
+  def test_graphs_3d_scatter_and_surface_render_the_gpu_graphs
+    adapters = {
+      graph_scatter_3d: "Scatter3D", graph_surface_3d: "Surface3D",
+      graph_scatter_3d_series: "Scatter3DSeries", graph_surface_3d_series: "Surface3DSeries"
+    }
+
+    adapters.each do |component, native|
+      name = component.to_s.split("_").map(&:capitalize).join
+      adapter = source("Components/Builtins/#{name}.qml")
+
+      assert_includes adapter, "import QtGraphs"
+      assert_includes adapter, "#{native} {"
+      refute_includes adapter, "import QtDataVisualization"
+      refute_includes adapter, "Canvas {"
+    end
+
+    graph = source("Components/Builtins/GraphSurface3d.qml")
+    series = source("Components/Builtins/GraphSurface3dSeries.qml")
+
+    assert_includes graph, "readonly property bool zuiGraphsHost: true"
+    assert_includes graph, "data: Repeater { model: renderer.node.children || []"
+    assert_includes graph, 'flipHorizontalGrid: renderer.prop("flip_horizontal_grid", false) === true'
+    assert_includes series, "host.addSeries(root.nativeSeries)"
+    assert_includes series, "graph_3d_series_without_graph"
+    assert_equal :graph_surface_3d, Zui::Mobile::ComponentCatalog::GRAPHS.fetch("QtGraphs/Surface3D")
+    assert_equal :graph_scatter_3d_series,
+                 Zui::Mobile::ComponentCatalog::GRAPHS.fetch("QtGraphs/Scatter3DSeries")
+  end
+
+  def test_surface_series_names_its_scoped_and_unscoped_enums_differently
+    series = source("Components/Builtins/GraphSurface3dSeries.qml")
+    surface_proxy = source("Components/Builtins/GraphItemModelSurfaceDataProxy.qml")
+    bar_proxy = source("Components/Builtins/GraphItemModelBarDataProxy.qml")
+
+    # Qt declares DrawFlag unscoped but Shading scoped on the same type.
+    assert_includes series, "Surface3DSeries.DrawSurfaceAndWireframe"
+    assert_includes series, "Surface3DSeries.Shading.Smooth"
+    refute_includes series, "Surface3DSeries.DrawFlag.DrawSurface"
+    refute_includes series, "Surface3DSeries.Flat"
+    # The two item-model proxies spell their last MultiMatchBehavior differently.
+    assert_includes bar_proxy, "ItemModelBarDataProxy.MultiMatchBehavior.Cumulative"
+    assert_includes surface_proxy, "ItemModelSurfaceDataProxy.MultiMatchBehavior.CumulativeY"
+    refute_includes surface_proxy, "MultiMatchBehavior.Cumulative\n"
+  end
+
+  def test_graphs_3d_surface_can_be_fed_from_a_height_map
+    proxy = source("Components/Builtins/GraphHeightMapSurfaceDataProxy.qml")
+
+    assert_includes proxy, "HeightMapSurfaceDataProxy {"
+    assert_includes proxy, "host.nativeSeries.dataProxy = root.nativeProxy"
+    assert_includes proxy, "graph_data_proxy_without_series"
+    assert_includes Zui::COMPONENTS.fetch(:graph_height_map_surface_data_proxy).fetch(0),
+                    :height_map_file
+    assert_equal :graph_height_map_surface_data_proxy,
+                 Zui::Mobile::ComponentCatalog::GRAPHS.fetch("QtGraphs/HeightMapSurfaceDataProxy")
+  end
+
   def test_mobile_permissions_can_surface_native_failures
     %i[bluetooth_permission calendar_permission camera_permission contacts_permission
        location_permission microphone_permission].each do |component|

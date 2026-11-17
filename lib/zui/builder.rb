@@ -589,6 +589,27 @@ module Zui
       component(:graph_item_model_bar_data_proxy, id:, rows: Array(rows), **props)
     end
 
+    # QtGraphs 3D scatter and surface graphs.
+    GRAPH_3D_GRAPH_COMPONENTS = %i[
+      graph_scatter_3d graph_surface_3d graph_scatter_3d_series graph_surface_3d_series
+    ].freeze
+    GRAPH_3D_GRAPH_COMPONENTS.each do |type|
+      define_method(type) { |id: nil, **props, &block| component(type, id:, **props, &block) }
+    end
+
+    GRAPH_3D_PROXY_COMPONENTS = %i[
+      graph_item_model_scatter_data_proxy graph_item_model_surface_data_proxy
+    ].freeze
+    GRAPH_3D_PROXY_COMPONENTS.each do |type|
+      define_method(type) do |rows = [], id: nil, **props|
+        component(type, id:, rows: Array(rows), **props)
+      end
+    end
+
+    def graph_height_map_surface_data_proxy(height_map_file = "", id: nil, **props)
+      component(:graph_height_map_surface_data_proxy, id:, height_map_file: height_map_file.to_s, **props)
+    end
+
     # QtGraphs' 2D graph surface and its theme. QtGraphs is Qt's replacement for
     # QtDataVisualization and is separate from both the chart wrappers above and
     # the QtCharts primitives: its axes belong to the view, not to each series.
