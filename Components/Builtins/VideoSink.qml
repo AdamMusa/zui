@@ -3,13 +3,14 @@ import QtMultimedia
 
 // VideoSink is the one creatable type among QtMultimedia's device and format types. It
 // receives frames from a media player or capture session without drawing them, which is
-// what an application needs to know a camera is producing frames, and at what size and
-// format, without putting a VideoOutput on screen.
+// what an application needs to know a camera is producing frames, and at what size,
+// without putting a VideoOutput on screen.
 Item {
   id: root
   required property var renderer
   readonly property alias sink: nativeSink
   readonly property var sourceItem: renderer ? renderer.findRenderedItem(renderer.prop("source", "")) : null
+  property int frameIndex: 0
   visible: false
 
   function send(name, payload) {
@@ -27,20 +28,18 @@ Item {
     renderer.componentError("video_sink_source_invalid", "source must name a media_player or capture_session",
       { source: String(renderer.prop("source", "")) })
   }
-  function publishFrame() {
-    var frame = nativeSink.videoFrame
-    send("frame", {
-      width: Number(nativeSink.videoSize.width), height: Number(nativeSink.videoSize.height),
-      valid: frame && frame.valid === true,
-      pixel_format: frame ? Number(frame.pixelFormat) : 0,
-      start_time: frame ? Number(frame.startTime) : 0,
-      end_time: frame ? Number(frame.endTime) : 0
-    })
-  }
 
   VideoSink {
     id: nativeSink
-    onVideoFrameChanged: root.publishFrame()
+    // QML's VideoSink is QQuickVideoSink, which re-declares videoFrameChanged with no
+    // parameters, shadowing QVideoSink's videoFrameChanged(QVideoFrame). QVideoSink has no
+    // videoFrame property either, so the frame itself is unreachable from QML in 6.8.3:
+    // what this type can honestly report is that a frame arrived, and at what size.
+    onVideoFrameChanged: {
+      root.frameIndex++
+      root.send("frame", { index: root.frameIndex,
+        width: Number(nativeSink.videoSize.width), height: Number(nativeSink.videoSize.height) })
+    }
     onVideoSizeChanged: root.send("size_change", { width: Number(nativeSink.videoSize.width), height: Number(nativeSink.videoSize.height) })
     onSubtitleTextChanged: root.send("subtitle", { text: String(nativeSink.subtitleText) })
   }
