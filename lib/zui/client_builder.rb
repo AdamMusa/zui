@@ -127,9 +127,16 @@ module Zui
       source = qt.fetch("QT_INSTALL_QML")
       destination = File.join(stage, "qml")
       FileUtils.mkdir_p(destination)
-      LINUX_QML_ROOTS.each do |name|
+      # The roots come from the modules the registered components import, so a component that
+      # lands without its Qt module available on the build host fails here rather than on a user's
+      # machine.
+      ClientPayload.qml_roots(framework_root: @framework_root).each do |name|
         path = File.join(source, name)
-        raise ArgumentError, "required Qt QML module is missing: #{path}" unless File.directory?(path)
+        unless File.directory?(path)
+          raise ArgumentError,
+                "Qt QML module required by a registered component is missing from this Qt " \
+                "installation: #{path}"
+        end
 
         FileUtils.cp_r(path, destination)
       end

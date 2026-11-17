@@ -10,15 +10,23 @@ module Zui
   # their own copies of it, and `test/client_payload_test.rb` fails when the framework imports a
   # module that is neither carried nor explained.
   module ClientPayload
-    # Top-level directories of the Qt QML tree the Linux client copies.
-    QML_ROOTS = %w[QML Qt QtCore QtMultimedia QtNetwork QtQml QtQuick QtQuick3D].freeze
+    # Top-level directories the client always carries, whether or not an adapter names them: Qt
+    # resolves `QML` and parts of `QtQml` itself. Everything else is derived from what the
+    # component adapters import, so registering a component is what makes its module ship.
+    BASE_ROOTS = %w[QML QtQml].freeze
+    # Directories to copy for the Linux client. Kept for the release builder's published contract;
+    # `qml_roots` is the derived list a build actually uses.
+    QML_ROOTS = %w[
+      QML Qt QtCore QtLocation QtMultimedia QtNetwork QtPositioning QtQml QtQuick QtQuick3D
+      QtSensors QtTextToSpeech QtWebSockets
+    ].freeze
     # Paths below those roots that are dropped again, because nothing in the framework imports them
     # and they are large, platform specific or development tooling.
     QML_EXCLUSIONS = %w[
       Qt/labs/StyleKit Qt/labs/animation Qt/labs/settings Qt/labs/sharedimage Qt/labs/synchronizer
       Qt/labs/wavefrontmesh Qt/test QtQuick/Controls/FluentWinUI3 QtQuick/Controls/Imagine
       QtQuick/Controls/Material QtQuick/Controls/Universal QtQuick/Controls/designer QtQuick/LocalStorage
-      QtQuick/Pdf QtQuick/Timeline QtQuick/tooling QtQuick3D/Effects QtQuick3D/Helpers
+      QtQuick/Timeline QtQuick/tooling QtQuick3D/Effects QtQuick3D/Helpers
       QtQuick3D/MaterialEditor QtQuick3D/ParticleEffects QtQuick3D/Particles3D QtQuick3D/SpatialAudio
       QtQuick3D/Xr QtQuick3D/designer QtQuick3D/lightmapviewer QtQml/XmlListModel
     ].freeze
@@ -34,32 +42,74 @@ module Zui
     }.freeze
     # Library and plugin names that belong to payload the client must not carry. Qt names its
     # libraries after the module rather than after the QML module, so they are listed separately.
-    FORBIDDEN_LIBRARIES = %w[Qt6WebEngine Qt6WebChannel Qt6Positioning].freeze
-    FORBIDDEN_FILES = %w[qtwebengine qwebengine webchannel position].freeze
-    # Qt QML modules the framework imports although the desktop client does not carry them. These
-    # components exist for iOS and Android; on a desktop client they report a missing-module error
-    # rather than silently rendering something else.
+    #
+    # Qt Positioning used to be rejected here as a "browser-only dependency", because Qt WebEngine
+    # pulls it in for the geolocation web API. The dependency only runs that way round: dropping
+    # Positioning from this list cannot bring WebEngine back, while keeping it made every
+    # positioning and map component unloadable on a released client.
+    FORBIDDEN_LIBRARIES = %w[Qt6WebEngine Qt6WebChannel].freeze
+    FORBIDDEN_FILES = %w[qtwebengine qwebengine webchannel].freeze
+    # Qt QML modules the framework imports although the desktop client does not carry them, with
+    # the reason. A component built on one of them reports a missing-module error on the desktop
+    # instead of silently rendering something else, and `test/client_payload_test.rb` names the
+    # components affected so the trade is visible rather than discovered by a user.
     UNSUPPORTED = {
-      "QtPositioning" => "device positioning is a mobile capability, and the client audit rejects " \
-                         "any positioning payload",
-      "QtLocation" => "maps need the positioning module and a geoservices plugin, neither of which " \
-                      "the client carries",
-      "QtSensors" => "sensor hardware is a mobile capability",
-      "QtTextToSpeech" => "speech synthesis is a mobile capability",
-      "QtWebView" => "the platform web view is a mobile capability; a desktop client would need a " \
-                     "browser engine",
-      "QtWebSockets" => "a Qt add-on the client does not carry; web_socket is a mobile capability",
-      "QtQuick.Pdf" => "Qt PDF renders through its own module, which the client audit rejects"
+      "QtWebView" => "Qt builds QtWebView for iOS, Android, macOS and Windows only; a Linux " \
+                     "desktop client has no platform web view to embed"
     }.freeze
 
     class << self
+      # The Qt QML modules each registered component needs, as { component => [module] }, read
+      # from its adapter and the shared support files that adapter loads.
+      def component_modules(framework_root: FRAMEWORK_ROOT, components: COMPONENTS)
+        builtins = File.join(framework_root, "Components", "Builtins")
+        components.keys.to_h do |component|
+          adapter = component.to_s.split("_").map(&:capitalize).join
+          [component, imports_of(File.join(builtins, "#{adapter}.qml"), builtins)]
+        end
+      end
+
+      # Top-level QML directories the client has to carry: the ones Qt resolves itself plus the
+      # first path segment of every module a registered component needs. Registering a component
+      # is therefore what makes its Qt module ship.
+      def qml_roots(framework_root: FRAMEWORK_ROOT)
+        @qml_roots ||= {}
+        @qml_roots[framework_root] ||= begin
+          required = component_modules(framework_root:).values.flatten.uniq
+                                                       .reject { |name| UNSUPPORTED.key?(name) || forbidden?(name) }
+          (BASE_ROOTS + required.map { |name| name.split(".").first }).uniq.sort.freeze
+        end
+      end
+
       # Does the client payload carry this Qt QML module?
-      def ships?(qml_module)
+      def ships?(qml_module, framework_root: FRAMEWORK_ROOT)
         path = qml_module.to_s.tr(".", "/")
-        return false unless QML_ROOTS.include?(path.split("/").first)
+        return false unless qml_roots(framework_root:).include?(path.split("/").first)
 
         QML_EXCLUSIONS.none? { |excluded| path == excluded || path.start_with?("#{excluded}/") }
       end
+
+      # Registered components whose Qt module the client neither carries nor documents as absent.
+      # Each one would work in a development tree and fail to load for a user.
+      def unshipped_components(framework_root: FRAMEWORK_ROOT)
+        component_modules(framework_root:).each_with_object({}) do |(component, modules), unshipped|
+          missing = modules.reject do |name|
+            ships?(name, framework_root:) || UNSUPPORTED.key?(name) || !qt_module?(name)
+          end
+          unshipped[component] = missing unless missing.empty?
+        end
+      end
+
+      # Registered components that depend on a module the client documents as absent, so the
+      # component reports a missing-module error there.
+      def unsupported_components(framework_root: FRAMEWORK_ROOT)
+        component_modules(framework_root:).each_with_object({}) do |(component, modules), affected|
+          reasons = modules.select { |name| UNSUPPORTED.key?(name) }
+          affected[component] = reasons unless reasons.empty?
+        end
+      end
+
+      def qt_module?(qml_module) = qml_module.to_s.match?(/\A(?:QML|Qt)/)
 
       # Modules the framework imports that the client neither carries nor documents as absent.
       # Each one is a component that works in development and fails on a released client.
@@ -96,10 +146,23 @@ module Zui
         end
       end
 
-      # Unsupported modules whose presence in an archive is itself a defect rather than dead
-      # weight: they pull in location data or a second rendering stack.
-      def audited_unsupported
-        %w[QtPositioning QtQuick.Pdf]
+      # Unsupported modules whose presence in an archive is a defect rather than dead weight.
+      def audited_unsupported = []
+
+      private
+
+      # The Qt modules a QML file imports, following the shared support files it loads, which is
+      # how `model_view_3d` reaches Qt Quick 3D through Support/ModelView3dScene.qml.
+      def imports_of(path, builtins, seen = [])
+        return [] unless File.file?(path) && !seen.include?(path)
+
+        seen << path
+        text = File.read(path, encoding: "UTF-8", invalid: :replace, undef: :replace, replace: "")
+        modules = text.scan(/^\s*import\s+([A-Z][A-Za-z0-9_.]*)/).flatten.select { |name| qt_module?(name) }
+        support = text.scan(%r{(?:Support[./]|["'])([A-Z][A-Za-z0-9_]*)\.qml}).flatten.uniq
+        modules + support.flat_map do |name|
+          imports_of(File.join(builtins, "Support", "#{name}.qml"), builtins, seen)
+        end
       end
     end
   end

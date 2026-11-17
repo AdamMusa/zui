@@ -23,31 +23,40 @@ class ClientBuilderTest < Minitest::Test
     end
   end
 
-  def test_purges_webengine_and_its_browser_only_dependencies
+  # The purge exists to keep a browser engine out of the client. It used to take Qt Positioning
+  # with it, because Qt WebEngine pulls Positioning in for the geolocation web API - but the
+  # dependency only runs that way round, and removing Positioning left every positioning and map
+  # component unable to load on a released client.
+  def test_purges_webengine_payload_and_keeps_the_modules_components_need
     Dir.mktmpdir do |stage|
       forbidden = [
         "qml/QtWebEngine/libqtwebenginequickplugin.so",
         "qml/QtWebChannel/qmldir",
-        "qml/QtPositioning/qmldir",
         "lib/libQt6WebEngineCore.so.6",
         "lib/libQt6WebChannel.so.6",
         "plugins/designer/libqwebengineview.so",
-        "plugins/position/libqtposition_geoclue2.so",
         "translations/qtwebengine_locales/en-US.pak"
       ]
-      forbidden.each do |relative|
+      required = [
+        "qml/QtPositioning/qmldir",
+        "qml/QtLocation/qmldir",
+        "qml/QtQuick/Pdf/qmldir",
+        "lib/libQt6Positioning.so.6",
+        "plugins/position/libqtposition_geoclue2.so",
+        "plugins/geoservices/libqtgeoservices_osm.so",
+        "lib/libQt6Quick.so.6"
+      ]
+      (forbidden + required).each do |relative|
         path = File.join(stage, relative)
         FileUtils.mkdir_p(File.dirname(path))
-        File.write(path, "browser payload")
+        File.write(path, "payload")
       end
-      desktop_library = File.join(stage, "lib", "libQt6Quick.so.6")
-      File.write(desktop_library, "desktop UI")
 
       builder = Zui::ClientBuilder.new(platform: Zui::Platform.new(os: :linux, arch: :x86_64))
       builder.send(:purge_browser_payload!, stage)
 
-      forbidden.each { |relative| refute File.exist?(File.join(stage, relative)) }
-      assert File.file?(desktop_library)
+      forbidden.each { |relative| refute File.exist?(File.join(stage, relative)), relative }
+      required.each { |relative| assert File.file?(File.join(stage, relative)), relative }
     end
   end
 
@@ -55,7 +64,7 @@ class ClientBuilderTest < Minitest::Test
     Dir.mktmpdir do |directory|
       qml = File.join(directory, "qt", "qml")
       stage = File.join(directory, "stage")
-      Zui::ClientBuilder::LINUX_QML_ROOTS.each do |root|
+      Zui::ClientPayload.qml_roots.each do |root|
         path = File.join(qml, root)
         FileUtils.mkdir_p(path)
         File.write(File.join(path, "catalog-marker"), root)
@@ -70,7 +79,7 @@ class ClientBuilderTest < Minitest::Test
 
       builder.send(:install_linux_qml, stage, "QT_INSTALL_QML" => qml)
 
-      Zui::ClientBuilder::LINUX_QML_ROOTS.each do |root|
+      Zui::ClientPayload.qml_roots.each do |root|
         assert File.file?(File.join(stage, "qml", root, "catalog-marker"))
       end
       Zui::ClientBuilder::LINUX_QML_EXCLUSIONS.each do |relative|
