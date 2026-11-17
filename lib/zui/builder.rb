@@ -526,6 +526,22 @@ module Zui
 
     def legend(items = [], id: nil, **props) = component(:legend, id:, items: Array(items), **props)
 
+    # Real QtCharts model mappers. A mapper is declared inside the series it
+    # drives and takes a table of row arrays, choosing which rows or columns
+    # carry the values, labels or OHLC fields.
+    CHART_MODEL_MAPPER_COMPONENTS = %i[
+      chart_h_bar_model_mapper chart_v_bar_model_mapper
+      chart_h_pie_model_mapper chart_v_pie_model_mapper
+      chart_h_xy_model_mapper chart_v_xy_model_mapper
+      chart_h_box_plot_model_mapper chart_v_box_plot_model_mapper
+      chart_h_candlestick_model_mapper chart_v_candlestick_model_mapper
+    ].freeze
+    CHART_MODEL_MAPPER_COMPONENTS.each do |type|
+      define_method(type) do |rows = [], id: nil, **props|
+        component(type, id:, rows: Array(rows), **props)
+      end
+    end
+
     # Real QtCharts axes. An axis is declared inside the series it scales, and
     # its position property names the slot it fills: x, y, x_top, y_right, or
     # angular and radial on a polar chart.
