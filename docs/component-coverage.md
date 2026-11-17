@@ -219,6 +219,7 @@ transitions, and animation groups receive Ruby APIs even though they are not vis
 - [x] shader_effect_source
 - [x] particle_system
 - [x] drag_area
+- [x] drag_source
 - [x] drop_area
 - [x] pinch_area
 - [x] hover_area
