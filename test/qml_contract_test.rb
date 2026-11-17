@@ -1,4 +1,28 @@
 # frozen_string_literal: true
+  def test_chart_views_render_real_qtcharts_types_without_touching_the_chart_wrappers
+    chart = source("Components/Builtins/ChartView.qml")
+    polar = source("Components/Builtins/PolarChartView.qml")
+    wrapper = source("Components/Builtins/LineChart.qml")
+
+    assert_includes chart, "import QtCharts"
+    assert_includes chart, "ChartView {"
+    assert_includes polar, "import QtCharts"
+    assert_includes polar, "PolarChartView {"
+    assert_includes chart, "readonly property bool zuiChartHost: true"
+    assert_includes polar, "readonly property bool zuiChartHost: true"
+    assert_includes chart, "delegate: renderer.childDelegateComponent"
+    assert_includes polar, "delegate: renderer.childDelegateComponent"
+    refute_includes chart, "Canvas {"
+    refute_includes polar, "Canvas {"
+    # The hand-drawn wrappers keep their own renderer; the Qt views are additive.
+    assert_includes wrapper, "Canvas {"
+    refute_includes wrapper, "import QtCharts"
+    assert_equal true, Zui::COMPONENTS.fetch(:chart_view).fetch(2)
+    assert_equal true, Zui::COMPONENTS.fetch(:polar_chart_view).fetch(2)
+    assert_equal :chart_view, Zui::Mobile::ComponentCatalog::CHARTS.fetch("QtCharts/ChartView")
+    assert_equal :polar_chart_view, Zui::Mobile::ComponentCatalog::CHARTS.fetch("QtCharts/PolarChartView")
+  end
+
 
 require "minitest/autorun"
 require_relative "../lib/zui"

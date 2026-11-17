@@ -1,4 +1,11 @@
 # frozen_string_literal: true
+    # Real QtCharts views. Unlike the high-level chart wrappers above they carry
+    # no data of their own: series, axes and sets are declared as children.
+    CHART_VIEW_COMPONENTS = %i[chart_view polar_chart_view].freeze
+    CHART_VIEW_COMPONENTS.each do |type|
+      define_method(type) { |id: nil, **props, &block| component(type, id:, **props, &block) }
+    end
+
 
 module Zui
   class Builder
