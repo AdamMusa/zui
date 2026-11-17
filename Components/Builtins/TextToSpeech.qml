@@ -26,6 +26,57 @@ Item {
   function stateName(value) {
     return ["ready", "speaking", "paused", "error", "synthesizing"][Number(value)] || "unknown"
   }
+  readonly property var genderNames: ["male", "female", "unknown"]
+  readonly property var ageNames: ["child", "teenager", "adult", "senior", "other"]
+  // QVoice is isCreatable: false - it reaches QML only as TextToSpeech.voice or as an
+  // entry of availableVoices()/findVoices(), so it is reported as a payload shape.
+  function voicePayload(voice) {
+    if (!voice) return null
+    return { name: String(voice.name), gender: Number(voice.gender),
+      gender_name: genderNames[Number(voice.gender)] || "unknown",
+      age: Number(voice.age), age_name: ageNames[Number(voice.age)] || "other",
+      locale: String(voice.locale.name), language: Number(voice.language) }
+  }
+  function voiceList(voices) {
+    var values = []
+    for (var index = 0; index < voices.length; index++) values.push(voicePayload(voices[index]))
+    return values
+  }
+  function localeList(locales) {
+    var values = []
+    for (var index = 0; index < locales.length; index++) values.push(String(locales[index].name))
+    return values
+  }
+  function capabilityNames(flags) {
+    var names = []
+    var value = Number(flags)
+    if (value & 1) names.push("speak")
+    if (value & 2) names.push("pause_resume")
+    if (value & 4) names.push("word_by_word_progress")
+    if (value & 8) names.push("synthesize")
+    return names
+  }
+  function publishVoices(nativeSpeech) {
+    if (!nativeSpeech) return
+    var criteria = renderer.prop("voice_criteria", null)
+    var matched = criteria ? voiceList(nativeSpeech.findVoices(criteria)) : null
+    renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "voices", {
+      available: voiceList(nativeSpeech.availableVoices()),
+      locales: localeList(nativeSpeech.availableLocales()),
+      current: voicePayload(nativeSpeech.voice),
+      matched: matched,
+      capabilities: capabilityNames(nativeSpeech.engineCapabilities),
+      native_capabilities: Number(nativeSpeech.engineCapabilities)
+    })
+  }
+  function boundaryHint() {
+    var value = String(renderer.prop("boundary_hint", "default"))
+    if (value === "immediate") return TextToSpeech.BoundaryHint.Immediate
+    if (value === "word") return TextToSpeech.BoundaryHint.Word
+    if (value === "sentence") return TextToSpeech.BoundaryHint.Sentence
+    if (value === "utterance") return TextToSpeech.BoundaryHint.Utterance
+    return TextToSpeech.BoundaryHint.Default
+  }
   function processCommand() {
     var revision = Number(renderer.prop("command_revision", 0))
     if (revision === handledCommandRevision) return
@@ -36,7 +87,7 @@ Item {
     var autoSpeak = first && renderer.prop("auto_speak", false) === true && text !== ""
     if (revision <= 0 && !autoSpeak) return
     if (autoSpeak) command = "say"
-    if (["say", "enqueue", "stop", "pause", "resume"].indexOf(command) < 0) return
+    if (["say", "enqueue", "stop", "pause", "resume", "voices"].indexOf(command) < 0) return
     if (zuiIosSimulator) {
       if (!simulatorErrorReported) {
         simulatorErrorReported = true
@@ -58,9 +109,10 @@ Item {
     var text = String(renderer.prop("text", ""))
     if (command === "say") nativeSpeech.say(text)
     else if (command === "enqueue") nativeSpeech.enqueue(text)
-    else if (command === "stop") nativeSpeech.stop()
-    else if (command === "pause") nativeSpeech.pause()
+    else if (command === "stop") nativeSpeech.stop(root.boundaryHint())
+    else if (command === "pause") nativeSpeech.pause(root.boundaryHint())
     else if (command === "resume") nativeSpeech.resume()
+    else if (command === "voices") root.publishVoices(nativeSpeech)
   }
 
   Loader {
@@ -82,6 +134,14 @@ Item {
         VoiceSelector.name: String(root.renderer.prop("voice", ""))
         VoiceSelector.gender: root.genderValue()
         VoiceSelector.age: root.ageValue()
+        VoiceSelector.locale: {
+          var name = String(root.renderer.prop("voice_locale", ""))
+          return name === "" ? Qt.locale() : Qt.locale(name)
+        }
+        VoiceSelector.language: {
+          var name = String(root.renderer.prop("voice_language", ""))
+          return name === "" ? Qt.locale() : Qt.locale(name)
+        }
         onStateChanged: root.renderer.bridge.sendEvent(root.renderer.surfaceName,
           root.renderer.controlId, "state", {
             value: root.stateName(nativeSpeech.state), native_state: Number(nativeSpeech.state)
@@ -91,10 +151,12 @@ Item {
             "word", { word: word, utterance_id: Number(id), start: Number(start), length: Number(length) })
         }
         onVoiceChanged: root.renderer.bridge.sendEvent(root.renderer.surfaceName,
-          root.renderer.controlId, "voice_change", {
-            name: nativeSpeech.voice.name, gender: Number(nativeSpeech.voice.gender),
-            age: Number(nativeSpeech.voice.age), locale: String(nativeSpeech.voice.locale)
-          })
+          root.renderer.controlId, "voice_change", root.voicePayload(nativeSpeech.voice) || {})
+        onAboutToSynthesize: function(id) {
+          root.renderer.bridge.sendEvent(root.renderer.surfaceName, root.renderer.controlId,
+            "about_to_synthesize", { utterance_id: Number(id) })
+        }
+        Component.onCompleted: root.publishVoices(nativeSpeech)
         onEngineChanged: root.renderer.bridge.sendEvent(root.renderer.surfaceName,
           root.renderer.controlId, "engines", {
             current: nativeSpeech.engine, available: nativeSpeech.availableEngines()

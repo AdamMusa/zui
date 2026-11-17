@@ -105,9 +105,12 @@ module Zui
         "Category" => :place_category
       }.freeze
 
+      # Voice is isCreatable: false and VoiceSelector is an uncreatable attached type, so
+      # both live on text_to_speech rather than becoming components of their own.
       TEXT_TO_SPEECH = {
         "TextToSpeech" => :text_to_speech,
-        "VoiceSelector" => :text_to_speech
+        "VoiceSelector" => :text_to_speech,
+        "Voice" => :text_to_speech
       }.freeze
 
       WEB = { "WebView" => :web_view }.freeze

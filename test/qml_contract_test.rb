@@ -240,7 +240,11 @@ class QmlContractTest < Minitest::Test
 
     assert_includes speech, 'localeName === "" ? Qt.locale() : Qt.locale(localeName)'
     assert_includes speech, "root.stateName(nativeSpeech.state)"
-    assert_includes speech, "nativeSpeech.voice.name"
+    # The voice is read through the qualified nativeSpeech.voice, never an unqualified
+    # "voice" that would resolve to the enclosing voicePayload parameter.
+    assert_includes speech, "root.voicePayload(nativeSpeech.voice)"
+    assert_includes speech, "String(voice.locale.name)"
+    refute_includes speech, "String(nativeSpeech.voice.locale)"
     refute_includes speech, 'locale: String(root.renderer.prop("locale", ""))'
   end
 
