@@ -97,6 +97,17 @@ module Zui
 
     def zui_native_components = @components.keys - covered.values.uniq
 
+    # Components registered twice. `COMPONENTS` is a Hash literal, so a repeated key is not an
+    # error: the later entry silently replaces the earlier one and the registry size does not
+    # change, which is how one track's component can disappear under another's. The collision is
+    # invisible in the loaded Hash, so the registration source is read as text.
+    def duplicate_registrations(path = File.join(FRAMEWORK_ROOT, "lib", "zui", "components.rb"))
+      return {} unless File.file?(path)
+
+      read(path).scan(/^\s{4}([a-z][a-z0-9_]*):\s*\[/).flatten
+                .tally.select { |_name, count| count > 1 }
+    end
+
     UnsupportedReference = Struct.new(:source, :kind, :subject, :detail, keyword_init: true)
 
     # Adapters whose QML references something the pinned Qt SDK does not provide: a type no
@@ -273,8 +284,11 @@ module Zui
         | Zui components | #{@components.size} |
         | Zui components that render a Qt type | #{covered.values.uniq.size} |
         | Zui components with no Qt counterpart | #{zui_native_components.size} |
+        | Components registered more than once | #{duplicate_registrations.size} |
 
         #{unmatched_section}
+
+        #{duplicate_section}
       MARKDOWN
     end
 
@@ -318,6 +332,17 @@ module Zui
         | --- | --- | --- | --- |
         #{rows.join("\n")}
       MARKDOWN
+    end
+
+    def duplicate_section
+      duplicates = duplicate_registrations
+      if duplicates.empty?
+        return "Every component is registered once; a repeated key in the `COMPONENTS` Hash would " \
+               "replace the earlier component without changing the registry size."
+      end
+
+      "Registered more than once, where the later entry silently replaces the earlier component: " \
+        "#{duplicates.map { |name, count| "`#{name}` (#{count})" }.join(', ')}."
     end
 
     def alias_section

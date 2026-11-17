@@ -79,6 +79,35 @@ class QtCoverageTest < Minitest::Test
                  "add #{unattributed.join(', ')} to Zui::QtCoverageReport::CATALOG_MODULES"
   end
 
+  # `COMPONENTS` is a Hash literal, so a repeated key replaces the earlier component and the
+  # registry size does not change. The loaded Hash cannot show it, so the detector reads the
+  # registration source as text; the authoritative guard belongs with the registry itself, this
+  # only has to keep working.
+  def test_duplicate_registrations_are_detected_and_reported
+    report = self.report
+
+    assert_empty report.duplicate_registrations
+
+    Dir.mktmpdir do |directory|
+      path = File.join(directory, "components.rb")
+      File.write(path, <<~RUBY)
+        module Zui
+          COMPONENTS = {
+            button: [%i[text], %i[click], false],
+            skeleton: [%i[width], %i[], false],
+            skeleton: [%i[height], %i[], false],
+            glow: [%i[radius], %i[], false]
+          }.freeze
+        end
+      RUBY
+
+      assert_equal({ "skeleton" => 2 }, report.duplicate_registrations(path))
+    end
+
+    assert_includes document, "Components registered more than once"
+    assert_includes document, "Every component is registered once"
+  end
+
   def test_the_document_lists_the_known_unsupported_references
     section = document[/## Adapters the pinned Qt cannot satisfy\n(.*?)\n## /m, 1]
     sources = section.scan(/^\| `([^`]+)` \|/).flatten.uniq
