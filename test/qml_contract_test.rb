@@ -609,6 +609,41 @@ class QmlContractTest < Minitest::Test
     assert_equal :chart_value_axis, Zui::Mobile::ComponentCatalog::CHARTS.fetch("QtCharts/ValueAxis")
   end
 
+  def test_graph_model_mappers_share_the_row_table_model_with_the_chart_mappers
+    adapters = {
+      graph_bar_model_mapper: "BarModelMapper", graph_pie_model_mapper: "PieModelMapper",
+      graph_xy_model_mapper: "XYModelMapper"
+    }
+
+    adapters.each do |component, native|
+      name = component.to_s.split("_").map(&:capitalize).join
+      adapter = source("Components/Builtins/#{name}.qml")
+
+      assert_includes adapter, "import QtGraphs"
+      assert_includes adapter, "#{native} {"
+      assert_includes adapter, 'item["zuiSeriesHost"] === true'
+      assert_includes adapter, "Support.ChartRowModel { id: rowModel; rowValues: root.modelRows() }"
+      assert_includes adapter, "root.nativeMapper.series = host.nativeSeries"
+      assert_includes adapter, "graph_model_mapper_without_series"
+      assert_includes adapter, "graph_model_row_too_wide"
+      # QtGraphs folds the H and V mappers into one type with an orientation.
+      assert_includes adapter, 'orientation: root.mapperOrientation(root.renderer.prop("orientation", "vertical"))'
+      assert_includes Zui::COMPONENTS.fetch(component).fetch(0), :orientation
+      assert_includes Zui::COMPONENTS.fetch(component).fetch(0), :rows
+      assert_includes Zui::COMPONENTS.fetch(component).fetch(1), :error
+    end
+
+    # The default count has to follow the orientation: horizontal mapping reads
+    # the model's columns, vertical mapping its rows.
+    mapper = source("Components/Builtins/GraphXyModelMapper.qml")
+    assert_includes mapper, "? root.modelRows().length"
+    assert_includes mapper, ": rowModel.widestRow()"
+    assert_equal :graph_xy_model_mapper,
+                 Zui::Mobile::ComponentCatalog::GRAPHS.fetch("QtGraphs/XYModelMapper")
+    assert_equal :chart_h_xy_model_mapper,
+                 Zui::Mobile::ComponentCatalog::CHARTS.fetch("QtCharts/HXYModelMapper")
+  end
+
   def test_mobile_permissions_can_surface_native_failures
     %i[bluetooth_permission calendar_permission camera_permission contacts_permission
        location_permission microphone_permission].each do |component|

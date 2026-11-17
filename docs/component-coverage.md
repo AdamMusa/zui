@@ -270,6 +270,9 @@ owns its axes and accepts series through addSeries, and the 3D graph types rende
 - [x] graph_value_axis
 - [x] graph_bar_category_axis
 - [x] graph_date_time_axis
+- [x] graph_bar_model_mapper
+- [x] graph_pie_model_mapper
+- [x] graph_xy_model_mapper
 
 ## Drawing and interaction
 

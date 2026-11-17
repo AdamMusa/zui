@@ -203,7 +203,10 @@ module Zui
         "QtGraphs/BarCategoryAxis" => :graph_bar_category_axis,
         "QtGraphs/DateTimeAxis" => :graph_date_time_axis,
         # Abstract base with no QML identity of its own.
-        "QtGraphs/AbstractAxis" => :graph_value_axis
+        "QtGraphs/AbstractAxis" => :graph_value_axis,
+        "QtGraphs/BarModelMapper" => :graph_bar_model_mapper,
+        "QtGraphs/PieModelMapper" => :graph_pie_model_mapper,
+        "QtGraphs/XYModelMapper" => :graph_xy_model_mapper
       }.freeze
 
       TOUCH_INTERACTION = {
