@@ -215,6 +215,11 @@ QtCharts composes them, for applications that need a chart assembled from series
 
 - [x] chart_view
 - [x] polar_chart_view
+- [x] chart_line_series
+- [x] chart_spline_series
+- [x] chart_scatter_series
+- [x] chart_area_series
+- [x] chart_xy_point
 
 ## Drawing and interaction
 
