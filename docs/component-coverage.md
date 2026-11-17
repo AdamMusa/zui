@@ -282,6 +282,13 @@ transitions, and animation groups receive Ruby APIs even though they are not vis
 - [x] radial_blur
 - [x] zoom_blur
 - [x] recursive_blur
+- [x] brightness_contrast
+- [x] desaturate
+- [x] gamma_adjust
+- [x] level_adjust
+- [x] hue_saturation
+- [x] hue_colorize
+- [x] color_overlay
 
 ## Multimedia and capture
 
