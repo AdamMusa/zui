@@ -90,6 +90,42 @@ class QmlContractTest < Minitest::Test
     end
   end
 
+  def test_sprite_adapters_use_the_native_sprite_types
+    sprite = File.read(File.join(ROOT, "Components", "Builtins", "Sprite.qml"))
+    animated = File.read(File.join(ROOT, "Components", "Builtins", "AnimatedSprite.qml"))
+    sequence = File.read(File.join(ROOT, "Components", "Builtins", "SpriteSequence.qml"))
+
+    assert_includes sprite, "Sprite {"
+    assert_includes animated, "AnimatedSprite {"
+    assert_includes sequence, "SpriteSequence {"
+    assert_includes sprite, "readonly property var nativeSprite"
+    assert_includes sequence, "host.nativeSprite"
+    refute_includes animated, "AnimatedImage {"
+    refute_includes sequence, "AnimatedImage {"
+    assert_includes animated, "AnimatedSprite.FinishAtFinalFrame"
+    assert_includes animated, "AnimatedSprite.FinishAtInitialFrame"
+  end
+
+  def test_sprite_adapters_keep_qts_unset_frame_timing_sentinel
+    sprite = File.read(File.join(ROOT, "Components", "Builtins", "Sprite.qml"))
+    animated = File.read(File.join(ROOT, "Components", "Builtins", "AnimatedSprite.qml"))
+
+    [sprite, animated].each do |qml|
+      assert_includes qml, 'prop("frame_rate", -2)'
+      assert_includes qml, 'prop("frame_duration", -2)'
+    end
+    refute_includes sprite, 'prop("frames"'
+  end
+
+  def test_sprite_sequence_appends_sprites_referenced_by_control_id
+    sequence = File.read(File.join(ROOT, "Components", "Builtins", "SpriteSequence.qml"))
+
+    assert_includes sequence, "nativeSequence.sprites.push(sprite)"
+    assert_includes sequence, "if (appliedSprites.indexOf(ids[index]) >= 0) continue"
+    assert_includes sequence, "nativeSequence.jumpTo(state)"
+    assert_includes Zui::COMPONENTS.fetch(:sprite_sequence).first, :jump_revision
+  end
+
   def test_component_coverage_catalog_has_no_unimplemented_entries
     coverage = File.read(File.join(ROOT, "docs", "component-coverage.md"))
 

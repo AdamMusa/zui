@@ -256,6 +256,9 @@ transitions, and animation groups receive Ruby APIs even though they are not vis
 - [x] y_animator
 - [x] uniform_animator
 - [x] frame_animation
+- [x] sprite
+- [x] animated_sprite
+- [x] sprite_sequence
 - [x] animation_controller
 - [x] behavior
 - [x] transition
