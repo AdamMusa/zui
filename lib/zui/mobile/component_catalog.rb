@@ -163,6 +163,12 @@ module Zui
         "ReflectionProbe" => :reflection_probe, "ResourceLoader" => :resource_loader
       }.freeze
 
+      # Qt Quick 3D skeletal animation and morphing.
+      QUICK3D_SKINNING = {
+        "Skeleton" => :skeleton_3d, "Joint" => :joint_3d,
+        "Skin" => :skin_3d, "MorphTarget" => :morph_target
+      }.freeze
+
       CORE = QUICK_CONTROLS.merge(QUICK_DIALOGS).merge(QUICK_LAYOUTS).freeze
       ALL = CORE.merge(PERMISSIONS).merge(DEVICE_INFORMATION).merge(VIRTUAL_KEYBOARD)
                 .merge(SENSORS).merge(POSITIONING).merge(LOCATION)
@@ -172,7 +178,8 @@ module Zui
                 .merge(QUICK3D_LIGHTS)
                 .merge(QUICK3D_MATERIALS)
                 .merge(QUICK3D_TEXTURES)
-                .merge(QUICK3D_ENVIRONMENT).freeze
+                .merge(QUICK3D_ENVIRONMENT)
+                .merge(QUICK3D_SKINNING).freeze
     end
   end
 end

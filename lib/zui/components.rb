@@ -342,7 +342,11 @@ module Zui
     lightmapper: [%i[opacity_threshold bias adaptive_bias_enabled indirect_light_enabled samples indirect_light_workgroup_size bounces indirect_light_factor], %i[error], false],
     baked_lightmap: [%i[enabled key load_prefix], %i[error], false],
     reflection_probe: [%i[position x y z euler_rotation rotation_x rotation_y rotation_z rotation scale pivot opacity visible static_flags texture quality clear_color refresh_mode time_slicing parallax_correction box_size box_offset debug_view], %i[error], true],
-    resource_loader: [%i[mesh_sources textures geometries], %i[error], true]
+    resource_loader: [%i[mesh_sources textures geometries], %i[error], true],
+    skeleton_3d: [%i[position x y z euler_rotation rotation_x rotation_y rotation_z rotation scale pivot opacity visible static_flags], %i[error], true],
+    joint_3d: [%i[position x y z euler_rotation rotation_x rotation_y rotation_z rotation scale pivot opacity visible static_flags skeleton_root index], %i[error], true],
+    skin_3d: [%i[joints inverse_bind_poses], %i[error], true],
+    morph_target: [%i[weight attributes], %i[error], false]
   }.freeze
 
   DEFAULT_COMPONENTS = ComponentRegistry.new

@@ -444,3 +444,14 @@ uses them.
 - [x] baked_lightmap
 - [x] reflection_probe
 - [x] resource_loader
+
+### Skeletal animation and morphing
+
+A model names the skeleton or skin that deforms it, and the morph targets
+it can blend towards, either by declaring them inside the model or by
+naming nodes declared elsewhere in the scene.
+
+- [x] skeleton_3d
+- [x] joint_3d
+- [x] skin_3d
+- [x] morph_target

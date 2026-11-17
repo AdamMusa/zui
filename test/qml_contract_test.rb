@@ -920,6 +920,31 @@ class QmlContractTest < Minitest::Test
     assert_equal :fog, Zui::Mobile::ComponentCatalog::QUICK3D_ENVIRONMENT.fetch("Fog")
   end
 
+  def test_quick3d_skinning_covers_skeletons_skins_and_morph_targets
+    skeleton = source("Components/Builtins/Skeleton3d.qml")
+    joint = source("Components/Builtins/Joint3d.qml")
+    skin = source("Components/Builtins/Skin3d.qml")
+    morph = source("Components/Builtins/MorphTarget.qml")
+    model = source("Components/Builtins/Model3d.qml")
+
+    assert_dynamic_component_route(source("ControlNode.qml"), "skeleton_3d")
+    assert_includes skeleton, "Skeleton {"
+    assert_includes joint, "Joint {"
+    assert_includes joint, 'renderer.sceneObject(renderer.prop("skeleton_root", ""))'
+    assert_includes Zui::COMPONENTS.fetch(:joint_3d).first, :index
+    assert_includes skin, "Skin {"
+    assert_includes skin, 'renderer.sceneObjects(renderer.prop("joints", []))'
+    assert_includes skin, "Value3d.matrixList"
+    # Morph target attributes are a flag set, so several channels combine.
+    assert_includes morph, "Value3d.flags("
+    assert_includes morph, '"tex_coord1": MorphTarget.TexCoord1'
+    assert_includes model, 'renderer.childObjectOrReference(["skeleton_3d"], "skeleton")'
+    assert_includes model, 'renderer.childObjectsAndReferences(["morph_target"], "morph_targets")'
+    assert_equal :morph_target, Zui::Mobile::ComponentCatalog::QUICK3D_SKINNING.fetch("MorphTarget")
+    # zui's own shimmer placeholder keeps the unsuffixed name.
+    assert_includes source("Components/Builtins/Skeleton.qml"), "shimmer"
+  end
+
   def test_optional_3d_properties_leave_qt_defaults_alone
     helper = source("Components/Builtins/Support/Prop3dBinding.qml")
 

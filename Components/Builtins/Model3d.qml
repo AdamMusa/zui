@@ -35,8 +35,8 @@ Model {
     geometry: renderer.childObjectOrReference(model3d.geometryTypes, "geometry")
     instancing: renderer.childObjectOrReference(model3d.instancingTypes, "instancing")
     instanceRoot: renderer.sceneObject(renderer.prop("instance_root", ""))
-    skeleton: renderer.childObjectOrReference(["skeleton"], "skeleton")
-    skin: renderer.childObjectOrReference(["skin"], "skin")
+    skeleton: renderer.childObjectOrReference(["skeleton_3d"], "skeleton")
+    skin: renderer.childObjectOrReference(["skin_3d"], "skin")
     bakedLightmap: renderer.childObjectOrReference(["baked_lightmap"], "baked_lightmap")
     inverseBindPoses: Value3d.matrixList(renderer.prop("inverse_bind_poses", []))
     pickable: renderer.prop("pickable", false) === true
