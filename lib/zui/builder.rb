@@ -598,7 +598,7 @@ module Zui
       number_animation color_animation rotation_animation vector_animation path_animation property_animation
       spring_animation smoothed_animation anchor_animation parent_animation opacity_animator rotation_animator
       scale_animator x_animator y_animator uniform_animator animation_controller behavior transition state_group
-      property_changes anchor_changes parent_change
+      property_changes anchor_changes parent_change quaternion_animation
     ].freeze
     TARGET_ANIMATION_COMPONENTS.each do |type|
       define_method(type) do |target, id: nil, **props|

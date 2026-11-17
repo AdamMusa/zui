@@ -150,6 +150,10 @@ function meshSource(renderer, value) {
 // A Qt easing curve property accepts an object carrying a type, so a protocol
 // name maps onto the same curve names the rest of Zui's animations use.
 function easing(value) {
+    return { "type": easingType(value) }
+}
+
+function easingType(value) {
     var curves = {
         "linear": Easing.Linear,
         "in_quad": Easing.InQuad, "out_quad": Easing.OutQuad, "in_out_quad": Easing.InOutQuad,
@@ -161,7 +165,7 @@ function easing(value) {
         "in_out_bounce": Easing.InOutBounce
     }
     var key = String(value === undefined || value === null ? "" : value)
-    return { "type": curves.hasOwnProperty(key) ? curves[key] : Easing.InOutQuad }
+    return curves.hasOwnProperty(key) ? curves[key] : Easing.InOutQuad
 }
 
 // Qt takes a loop count as a plain integer with one reserved value meaning

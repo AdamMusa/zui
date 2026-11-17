@@ -585,3 +585,10 @@ audio_engine and heard from wherever the audio_listener sits.
 - [x] audio_room
 - [x] spatial_sound
 - [x] ambient_sound
+
+### Orientation animation
+
+Interpolating Euler angles separately swings a node through poses nobody asked
+for, so a 3D rotation is animated as a quaternion.
+
+- [x] quaternion_animation
