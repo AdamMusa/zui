@@ -24,7 +24,8 @@ class QmlContractTest < Minitest::Test
   end
 
   def assert_dynamic_component_route(renderer, component)
-    assert_match(/readonly property bool builtIn: \[.*"#{Regexp.escape(component)}"/m, renderer)
+    assert_equal true, Zui::DEFAULT_COMPONENTS.protocol_schema.dig(component, "built_in")
+    assert_includes renderer, "nativeSchema.builtIn === true"
     assert_includes renderer, "builtInSource(node.type)"
     assert_includes renderer, "sourceComponent: null"
   end
@@ -37,6 +38,12 @@ class QmlContractTest < Minitest::Test
     assert_includes router, "sourceComponent: null"
     assert_includes router, "function builtInSource(typeName)"
     assert_includes router, "builtInSource(node.type)"
+    assert_includes router, "nativeSchema.builtIn === true"
+    refute_includes router, 'readonly property bool builtIn: ['
+    assert_includes router, "onAdapterSourceChanged: requestAdapterLoad()"
+    assert_includes router, "function scheduleAdapterLoad()"
+    assert_includes router, "root.ensureAdapterLoaded()"
+    refute_includes router, "Qt.callLater(ensureAdapterLoaded)"
 
     Zui::COMPONENTS.each_key do |component_name|
       name = component_name.to_s.split("_").map(&:capitalize).join
@@ -73,6 +80,10 @@ class QmlContractTest < Minitest::Test
     assert_includes effect, "MultiEffect {"
     assert_includes particles, "ParticleSystem {"
     assert_includes particles, "Emitter {"
+    assert_includes particles, 'renderer.prop("turbulence_grid_size", 256)'
+    assert_includes particles, "model: particleRoot.turbulenceColumns * particleRoot.turbulenceRows"
+    assert_includes particles, "column * particleRoot.turbulenceTileWidth"
+    refute_includes particles, "transform: Scale"
     %w[passthrough grayscale wave pixelate vignette].each do |name|
       path = File.join(ROOT, "Components", "Builtins", "Shaders", "#{name}.frag.qsb")
       assert_operator File.size(path), :>, 100, "invalid precompiled shader: #{path}"
@@ -83,6 +94,172 @@ class QmlContractTest < Minitest::Test
     coverage = File.read(File.join(ROOT, "docs", "component-coverage.md"))
 
     refute_match(/^- \[ \] /, coverage)
+  end
+
+  def test_qt_mobile_control_catalog_maps_every_public_type_to_a_native_adapter
+    Zui::Mobile::ComponentCatalog::ALL.each do |qt_type, component|
+      assert Zui::COMPONENTS.key?(component), "#{qt_type} maps to missing #{component}"
+      adapter = component.to_s.split("_").map(&:capitalize).join + ".qml"
+      assert File.file?(File.join(ROOT, "Components", "Builtins", adapter)),
+             "#{qt_type} maps to missing #{adapter}"
+    end
+  end
+
+  def test_protocol_component_limit_covers_the_complete_builtin_catalog
+    service = source("Service.qml")
+
+    assert_operator Zui::COMPONENTS.length, :>, 256
+    assert_includes service, "readonly property int maxComponentDefinitions: 1024"
+    assert_includes service, "names.length > maxComponentDefinitions"
+    assert_includes service, 'reject("component registry schema rejected: " + name)'
+  end
+
+  def test_mobile_position_source_tolerates_an_uninitialized_timestamp
+    positioning = source("Components/Builtins/PositionSource.qml")
+
+    assert_includes positioning, '!isNaN(timestamp.getTime()) ? timestamp.toISOString() : ""'
+    refute_includes positioning, "position.timestamp.toISOString()"
+  end
+
+  def test_mobile_device_information_uses_qt_singletons
+    system = source("Components/Builtins/SystemInfo.qml")
+    network = source("Components/Builtins/NetworkStatus.qml")
+
+    assert_includes system, "import QtCore"
+    assert_includes system, "SystemInformation.prettyProductName"
+    assert_includes system, '"information"'
+    assert_includes system, "handledRefreshRevision"
+    assert_includes network, "import QtNetwork"
+    assert_includes network, "NetworkInformation.reachability"
+    assert_includes network, 'function onReachabilityChanged()'
+    assert_includes network, "handledRefreshRevision"
+  end
+
+  def test_read_only_mobile_services_do_not_republish_on_unrelated_ui_revisions
+    system = source("Components/Builtins/SystemInfo.qml")
+    network = source("Components/Builtins/NetworkStatus.qml")
+    paths = source("Components/Builtins/StandardPaths.qml")
+
+    assert_includes system, "if (revision === handledRefreshRevision) return"
+    assert_includes network, "if (revision === handledRefreshRevision) return"
+    assert_includes paths, "if (key === handledRequestKey) return"
+    refute_includes system, "onNodeChanged() { root.publish() }"
+    refute_includes network, 'onNodeChanged() { root.publish("information") }'
+  end
+
+  def test_rendered_item_lookup_is_cycle_safe_on_native_object_trees
+    control_node = source("ControlNode.qml")
+
+    assert_includes control_node, "var pending = [object]"
+    assert_includes control_node, "visited.indexOf(current) >= 0"
+    assert_includes control_node, "pending.push(descendants[index])"
+    refute_includes control_node, "findRenderedItemBelow(descendants[index], targetId)"
+  end
+
+  def test_mobile_permission_status_and_access_modes_are_reentrancy_safe
+    bridge = source("Components/Builtins/Support/PermissionBridge.qml")
+    contacts = source("Components/Builtins/ContactsPermission.qml")
+    calendar = source("Components/Builtins/CalendarPermission.qml")
+
+    assert_includes bridge, "property bool publishing: false"
+    assert_includes bridge, "if (publishing) return"
+    assert_includes contacts, 'property string appliedAccessMode: "read_write"'
+    assert_includes calendar, 'property string appliedAccessMode: "read_write"'
+    refute_includes contacts, 'accessMode: String(root.renderer.prop('
+    refute_includes calendar, 'accessMode: String(root.renderer.prop('
+  end
+
+  def test_badge_implicit_size_does_not_depend_on_its_resolved_size
+    badge = source("Components/Builtins/Badge.qml")
+
+    assert_includes badge, "function labelText()"
+    assert_includes badge, 'Number(renderer.prop("font_size", 12)) * 0.62'
+    refute_includes badge, "badgeText.implicitWidth"
+    refute_includes badge, "badgeRoot.height * 0.58"
+    refute_includes badge, "readonly property"
+  end
+
+  def test_mobile_button_uses_pointer_handlers_and_a_touch_minimum
+    button = source("Components/Builtins/Button.qml")
+
+    assert_includes button, "implicitHeight: Math.max(44,"
+    assert_includes button, "Number(renderer.node.props.width)"
+    assert_includes button, "Number(renderer.node.props.height)"
+    assert_includes button, "TapHandler {"
+    assert_includes button, "HoverHandler {"
+    assert_includes button, "Qt.LeftButton | Qt.RightButton"
+    refute_includes button, "ZuiControls.Button"
+    refute_includes button, "MouseArea"
+  end
+
+  def test_mobile_location_catalog_includes_places_and_geojson
+    expected = %w[Category CategoryModel GeoJsonData GeocodeModel Map MapCircle MapCopyrightNotice
+                  MapItemGroup MapItemView MapPolygon MapPolyline MapQuickItem MapRectangle MapRoute
+                  MapView Place PlaceSearchModel PlaceSearchSuggestionModel Plugin PluginParameter
+                  RouteModel RouteQuery]
+
+    assert_empty expected - Zui::Mobile::ComponentCatalog::LOCATION.keys
+    assert_includes source("Components/Builtins/PlaceSearch.qml"), "PlaceSearchModel {"
+    assert_includes source("Components/Builtins/PlaceSuggestions.qml"), "PlaceSearchSuggestionModel {"
+    assert_includes source("Components/Builtins/PlaceCategories.qml"), "property bool queryRequested: false"
+    refute_includes source("Components/Builtins/GeoJsonData.qml"), 'sourceUrl: {'
+  end
+
+  def test_mobile_virtual_keyboard_catalog_is_opt_in_and_complete
+    expected = %w[EnterKeyAction HandwritingInputPanel InputContext InputPanel VirtualKeyboard VirtualKeyboardSettings]
+
+    assert_empty expected - Zui::Mobile::ComponentCatalog::VIRTUAL_KEYBOARD.keys
+    assert_includes source("Components/Builtins/VirtualKeyboard.qml"), "InputPanel {"
+    assert_includes source("Components/Builtins/HandwritingInput.qml"), "HandwritingInputPanel {"
+    assert_includes source("Components/Builtins/KeyboardContext.qml"), "InputContext.commit"
+    assert_includes source("Components/Builtins/KeyboardSettings.qml"), "VirtualKeyboardSettings.activeLocales"
+    assert_includes source("Components/Builtins/KeyboardTextField.qml"), "EnterKeyAction.actionId"
+  end
+
+  def test_mobile_permissions_can_surface_native_failures
+    %i[bluetooth_permission calendar_permission camera_permission contacts_permission
+       location_permission microphone_permission].each do |component|
+      assert_includes Zui::COMPONENTS.fetch(component).fetch(1), :error
+    end
+  end
+
+  def test_capture_session_can_defer_protected_microphone_access
+    capture = source("Components/Builtins/CaptureSession.qml")
+    recorder = source("Components/Builtins/MediaRecorder.qml")
+
+    assert_includes Zui::COMPONENTS.fetch(:capture_session).fetch(0), :audio_input_enabled
+    assert_includes Zui::COMPONENTS.fetch(:capture_session).fetch(0), :camera_enabled
+    assert_includes capture, 'renderer.prop("audio_input_enabled",true)!==false'
+    assert_includes capture, "audioInput:sessionRoot.audioInputEnabled()&&"
+    assert_includes capture, "camera:sessionRoot.cameraEnabled()?nativeCamera:null"
+    assert_includes recorder, "m4a:MediaFormat.MPEG4"
+  end
+
+  def test_mobile_text_to_speech_uses_typed_locale_and_qualified_signals
+    speech = source("Components/Builtins/TextToSpeech.qml")
+
+    assert_includes speech, 'localeName === "" ? Qt.locale() : Qt.locale(localeName)'
+    assert_includes speech, "root.stateName(nativeSpeech.state)"
+    assert_includes speech, "nativeSpeech.voice.name"
+    refute_includes speech, 'locale: String(root.renderer.prop("locale", ""))'
+  end
+
+  def test_mobile_webview_defers_explicit_settings_until_native_completion
+    webview = source("Components/Builtins/WebView.qml")
+
+    assert_includes webview, "function scheduleSynchronize() { Qt.callLater(synchronize) }"
+    assert_includes webview, "if (props.local_storage !== undefined)"
+    assert_includes webview, "settings.localStorageEnabled = props.local_storage !== false"
+    assert_includes webview, 'if (Qt.platform.os === "ios") {'
+    assert_includes webview, 'renderer.componentError("web_view_settings_unsupported"'
+    refute_includes webview, 'settings.localStorageEnabled: renderer.prop('
+  end
+
+  def test_mobile_map_signal_handlers_read_qualified_map_properties
+    map = source("Components/Builtins/Map.qml")
+
+    assert_includes map, 'onZoomLevelChanged: root.send("zoom_change", { value: root.zoomLevel })'
+    assert_includes map, "latitude: root.center.latitude"
   end
 
   def test_service_uses_one_injected_bidirectional_transport
@@ -98,9 +275,40 @@ class QmlContractTest < Minitest::Test
     assert_includes native, "m_process.write(data.toUtf8())"
     assert_includes native, "m_crashed = true"
     assert_includes host, "QFontDatabase::addApplicationFont"
-    assert_includes host, 'QFont::insertSubstitution(QStringLiteral("RobotoMono"), textFamily)'
+    assert_includes host, 'QFont::insertSubstitution(QStringLiteral("RobotoMono"), result.textFamily)'
+    assert_includes host, 'QStringLiteral("zuiBundledFontsReady")'
+    assert_includes host, 'qgetenv("ZUI_QT_STYLE")'
+    assert_includes host, "malloc_zone_pressure_relief(nullptr, 0)"
+    assert_includes host, "scheduleAllocatorPressureRelief(&application)"
     refute_includes qml, "Quickshell"
     refute_includes qml, "Process {"
+  end
+
+  def test_mobile_host_embeds_ruby_and_framework_resources
+    host = source("native/main.cpp")
+    runtime = source("native/ZuiEmbeddedRuntime.cpp")
+    cmake = source("native/CMakeLists.txt")
+    desktop = source("Desktop.qml")
+
+    assert_includes host, "ZUI_EMBEDDED_RUNTIME"
+    assert_includes host, 'QStringLiteral(":/app/app.mrb")'
+    assert_includes runtime, "mrb_load_irep_buf"
+    assert_includes runtime, 'mrb_define_module(m_state, "ZuiNative")'
+    assert_includes runtime, 'callZui("embedded_receive", &data)'
+    assert_includes cmake, 'PREFIX "/zui"'
+    assert_includes cmake, 'PREFIX "/app"'
+    assert_includes cmake, "qt_import_qml_plugins(zui-host)"
+    assert_includes cmake, "WrapOpenGL::WrapOpenGL"
+    assert_includes cmake, "list(REMOVE_ITEM zui_qt_gui_libraries WrapOpenGL::WrapOpenGL)"
+    assert_includes cmake, "QT_IOS_LAUNCH_SCREEN"
+    android_safe_area = source("native/ZuiSafeArea.cpp")
+    assert_includes android_safe_area, "getRootWindowInsets"
+    assert_includes android_safe_area, "displayCutout"
+    assert_includes android_safe_area, "runOnAndroidMainThread"
+    assert_includes desktop, 'visibility: zuiMobile || option("fullscreen", false) === true'
+    assert_includes desktop, 'width: zuiMobile ? Screen.width : Number(option("width", 760))'
+    assert_includes desktop, 'height: zuiMobile ? Screen.height : Number(option("height", 520))'
+    assert_includes desktop, "service.revision"
   end
 
   def test_service_applies_reactive_patch_batches_with_one_visual_revision
@@ -117,10 +325,82 @@ class QmlContractTest < Minitest::Test
   def test_renderer_keeps_loaded_adapters_across_reactive_revisions
     renderer = source("ControlNode.qml")
 
-    assert_includes renderer, 'if (!node) {'
+    assert_includes renderer, 'if (!node || adapterSource === "") {'
     assert_includes renderer, 'if (loadedAdapterKey === adapterKey && item) return'
     refute_includes renderer, 'sourceComponent !== null'
     refute_includes renderer, 'onSourceComponentChanged:'
+  end
+
+  def test_renderer_breaks_recursive_mobile_adapter_construction_across_event_turns
+    renderer = source("ControlNode.qml")
+
+    assert_includes renderer, "property bool adapterLoadPending: false"
+    assert_includes renderer, "if (adapterLoadPending) return"
+    assert_includes renderer, "Qt.callLater(function()"
+    assert_includes renderer, "root.adapterLoadPending = false"
+    assert_includes renderer, "root.ensureAdapterLoaded()"
+    assert_includes renderer, "root.scheduleAdapterLoad()"
+  end
+
+  def test_renderer_batches_nested_adapters_between_safe_depth_boundaries
+    renderer = source("ControlNode.qml")
+    responsive = source("Components/Builtins/ResponsiveView.qml")
+
+    assert_includes renderer, "property int renderDepth: 0"
+    assert_includes renderer, "readonly property int synchronousAdapterSpan: 4"
+    assert_includes renderer, "function requestAdapterLoad()"
+    assert_includes renderer, "renderDepth % synchronousAdapterSpan !== 0"
+    assert_includes renderer, "item.renderDepth = root.renderDepth + 1"
+    assert_includes responsive, "item.renderDepth = viewport.renderer.renderDepth + 1"
+  end
+
+  def test_responsive_view_incubates_cards_only_as_the_viewport_approaches
+    responsive = source("Components/Builtins/ResponsiveView.qml")
+
+    assert_includes responsive, "readonly property int eagerCardCount: Math.max(1, columns)"
+    assert_includes responsive, "readonly property real estimatedCardHeight"
+    assert_includes responsive, "required property int index"
+    assert_includes responsive, "property bool activated: index < viewport.eagerCardCount"
+    assert_includes responsive, "feed.contentY + feed.height * 1.5"
+    assert_includes responsive, "active: cardWrapper.activated"
+    assert_includes responsive, "asynchronous: cardWrapper.index >= viewport.eagerCardCount"
+  end
+
+  def test_renderer_snapshots_nodes_once_per_published_bridge_revision
+    renderer = source("ControlNode.qml")
+
+    assert_includes renderer, "property var node: null"
+    assert_includes renderer, "function synchronizeNode()"
+    assert_includes renderer, "function onRevisionChanged() { root.synchronizeNode() }"
+    assert_includes renderer, "onBridgeChanged: synchronizeNode()"
+    assert_includes renderer, "onControlIdChanged: synchronizeNode()"
+    refute_includes renderer, "var currentRevision = bridge ? bridge.revision : 0"
+  end
+
+  def test_text_to_speech_initializes_only_after_a_real_command
+    speech = source("Components/Builtins/TextToSpeech.qml")
+
+    assert_includes speech, "property bool nativeRequested: false"
+    assert_includes speech, "active: root.nativeRequested && !zuiIosSimulator"
+    assert_includes speech, "asynchronous: true"
+    assert_includes speech, "onLoaded: root.runPendingCommand()"
+    assert_includes speech, "text_to_speech_simulator_unavailable"
+  end
+
+  def test_explicit_native_text_sizes_do_not_evaluate_implicit_size_fallbacks
+    renderer = source("ControlNode.qml")
+    adapters = %w[Text Label RichText Markdown SelectableText LayoutItemProxy].map do |name|
+      source("Components/Builtins/#{name}.qml")
+    end.join("\n")
+
+    assert_includes renderer, "function hasProp(name)"
+    assert_includes adapters, "function synchronizeWidth()"
+    assert_includes adapters, "function synchronizeDimensions()"
+    assert_includes adapters, "Component.onCompleted: synchronizeWidth()"
+    refute_match(/^\s*width:\s*.*implicitWidth/, adapters)
+    refute_match(/^\s*height:\s*.*implicitHeight/, adapters)
+    refute_match(/prop\("width",\s*implicitWidth\)/, adapters)
+    refute_match(/prop\("height",\s*implicitHeight\)/, adapters)
   end
 
   def test_framework_loads_bundled_cross_platform_text_and_icon_fonts
@@ -134,6 +414,7 @@ class QmlContractTest < Minitest::Test
       assert_operator File.size(File.join(ROOT, "Fonts", name)), :>, 10_000
     end
     assert_includes fonts, "readonly property bool ready:"
+    assert_includes fonts, "zuiBundledFontsReady"
     assert_includes style, "readonly property string family: Fonts.family"
     assert_includes renderer, "readonly property string iconFontFamily: Fonts.iconFamily"
     refute_match(/Sans ?Serif/, framework_qml)
@@ -146,6 +427,14 @@ class QmlContractTest < Minitest::Test
     assert_includes chart, 'fontResolver.fontInfo.family || chartRoot.requestedFontFamily'
     assert_includes chart, 'JSON.stringify(resolvedFamily)'
     refute_includes chart, '+ "px " + String(renderer.prop("font_family", renderer.fontFamily))'
+  end
+
+  def test_radial_gauge_rounds_animation_values_before_formatting_labels
+    chart = source("Components/Builtins/Support/ChartCanvas.qml")
+
+    assert_includes chart, "function displayNumber(value)"
+    assert_includes chart, 'Math.abs(number) < 1e-9'
+    assert_includes chart, 'format.replace("%{value}", chartRoot.displayNumber(value))'
   end
 
   def test_renderer_installs_the_ruby_component_registry
@@ -416,7 +705,7 @@ class QmlContractTest < Minitest::Test
     host = source("Components/Builtins/ModelView3d.qml")
     model = source("Components/Builtins/Support/ModelView3dScene.qml")
 
-    assert_includes renderer, '"model_view_3d"'
+    assert_equal true, Zui::DEFAULT_COMPONENTS.protocol_schema.dig("model_view_3d", "built_in")
     assert_includes renderer, "builtInSource(node.type)"
     refute_includes renderer, "id: modelView3dComponent"
     assert_includes host, 'Qt.resolvedUrl("Support/ModelView3dScene.qml")'
@@ -1329,7 +1618,9 @@ class QmlContractTest < Minitest::Test
     assert_includes alert, "delegate: ZuiControls.Button {"
     assert_includes alert, 'renderer.prop("button_accent"'
     assert_includes alert, 'renderer.prop("image"'
-    assert_includes alert, "renderer.assetUrl(alertRoot.imageSource)"
+    assert_includes alert, 'alertRoot.requestedOpen ? renderer.assetUrl(alertRoot.imageSource) : ""'
+    assert_includes alert, 'renderer.prop("image_source_width", -1)'
+    assert_includes alert, "Util.scalableImageSourceSize"
     assert_includes alert, '"accept", {'
     assert_includes alert, '"reject", {'
   end
@@ -1343,6 +1634,7 @@ class QmlContractTest < Minitest::Test
     assert_includes image, 'renderer.prop("cache", true)'
     assert_includes image, 'renderer.prop("horizontal_alignment", "center")'
     assert_includes image, 'renderer.prop("vertical_alignment", "center")'
+    assert_includes image, 'Util.scalableImageSourceSize(source, renderer.prop("source_width", -1), width, Screen.devicePixelRatio)'
     assert_includes image, 'send("loaded", payload)'
     assert_includes image, 'renderer.componentError("image_load_failed"'
   end

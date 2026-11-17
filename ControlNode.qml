@@ -10,6 +10,7 @@ Loader {
   property var bridge: null
   property string surfaceName: ""
   property string controlId: ""
+  property int renderDepth: 0
   property color foreground: Color.foreground
   property string fontFamily: Style.font.family
   readonly property string iconFontFamily: Fonts.iconFamily
@@ -23,33 +24,34 @@ Loader {
   readonly property Component layoutChildDelegateComponent: layoutChildDelegate
   readonly property Component splitChildDelegateComponent: splitChildDelegate
 
-  readonly property var node: {
-    var currentRevision = bridge ? bridge.revision : 0
-    return bridge ? bridge.nodeFor(controlId) : null
-  }
-
-  readonly property bool builtIn: ["text", "label", "rich_text", "markdown", "selectable_text", "icon", "tooltip", "button", "round_button", "tool_button", "delay_button", "row", "column", "container", "image", "vector_image", "model_view_3d", "font_loader", "text_metrics", "animated_image", "video", "audio", "avatar", "badge", "chip", "spacer",
-    "grid", "row_layout", "column_layout", "grid_layout", "flow", "center", "card", "border_overlay", "aspect_ratio", "constrained_box", "fitted_box", "wrap", "split_view", "stack_layout", "layout_item_proxy", "loader", "flickable", "focus_scope", "flipable", "border_image", "window", "application_window",
-    "stack", "scroll", "rectangle", "page", "pane", "frame", "group_box", "tabs", "tab_bar", "tab_button", "page_indicator", "stack_view", "swipe_view", "drawer", "navigation_rail", "breadcrumb", "pagination", "expansion_panel", "accordion", "tool_bar", "tool_separator", "menu", "menu_item", "menu_separator", "menu_bar", "context_menu", "popup", "dialog", "alert_dialog", "message_dialog", "bottom_sheet", "modal_sheet", "snackbar", "banner", "toast", "busy_indicator", "progress_ring", "skeleton", "item_delegate", "check_delegate", "radio_delegate", "switch_delegate", "swipe_delegate", "grid_view", "table_view", "tree_view", "action_button", "bar_icon_button", "bar_indicator", "toggle", "checkbox", "radio_button", "radio_group", "toggle_switch", "text_field",
-    "number_field", "text_area", "search_field", "password_field", "slider", "range_slider", "dial", "spin_box", "double_spin_box", "color_picker", "date_picker", "time_picker", "file_picker", "folder_picker", "font_picker", "dialog_button_box", "action", "action_group", "dropdown", "multi_select", "button_group", "progress", "line_chart", "area_chart", "bar_chart", "separator", "divider",
-    "section_header", "searchable_dropdown", "confirm_dialog", "panel_hero", "optical_glyph",
-    "cursor_surface", "widget_button", "list_view", "key_catcher", "canvas", "shape", "line", "path", "circle", "gradient", "shader_effect", "shader_effect_source", "multi_effect", "rectangular_shadow", "opacity_mask", "blur", "drop_shadow", "colorize", "glow", "particle_system",
-    "data_table", "horizontal_header", "vertical_header", "table_view_delegate", "tree_view_delegate", "horizontal_header_delegate", "vertical_header_delegate", "reorderable_list", "carousel", "calendar", "month_grid", "week_number_column", "day_of_week_row", "tumbler",
-    "stacked_bar_chart", "pie_chart", "donut_chart", "scatter_chart", "bubble_chart", "radar_chart", "heatmap", "sparkline", "gauge", "radial_gauge", "histogram", "candlestick_chart", "legend",
-    "drag_area", "drop_area", "pinch_area", "hover_area", "selection_rectangle", "scroll_bar", "scroll_indicator",
-    "animation", "number_animation", "color_animation", "rotation_animation", "vector_animation", "path_animation", "property_animation", "pause_animation", "script_action", "property_action", "parallel_animation", "sequential_animation", "spring_animation", "smoothed_animation", "anchor_animation", "parent_animation", "opacity_animator", "rotation_animator", "scale_animator", "x_animator", "y_animator", "uniform_animator", "frame_animation", "animation_controller", "behavior", "transition", "state", "state_group", "property_changes", "anchor_changes", "parent_change", "timer",
-    "media_player", "video_output", "sound_effect", "camera", "capture_session", "image_capture", "media_recorder", "audio_input", "audio_output", "media_devices", "screen_capture", "window_capture",
-    "list_model", "delegate_model", "delegate_model_group", "sort_filter_proxy_model", "folder_list_model", "settings", "standard_paths", "clipboard"].indexOf(node ? node.type : "") >= 0
-  readonly property bool structuralContainer: ["row", "column", "container", "grid", "row_layout",
-    "column_layout", "grid_layout", "flow", "center", "card", "stack", "scroll", "rectangle", "aspect_ratio", "constrained_box", "fitted_box", "wrap", "split_view", "stack_layout", "loader", "flickable", "focus_scope", "flipable", "border_image", "key_catcher", "shader_effect", "shader_effect_source", "multi_effect", "rectangular_shadow", "opacity_mask", "blur", "drop_shadow", "colorize", "glow", "drag_area", "drop_area", "pinch_area", "hover_area", "capture_session"]
-    .indexOf(node ? node.type : "") >= 0
+  // Keep a stable snapshot per published bridge revision. A computed binding
+  // that calls through bridge.nodeFor() can be re-entered by native QML while
+  // several controls are resolving their adapters on iOS.
+  property var node: null
+  property var nativeSchema: null
+  readonly property bool builtIn: nativeSchema ? nativeSchema.builtIn === true : false
+  readonly property bool structuralContainer: nativeSchema ? nativeSchema.container === true : false
   property string loadedAdapterKey: ""
   property string lastComponentErrorKey: ""
+  property bool adapterLoadPending: false
+  readonly property int synchronousAdapterSpan: 4
+
+  function synchronizeNode() {
+    var nextNode = bridge ? bridge.nodeFor(controlId) : null
+    var nextSchema = bridge && nextNode ? bridge.componentDefinition(nextNode.type) : null
+    if (nativeSchema !== nextSchema) nativeSchema = nextSchema
+    if (node !== nextNode) node = nextNode
+  }
 
   function prop(name, fallback) {
     var props = node && node.props ? node.props : null
     var value = props ? props[name] : undefined
     return value === undefined || value === null ? fallback : value
+  }
+
+  function hasProp(name) {
+    var props = node && node.props ? node.props : null
+    return props && props[name] !== undefined && props[name] !== null
   }
 
   function iconGlyph(name) {
@@ -121,12 +123,17 @@ Loader {
 
   function findRenderedItemBelow(object, targetId) {
     if (!object || targetId === "") return null
-    if (object !== root && object.controlId !== undefined && String(object.controlId) === targetId)
-      return object.item || object
-    var descendants = object.children || []
-    for (var index = 0; index < descendants.length; index++) {
-      var result = findRenderedItemBelow(descendants[index], targetId)
-      if (result) return result
+    var pending = [object]
+    var visited = []
+    while (pending.length > 0) {
+      var current = pending.pop()
+      if (!current || visited.indexOf(current) >= 0) continue
+      visited.push(current)
+      if (current !== root && current.controlId !== undefined && String(current.controlId) === targetId)
+        return current.item || current
+      var descendants = current.children || []
+      for (var index = descendants.length - 1; index >= 0; index--)
+        pending.push(descendants[index])
     }
     return null
   }
@@ -153,6 +160,7 @@ Loader {
 
   function configureFace(face, childNode) {
     if (!face || !childNode) return
+    if (face.hasOwnProperty("renderDepth")) face.renderDepth = renderDepth + 1
     face.bridge = bridge
     face.surfaceName = surfaceName
     face.controlId = String(childNode.id)
@@ -183,12 +191,11 @@ Loader {
   }
 
   function ensureAdapterLoaded() {
-    if (!node) {
+    if (!node || adapterSource === "") {
       loadedAdapterKey = ""
       if (source !== "") source = ""
       return
     }
-    var adapterSource = builtIn ? builtInSource(node.type) : bridge.componentSource(node.type)
     var adapterKey = String(node.type) + ":" + String(adapterSource)
     if (loadedAdapterKey === adapterKey && item) return
     loadedAdapterKey = adapterKey
@@ -196,8 +203,27 @@ Loader {
     else source = adapterSource
   }
 
+  function scheduleAdapterLoad() {
+    if (adapterLoadPending) return
+    adapterLoadPending = true
+    Qt.callLater(function() {
+      root.adapterLoadPending = false
+      root.ensureAdapterLoaded()
+    })
+  }
+
+  function requestAdapterLoad() {
+    // Break recursive QML construction only at bounded depth intervals.
+    // This protects Qt's iOS stack without delaying every individual node.
+    if (renderDepth > 0 && renderDepth % synchronousAdapterSpan !== 0) {
+      ensureAdapterLoaded()
+      return
+    }
+    root.scheduleAdapterLoad()
+  }
+
   function nativeDefinition() {
-    return bridge && node ? bridge.componentDefinition(node.type) : null
+    return nativeSchema
   }
 
   function optionValue(option) {
@@ -287,6 +313,11 @@ Loader {
   z: Number(prop("z", 0))
   sourceComponent: null
   source: ""
+  readonly property string adapterSource: !node || !nativeSchema ? ""
+    : (builtIn ? builtInSource(node.type) : bridge.componentSource(node.type))
+  onAdapterSourceChanged: requestAdapterLoad()
+  onBridgeChanged: synchronizeNode()
+  onControlIdChanged: synchronizeNode()
   onLoaded: {
     lastComponentErrorKey = ""
     if (!item) return
@@ -308,12 +339,19 @@ Loader {
       componentError("component_load_failed", "Unable to load the declared " + (node ? node.type : "component") + " renderer", { source: String(source) })
   }
   onNodeChanged: {
-    Qt.callLater(ensureAdapterLoaded)
     if (item && !builtIn && item.hasOwnProperty("node")) item.node = node
     if (!builtIn) syncNativeProperties()
     Qt.callLater(runTransition)
   }
-  Component.onCompleted: Qt.callLater(ensureAdapterLoaded)
+  Component.onCompleted: {
+    root.synchronizeNode()
+    root.requestAdapterLoad()
+  }
+
+  Connections {
+    target: root.bridge
+    function onRevisionChanged() { root.synchronizeNode() }
+  }
 
   TapHandler {
     enabled: root.structuralContainer && root.subscribed("click")
@@ -360,6 +398,7 @@ Loader {
       QQC.SplitView.fillHeight: modelData.props && modelData.props.fill_height === true
       source: Qt.resolvedUrl("ControlNode.qml")
       onLoaded: {
+        item.renderDepth = root.renderDepth + 1
         item.bridge = root.bridge
         item.surfaceName = root.surfaceName
         item.controlId = String(modelData.id)
@@ -375,6 +414,7 @@ Loader {
       required property var modelData
       source: Qt.resolvedUrl("ControlNode.qml")
       onLoaded: {
+        item.renderDepth = root.renderDepth + 1
         item.bridge = root.bridge
         item.surfaceName = root.surfaceName
         item.controlId = String(modelData.id)
@@ -394,6 +434,7 @@ Loader {
       anchors.bottom: crossAlignment === "end" || crossAlignment === "bottom" ? parent.bottom : undefined
       source: Qt.resolvedUrl("ControlNode.qml")
       onLoaded: {
+        item.renderDepth = root.renderDepth + 1
         item.bridge = root.bridge
         item.surfaceName = root.surfaceName
         item.controlId = String(modelData.id)
@@ -419,6 +460,7 @@ Loader {
       Layout.alignment: root.layoutAlignment(layoutProps.layout_alignment, root.prop("alignment", "center"))
       source: Qt.resolvedUrl("ControlNode.qml")
       onLoaded: {
+        item.renderDepth = root.renderDepth + 1
         item.bridge = root.bridge
         item.surfaceName = root.surfaceName
         item.controlId = String(modelData.id)
@@ -438,6 +480,7 @@ Loader {
       anchors.right: crossAlignment === "end" || crossAlignment === "right" ? parent.right : undefined
       source: Qt.resolvedUrl("ControlNode.qml")
       onLoaded: {
+        item.renderDepth = root.renderDepth + 1
         item.bridge = root.bridge
         item.surfaceName = root.surfaceName
         item.controlId = String(modelData.id)

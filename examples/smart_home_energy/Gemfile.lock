@@ -8,6 +8,7 @@ GEM
   specs:
 
 PLATFORMS
+  arm64-darwin
   ruby
   x64-mingw-ucrt
   x86_64-linux

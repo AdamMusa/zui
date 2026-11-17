@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Window
 import QtQuick.Controls as QQC
 import QtQuick.Layouts
 import "../../Theme"
@@ -91,6 +92,8 @@ QQC.SwipeDelegate {
       Layout.alignment: Qt.AlignVCenter
       visible: source.toString().length > 0
       source: String(renderer.prop("icon_source", ""))
+      sourceSize.width: Util.scalableImageSourceSize(source, -1, width, Screen.devicePixelRatio)
+      sourceSize.height: Util.scalableImageSourceSize(source, -1, height, Screen.devicePixelRatio)
       fillMode: Image.PreserveAspectFit
       onStatusChanged: {
         if (status === Image.Error)

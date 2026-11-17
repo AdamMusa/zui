@@ -6,6 +6,10 @@ require_relative "../lib/zui"
 require_relative "support/client_fixture"
 
 class ClientTest < Minitest::Test
+  def test_native_build_recipe_is_part_of_the_runtime_contract
+    assert_includes Zui::Client::RUNTIME_CONTRACT_FILES, "native/CMakeLists.txt"
+  end
+
   def test_uses_native_user_cache_roots_on_each_platform
     Dir.mktmpdir do |home|
       linux = Zui::Client.new(
@@ -87,6 +91,22 @@ class ClientTest < Minitest::Test
 
       error = assert_raises(ArgumentError) { client_for(requested, directory, archive).configure! }
       assert_includes error.message, "invalid Zui client platform"
+    end
+  end
+
+  def test_rejects_a_native_client_built_for_an_older_runtime_contract
+    Dir.mktmpdir do |directory|
+      platform = Zui::Platform.new(os: :linux, arch: :x86_64)
+      root = ClientFixture.create(File.join(directory, "client"), platform:)
+      manifest_path = File.join(root, "client.json")
+      manifest = JSON.parse(File.read(manifest_path))
+      manifest["runtime_contract_sha256"] = "0" * 64
+      File.write(manifest_path, JSON.pretty_generate(manifest))
+      client = Zui::Client.new(platform:, environment: { "ZUI_CLIENT_ROOT" => root })
+
+      refute client.configured?
+      error = assert_raises(ArgumentError) { client.manifest }
+      assert_includes error.message, "runtime_contract_sha256"
     end
   end
 

@@ -136,14 +136,18 @@ module Zui
     end
 
     def run(input: $stdin, output: $stdout, error: $stderr)
-      start(output:, error:)
-      input.each_line do |line|
-        receive(line)
-      rescue StandardError => exception
-        report_internal_error(exception)
+      return Zui.start_embedded(self) if Object.const_defined?(:ZuiNative)
+
+      begin
+        start(output:, error:)
+        input.each_line do |line|
+          receive(line)
+        rescue StandardError => exception
+          report_internal_error(exception)
+        end
+      ensure
+        stop
       end
-    ensure
-      stop
     end
 
     def stop

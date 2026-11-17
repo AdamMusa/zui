@@ -1,12 +1,18 @@
 import QtQuick
 import QtQuick.Controls as QQC
+import QtQuick.Window
 import "Theme"
 
 QQC.ApplicationWindow {
   id: window
 
   readonly property string activeSurface: applicationSurface()
-  readonly property var windowOptions: service.optionsFor(activeSurface)
+  readonly property var windowOptions: {
+    // Keep the window itself reactive when the embedded runtime publishes or
+    // patches application options after the native shell has been created.
+    service.revision
+    return service.optionsFor(activeSurface)
+  }
 
   function option(name, fallback) {
     var value = windowOptions ? windowOptions[name] : undefined
@@ -21,13 +27,13 @@ QQC.ApplicationWindow {
 
   visible: option("visible", true) !== false
   title: String(option("title", zuiApplicationName))
-  width: Number(option("width", 760))
-  height: Number(option("height", 520))
-  minimumWidth: Number(option("min_width", 320))
-  minimumHeight: Number(option("min_height", 220))
+  width: zuiMobile ? Screen.width : Number(option("width", 760))
+  height: zuiMobile ? Screen.height : Number(option("height", 520))
+  minimumWidth: zuiMobile ? 0 : Number(option("min_width", 320))
+  minimumHeight: zuiMobile ? 0 : Number(option("min_height", 220))
   maximumWidth: Number(option("max_width", 16777215))
   maximumHeight: Number(option("max_height", 16777215))
-  visibility: option("fullscreen", false) === true
+  visibility: zuiMobile || option("fullscreen", false) === true
     ? Window.FullScreen
     : (option("maximized", false) === true ? Window.Maximized : Window.Windowed)
   color: option("color", Color.background)
@@ -45,7 +51,7 @@ QQC.ApplicationWindow {
   ControlNode {
     id: renderer
     anchors.fill: parent
-    anchors.margins: Number(window.option("padding", 20))
+    anchors.margins: zuiMobile ? 0 : Number(window.option("padding", 20))
     visible: Fonts.ready && window.activeSurface !== "" && service.rootId(window.activeSurface) !== ""
     bridge: service
     surfaceName: window.activeSurface

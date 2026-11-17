@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Window
 import QtQuick.Controls as QQC
 import "../../Theme"
 
@@ -97,6 +98,8 @@ QQC.Pane {
                 source: String(breadcrumbRoot.itemValue(index, "icon_source", ""))
                 width: Number(renderer.prop("icon_size", Style.font.icon))
                 height: width
+                sourceSize.width: Util.scalableImageSourceSize(source, -1, width, Screen.devicePixelRatio)
+                sourceSize.height: Util.scalableImageSourceSize(source, -1, height, Screen.devicePixelRatio)
                 fillMode: Image.PreserveAspectFit
                 onStatusChanged: {
                   if (status === Image.Error)

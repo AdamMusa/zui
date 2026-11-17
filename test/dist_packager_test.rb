@@ -32,11 +32,17 @@ class DistPackagerTest < Minitest::Test
     with_project(Zui::Platform.new(os: :linux, arch: :x86_64)) do |project, client, tools|
       write_tool(tools, "rpmbuild", <<~SH)
         #!/bin/sh
+        test "$SOURCE_DATE_EPOCH" = "946684800" || exit 30
+        case " $* " in *" _buildhost reproducible "*) ;; *) exit 31 ;; esac
+        case " $* " in *" _buildtime 946684800 "*) ;; *) exit 32 ;; esac
+        case " $* " in *" build_mtime_policy clamp_to_source_date_epoch "*) ;; *) exit 33 ;; esac
         topdir=""
         while [ "$#" -gt 0 ]; do
           if [ "$1" = "--define" ]; then
             shift
-            topdir=${1#_topdir }
+            case "$1" in
+              "_topdir "*) topdir=${1#_topdir } ;;
+            esac
           fi
           shift
         done
@@ -73,18 +79,35 @@ class DistPackagerTest < Minitest::Test
     with_project(Zui::Platform.new(os: :macos, arch: :arm64)) do |project, client, tools|
       write_tool(tools, "hdiutil", <<~SH)
         #!/bin/sh
-        source=""
-        output=""
-        previous=""
-        for argument in "$@"; do
-          [ "$previous" = "-srcfolder" ] && source=$argument
-          previous=$argument
-          output=$argument
-        done
-        test -f "$source/Signal Board.app/Contents/Resources/Application.icns" || exit 20
-        grep -q 'com.example.signal-board' "$source/Signal Board.app/Contents/Info.plist" || exit 21
-        grep -q '<string>1.2.3</string>' "$source/Signal Board.app/Contents/Info.plist" || exit 22
-        printf 'dmg-fixture' > "$output"
+        command=$1
+        shift
+        if [ "$command" = "makehybrid" ]; then
+          output=""
+          previous=""
+          for argument in "$@"; do
+            [ "$previous" = "-o" ] && output=$argument
+            previous=$argument
+            source=$argument
+          done
+          test -f "$source/Signal Board.app/Contents/Resources/Application.icns" || exit 20
+          grep -q 'com.example.signal-board' "$source/Signal Board.app/Contents/Info.plist" || exit 21
+          grep -q '<string>1.2.3</string>' "$source/Signal Board.app/Contents/Info.plist" || exit 22
+          printf 'hybrid-fixture' > "$output"
+        elif [ "$command" = "convert" ]; then
+          source=$1
+          output=""
+          previous=""
+          for argument in "$@"; do
+            [ "$previous" = "-o" ] && output=$argument
+            previous=$argument
+          done
+          test -f "$source" || exit 23
+          /bin/dd if=/dev/zero of="$output" bs=512 count=1 2>/dev/null
+          printf 'koly' | /bin/dd of="$output" bs=1 seek=0 conv=notrunc 2>/dev/null
+          printf 'random-segmentid' | /bin/dd of="$output" bs=1 seek=64 conv=notrunc 2>/dev/null
+        else
+          exit 24
+        fi
       SH
       packager = lite_packager(client:, tools:)
 
@@ -92,7 +115,8 @@ class DistPackagerTest < Minitest::Test
 
       assert_equal 1, artifacts.length
       assert_match(/macos-arm64\.dmg\z/, artifacts.first)
-      assert_equal "dmg-fixture", File.read(artifacts.first)
+      assert_equal "koly", File.binread(artifacts.first, 4)
+      assert_equal "\0" * 16, File.binread(artifacts.first, 16, 64)
     end
   end
 
@@ -102,14 +126,23 @@ class DistPackagerTest < Minitest::Test
     with_project(Zui::Platform.new(os: :windows, arch: :x86_64)) do |project, client, tools|
       write_tool(tools, "iscc", <<~'SH')
         #!/bin/sh
-        script=$1
+        [ "$1" = "--no-ide-signtools" ] || exit 30
+        [ "$2" = "--no-signing" ] || exit 31
+        for script do :; done
         output=$(sed -n 's/^OutputDir=//p' "$script")
         base=$(sed -n 's/^OutputBaseFilename=//p' "$script")
-        source_glob=$(sed -n 's/^Source: "\(.*\)";.*/\1/p' "$script")
-        source=${source_glob%/*}
-        [ "$source" = "$source_glob" ] && source=${source_glob%\\*}
-        test -f "$source/app.ico" || exit 20
+        source=$(sed -n 's/^Source: "\(.*app.ico\)";.*/\1/p' "$script")
+        test -f "$source" || exit 20
         grep -q '^AppId=com.example.signal-board$' "$script" || exit 21
+        grep -q '^CompressionThreads=1$' "$script" || exit 22
+        grep -q '^LZMANumBlockThreads=1$' "$script" || exit 23
+        grep -q '^TimeStampsInUTC=yes$' "$script" || exit 24
+        grep -q '^TimeStampRounding=1$' "$script" || exit 25
+        ! grep -q 'recursesubdirs' "$script" || exit 26
+        file_count=$(grep -c '^Source: ' "$script")
+        notimestamp_count=$(grep -c '^Source: .*Flags: ignoreversion notimestamp$' "$script")
+        [ "$file_count" -gt 0 ] || exit 27
+        [ "$file_count" = "$notimestamp_count" ] || exit 28
         mkdir -p "$output"
         printf 'setup-fixture' > "$output/$base.exe"
       SH
@@ -150,7 +183,9 @@ class DistPackagerTest < Minitest::Test
         while [ "$#" -gt 0 ]; do
           if [ "$1" = "--define" ]; then
             shift
-            topdir=${1#_topdir }
+            case "$1" in
+              "_topdir "*) topdir=${1#_topdir } ;;
+            esac
           fi
           shift
         done

@@ -3,6 +3,7 @@
 require "fileutils"
 require "tmpdir"
 require_relative "client_packager"
+require_relative "macos_qml_payload"
 
 module Zui
   # Internal CI/release builder. It is deliberately not used by `zui configure`.
@@ -67,7 +68,9 @@ module Zui
 
         qt = qt_installation
         install_catalog_runtime(stage, qt)
-        ClientPackager.new(platform: @platform).package(
+        ClientPackager.new(
+          platform: @platform, source_date_epoch: @environment["SOURCE_DATE_EPOCH"]
+        ).package(
           source: stage,
           output:,
           executable: executable_relative_path,
@@ -130,6 +133,7 @@ module Zui
           FileUtils.cp(source, destination)
         end
       end
+      MacOSQmlPayload.deduplicate!(stage)
     end
 
     def install_linux_qml(stage, qt)

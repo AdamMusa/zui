@@ -110,7 +110,9 @@ module Zui
 
           icon linux: "assets/ruby.png",
                macos: "assets/ruby.icns",
-               windows: "assets/ruby.ico"
+               windows: "assets/ruby.ico",
+               android: "assets/ruby.png",
+               ios: "assets/ruby.png"
 
           categories "Utility", "Development"
         end

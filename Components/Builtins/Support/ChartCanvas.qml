@@ -65,6 +65,16 @@ Item {
         ctx.textBaseline = "middle";
     }
 
+    function displayNumber(value) {
+        var number = Number(value);
+        if (!isFinite(number))
+            return String(value);
+
+        if (Math.abs(number) < 1e-9)
+            number = 0;
+        return String(Math.round(number * 1000) / 1000);
+    }
+
     function labelAt(index, fallback) {
         var labels = renderer.prop("labels", []);
         return Array.isArray(labels) && index < labels.length ? String(labels[index]) : String(fallback);
@@ -482,7 +492,7 @@ Item {
         ctx.stroke();
         if (renderer.prop("show_label", true) !== false) {
             var format = String(renderer.prop("label_format", "%{value}"));
-            var text = format.replace("%{value}", String(value)).replace("%{label}", String(renderer.prop("label", "")));
+            var text = format.replace("%{value}", chartRoot.displayNumber(value)).replace("%{label}", String(renderer.prop("label", "")));
             chartRoot.textStyle(ctx, renderer.foreground);
             ctx.fillText(text, cx, cy);
         }

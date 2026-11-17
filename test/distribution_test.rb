@@ -8,6 +8,10 @@ require_relative "../lib/zui"
 require_relative "support/client_fixture"
 
 class DistributionTest < Minitest::Test
+  FakeGemSpec = Struct.new(:full_gem_path, :default, keyword_init: true) do
+    def default_gem? = default == true
+  end
+
   FakeRuntimeBuilder = Struct.new(:platform, :engine) do
     def initialize(platform, engine = "mruby") = super
 
@@ -29,7 +33,8 @@ class DistributionTest < Minitest::Test
           "RUBYLIB" => ["lib/ruby/3.3.0"],
           "GEM_HOME" => ["gems"],
           "GEM_PATH" => ["gems"]
-        } : {}
+        } : {},
+        variables: engine == "cruby" ? { "RUBYOPT" => "--disable-gems" } : {}
       ).write(destination)
     end
   end
@@ -56,7 +61,11 @@ class DistributionTest < Minitest::Test
       assert_includes manifest.fetch("tree_shake").fetch("components"), "text"
       refute File.exist?(File.join(destination, "runtime", "qml", "Components", "Builtins", "Camera.qml"))
       assert_equal 1, Dir[File.join(destination, "share", "applications", "*.desktop")].length
+      desktop = File.read(Dir[File.join(destination, "share", "applications", "*.desktop")].first)
+      assert_includes desktop, "Exec=./run"
+      refute_includes desktop, destination
       launcher = File.read(File.join(destination, "run"))
+      assert_includes launcher, "export ZUI_QT_STYLE='Fusion'"
       assert_includes launcher, 'ruby_command="$ruby_root/bin/mruby"'
       assert_includes launcher, '--program "$bundle_dir/runtime/ruby/app.rb"'
       assert_includes launcher, '--load-path ""'
@@ -79,8 +88,135 @@ class DistributionTest < Minitest::Test
       assert File.file?(File.join(contents, "Resources", "runtime", "qml", "Desktop.qml"))
       assert_includes File.read(File.join(contents, "Info.plist")), "CFBundlePackageType"
       launcher = File.read(File.join(contents, "MacOS", "run"))
+      assert_includes launcher, "export ZUI_QT_STYLE='Fusion'"
       assert_includes launcher, 'ruby_command="$ruby_root/bin/mruby"'
       assert_includes launcher, '--program "$resources/runtime/ruby/app.rb"'
+    end
+  end
+
+  def test_macos_bundle_removes_duplicate_qml_plugins_from_legacy_clients
+    platform = Zui::Platform.new(os: :macos, arch: :arm64)
+    with_project(platform) do |project, client|
+      contents = File.join(client.root, "zui-host.app", "Contents")
+      qml = File.join(contents, "Resources", "qml", "QtQuick")
+      duplicate = File.join(contents, "PlugIns", "quick", "libqtquick2plugin.dylib")
+      FileUtils.mkdir_p([qml, File.dirname(duplicate)])
+      File.write(File.join(qml, "qmldir"), "module QtQuick\nplugin qtquick2plugin\n")
+      File.binwrite(File.join(qml, "libqtquick2plugin.dylib"), "qml plugin")
+      File.binwrite(duplicate, "qml plugin")
+      destination = File.join(project, "package", "Demo.app")
+
+      lite_distribution(client:, platform:).bundle(project, destination:)
+
+      native = File.join(destination, "Contents", "Resources", "runtime", "native")
+      assert File.file?(File.join(native, "zui-host.app", "Contents", "Resources", "qml",
+                                  "QtQuick", "libqtquick2plugin.dylib"))
+      refute File.exist?(File.join(native, "zui-host.app", "Contents", "PlugIns", "quick"))
+    end
+  end
+
+  def test_desktop_bundle_excludes_mobile_build_and_development_files
+    platform = Zui::Platform.new(os: :macos, arch: :arm64)
+    with_project(platform) do |project, client|
+      excluded = %w[android ios test spec .ruby-lsp .cache .idea .vscode build cmake-build-debug
+                    dist node_modules pkg]
+      excluded.each do |entry|
+        FileUtils.mkdir_p(File.join(project, entry))
+        File.write(File.join(project, entry, "not-for-desktop.txt"), entry)
+      end
+      %w[Gemfile Gemfile.lock demo.gemspec .DS_Store].each do |entry|
+        File.write(File.join(project, entry), "not for desktop")
+      end
+      FileUtils.mkdir_p(File.join(project, "assets"))
+      File.write(File.join(project, "assets", ".DS_Store"), "metadata")
+      File.binwrite(File.join(project, "assets", "icon.icns"), "icnsfixture")
+      File.binwrite(File.join(project, "assets", "icon.ico"), "\x00\x00\x01\x00fixture".b)
+      File.binwrite(File.join(project, "assets", "icon.png"), "\x89PNG\r\n\x1a\n".b)
+      File.write(File.join(project, "README.md"), "development documentation")
+      FileUtils.mkdir_p(File.join(project, "vendor", "bundle"))
+      File.write(File.join(project, "vendor", "bundle", "cached-gem.rb"), "dependency cache")
+      FileUtils.mkdir_p(File.join(project, "vendor", "cache"))
+      File.write(File.join(project, "vendor", "cache", "paint-1.0.0.gem"), "gem archive")
+      File.write(File.join(project, "config.rb"), <<~RUBY)
+        Zui::Dist.configure do
+          name "Desktop"
+          identifier "dev.zui.desktop"
+          version "1.0.0"
+          publisher "Zui"
+          description "Desktop fixture."
+          license "MIT"
+          icon macos: "assets/icon.icns", windows: "assets/icon.ico", ios: "assets/icon.png"
+          categories "Utility"
+        end
+      RUBY
+      destination = File.join(File.dirname(project), "Desktop.app")
+
+      lite_distribution(client:, platform:).bundle(project, destination:)
+
+      application = File.join(destination, "Contents", "Resources", "app")
+      assert File.file?(File.join(application, "main.rb"))
+      assert File.file?(File.join(application, "asset.txt"))
+      excluded.each { |entry| refute File.exist?(File.join(application, entry)) }
+      %w[Gemfile Gemfile.lock demo.gemspec .DS_Store].each do |entry|
+        refute File.exist?(File.join(application, entry))
+      end
+      refute File.exist?(File.join(application, "assets", ".DS_Store"))
+      refute File.exist?(File.join(application, "README.md"))
+      refute File.exist?(File.join(application, "vendor"))
+      %w[icon.icns icon.ico icon.png].each do |entry|
+        refute File.exist?(File.join(application, "assets", entry))
+      end
+      assert File.file?(File.join(destination, "Contents", "Resources", "Application.icns"))
+    end
+  end
+
+  def test_full_bundle_does_not_duplicate_locked_project_gem_sources
+    platform = Zui::Platform.new(os: :linux, arch: :x86_64)
+    with_project(platform) do |project, client|
+      gem_root = File.join(project, "vendor", "paint")
+      FileUtils.mkdir_p(File.join(gem_root, "lib"))
+      File.write(File.join(gem_root, "lib", "paint.rb"), "module Paint; end\n")
+      FileUtils.mkdir_p(File.join(project, "vendor", "application-data"))
+      File.write(File.join(project, "vendor", "application-data", "palette.json"), "{}\n")
+      loader = ->(_project) { [FakeGemSpec.new(full_gem_path: gem_root)] }
+      destination = Zui::Distribution.new(
+        client:, platform:, runtime_mode: :full,
+        runtime_builder: FakeRuntimeBuilder.new(platform, "cruby"), gem_spec_loader: loader
+      ).bundle(project)
+
+      application = File.join(destination, "app")
+      refute File.exist?(File.join(application, "vendor", "paint"))
+      assert File.file?(File.join(application, "vendor", "application-data", "palette.json"))
+      assert File.file?(File.join(application, "main.rb"))
+    end
+  end
+
+  def test_every_desktop_bundle_has_a_reproducible_payload_and_timestamp
+    [
+      Zui::Platform.new(os: :linux, arch: :x86_64),
+      Zui::Platform.new(os: :macos, arch: :arm64),
+      Zui::Platform.new(os: :windows, arch: :x86_64)
+    ].each do |platform|
+      with_project(platform) do |project, client|
+        root = File.dirname(project)
+        first = File.join(root, "First-#{platform.id}")
+        second = File.join(root, "Second-#{platform.id}")
+        epoch = 1_234_567_890
+
+        lite_distribution(client:, platform:, source_date_epoch: epoch).bundle(project, destination: first)
+        File.utime(Time.now, Time.now, File.join(project, "main.rb"))
+        lite_distribution(client:, platform:, source_date_epoch: epoch).bundle(project, destination: second)
+
+        assert_equal Zui::ReproducibleBuild.tree_digest(first), Zui::ReproducibleBuild.tree_digest(second)
+        manifest = platform.macos? ? File.join("Contents", "Resources", "zui-bundle.json") : "zui-bundle.json"
+        first_manifest = JSON.parse(File.read(File.join(first, manifest)))
+        second_manifest = JSON.parse(File.read(File.join(second, manifest)))
+        assert_equal first_manifest.fetch("payload_sha256"), second_manifest.fetch("payload_sha256")
+        assert_equal epoch, first_manifest.fetch("source_date_epoch")
+        assert_equal epoch, second_manifest.fetch("source_date_epoch")
+        paths = Dir.glob(File.join(first, "**", "*"), File::FNM_DOTMATCH) << first
+        assert paths.all? { |path| File.lstat(path).mtime.to_i == epoch }
+      end
     end
   end
 
@@ -97,6 +233,7 @@ class DistributionTest < Minitest::Test
       assert File.file?(File.join(destination, "runtime", "qml", "Desktop.qml"))
       assert_equal "windows", JSON.parse(File.read(File.join(destination, "zui-bundle.json"))).fetch("platform")
       launcher = File.read(File.join(destination, "run.cmd"))
+      assert_includes launcher, 'set "ZUI_QT_STYLE=Fusion"'
       assert_includes launcher, "%ruby_root%\\bin\\mruby.exe"
       assert_includes launcher, "%ruby_root%\\app.rb"
       refute_includes launcher, "Omarchy"
@@ -128,8 +265,10 @@ class DistributionTest < Minitest::Test
       assert_includes launcher, 'ruby_root="$bundle_dir/runtime/ruby"'
       assert_includes launcher, 'ruby_command="$ruby_root/bin/ruby"'
       assert_includes launcher, 'export GEM_HOME="${ruby_root}/gems"'
+      assert_includes launcher, "export RUBYOPT='--disable-gems'"
       refute_includes launcher, "command -v ruby"
       assert File.file?(File.join(destination, "runtime", "ruby", "runtime.json"))
+      refute File.exist?(File.join(destination, "runtime", "lib"))
       manifest = JSON.parse(File.read(File.join(destination, "zui-bundle.json")))
       assert_equal "full", manifest.fetch("ruby_runtime")
     end
@@ -146,6 +285,7 @@ class DistributionTest < Minitest::Test
       assert_includes launcher, "%ruby_root%\\bin\\ruby.exe"
       assert_includes launcher, "runtime\\native\\bin\\zui-host.exe"
       assert_includes launcher, "--ruby"
+      assert_includes launcher, 'set "RUBYOPT=--disable-gems"'
       refute File.exist?(File.join(destination, "run.rb"))
       refute_match(/^ruby /, launcher)
     end

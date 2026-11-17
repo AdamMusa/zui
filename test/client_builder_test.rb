@@ -6,6 +6,23 @@ require_relative "../lib/zui"
 require_relative "../lib/zui/client_builder"
 
 class ClientBuilderTest < Minitest::Test
+  def test_macos_qml_plugins_have_one_canonical_runtime_copy
+    Dir.mktmpdir do |stage|
+      contents = File.join(stage, "zui-host.app", "Contents")
+      qml = File.join(contents, "Resources", "qml", "QtQuick")
+      duplicate = File.join(contents, "PlugIns", "quick", "libqtquick2plugin.dylib")
+      FileUtils.mkdir_p([qml, File.dirname(duplicate)])
+      File.write(File.join(qml, "qmldir"), "module QtQuick\nplugin qtquick2plugin\n")
+      File.binwrite(duplicate, "qml plugin")
+      builder = Zui::ClientBuilder.new(platform: Zui::Platform.new(os: :macos, arch: :arm64))
+
+      builder.send(:install_macos_qml_plugins, stage)
+
+      assert_equal "qml plugin", File.binread(File.join(qml, "libqtquick2plugin.dylib"))
+      refute File.exist?(File.join(contents, "PlugIns", "quick"))
+    end
+  end
+
   def test_purges_webengine_and_its_browser_only_dependencies
     Dir.mktmpdir do |stage|
       forbidden = [

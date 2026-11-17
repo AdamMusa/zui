@@ -14,11 +14,14 @@ module Zui
       "doctor" => "Check or repair the local Zui installation",
       "run" => "Run a Ruby application with the native client",
       "bundle" => "Build a standalone app or release installer",
+      "mobile" => "Enable or repair native mobile development",
+      "build" => "Build a native iOS or Android application",
+      "install" => "Install and launch a mobile application",
       "version" => "Print the installed Zui version"
     }.freeze
 
     GENERAL_HELP = <<~HELP.freeze
-      Zui #{VERSION} — native desktop applications in Ruby
+      Zui #{VERSION} — native applications in Ruby
 
       Usage:
         zui COMMAND [arguments] [options]
@@ -29,6 +32,9 @@ module Zui
         doctor         #{COMMANDS.fetch("doctor")}
         run FILE       #{COMMANDS.fetch("run")}
         bundle [DIR]   #{COMMANDS.fetch("bundle")}
+        mobile         #{COMMANDS.fetch("mobile")}
+        build TARGET   #{COMMANDS.fetch("build")}
+        install TARGET #{COMMANDS.fetch("install")}
         version        #{COMMANDS.fetch("version")}
 
       Global options:
@@ -113,6 +119,114 @@ module Zui
           zui bundle --name "Smart Home" --output dist/SmartHome.app
           zui bundle --dist --full .
       HELP
+      "mobile" => <<~HELP,
+        Enable or repair native mobile development.
+
+        Usage:
+          zui mobile --enable [DIRECTORY]
+          zui mobile --fix
+
+        --enable turns on the mobile commands for this user and creates editable
+        android/ and ios/ configuration in the project without overwriting existing
+        files. DIRECTORY defaults to the current project. --fix installs or repairs
+        the required Qt and embedded Ruby dependencies, and records the detected
+        Apple and Android SDK paths.
+
+        Once configured:
+          zui build ios
+          zui build android
+          zui install ios
+          zui install android --device
+
+        The existing low-level commands remain available for advanced use:
+          zui mobile ios [DIRECTORY] [options]
+          zui mobile android [DIRECTORY] [options]
+
+        Options:
+              --qt-ios PATH        Qt iOS SDK root (or ZUI_QT_IOS)
+              --qt-host PATH       Matching host Qt SDK root (or ZUI_QT_HOST)
+              --mruby PATH         mruby source root (or ZUI_MRUBY_ROOT)
+              --mruby-json PATH    mruby-json source root (or ZUI_MRUBY_JSON)
+              --cruby-source PATH  CRuby source root (or ZUI_CRUBY_SOURCE_ROOT)
+              --cruby-build PATH   Static CRuby iOS build (or ZUI_CRUBY_BUILD_ROOT)
+              --lite               Embed mruby (default)
+              --full               Embed CRuby, its standard library, and locked project gems
+              --simulator ID       Use a specific compatible simulator
+              --device ID          Build, sign, install, and launch on a physical iPhone
+              --team ID            Apple development team (or ZUI_APPLE_TEAM)
+              --architecture ARCH  Simulator Ruby architecture: x86_64 or arm64
+              --deployment VERSION Minimum iOS version (default: 16.0)
+              --verify-reproducible Build twice and verify deterministic output
+          -o, --output PATH        Build workspace (default: dist/ios-simulator or dist/ios-device)
+              --build-only        Build without installing or launching
+
+        Android options:
+              --qt-android PATH    Qt Android SDK root (or ZUI_QT_ANDROID)
+              --android-sdk PATH   Android SDK root (or ANDROID_SDK_ROOT)
+              --android-ndk PATH   Android NDK root (or ANDROID_NDK_ROOT)
+              --abi ABI            Android ABI (default: arm64-v8a)
+              --api LEVEL          Minimum Android API (default: 28)
+              --target-api LEVEL   Target Android API (default: 35)
+              --verify-reproducible Build twice and verify deterministic output
+
+        The selected Ruby runtime and native Qt renderer run inside the app process;
+        mobile builds do not use a web view or require a separate Ruby process.
+
+        On iOS, --full selects the experimental in-process CRuby engine. It requires
+        a matching static iOS CRuby build and bundles the target standard library plus
+        the exact pure-Ruby gems selected by Gemfile.lock. Gems with native extensions
+        require an iOS static integration; dynamic extensions are rejected at build time.
+
+        iOS example:
+          zui mobile ios my_mobile_app --qt-ios ~/Qt/6.8.3/ios \\
+            --qt-host ~/Qt/6.8.3/macos --mruby ~/src/mruby --mruby-json ~/src/mruby-json
+
+        Android example:
+          zui mobile android my_mobile_app --qt-android ~/Qt/6.8.3/android_arm64_v8a
+      HELP
+      "build" => <<~HELP,
+        Build a native mobile application with Ruby embedded in the app process.
+
+        Usage:
+          zui build ios [DIRECTORY] [options]
+          zui build android [DIRECTORY] [options]
+
+        Options:
+              --lite               Embed mruby (iOS default)
+              --full               Embed the experimental CRuby runtime on iOS
+              --architecture ARCH  iOS Simulator architecture: x86_64 or arm64
+              --deployment VERSION Minimum iOS version (default: 16.0)
+              --abi ABI            Android ABI (default: arm64-v8a)
+              --api LEVEL          Minimum Android API (default: 28)
+              --target-api LEVEL   Target Android API (default: 35)
+              --verify-reproducible Build twice and verify deterministic output
+
+        DIRECTORY defaults to the current project. Configuration, launcher icons,
+        and optional splash artwork are read from config.rb. Artifacts are written
+        below dist/ios or dist/android.
+      HELP
+      "install" => <<~HELP,
+        Build, install, and launch a mobile application.
+
+        Usage:
+          zui install [ios|android] [DIRECTORY] [options]
+
+        Options:
+              --device[=ID]        Install on a physical device; auto-select when ID is omitted
+              --lite               Embed mruby (iOS default)
+              --full               Embed the experimental CRuby runtime on iOS
+              --simulator ID       Use a specific iOS Simulator
+              --architecture ARCH  iOS Simulator architecture: x86_64 or arm64
+              --deployment VERSION Minimum iOS version (default: 16.0)
+              --abi ABI            Android ABI (default: arm64-v8a)
+              --api LEVEL          Minimum Android API (default: 28)
+              --target-api LEVEL   Target Android API (default: 35)
+              --verify-reproducible Build twice before installing
+
+        Without --device, iOS uses a simulator and Android uses an emulator.
+        When TARGET is omitted, Zui infers it from an existing dist/ios or
+        dist/android directory.
+      HELP
       "version" => <<~HELP
         Print the installed Zui version.
 
@@ -144,6 +258,9 @@ module Zui
       when "configure" then configure(arguments)
       when "run" then run_file(arguments)
       when "bundle" then bundle_project(arguments)
+      when "mobile" then mobile_project(arguments)
+      when "build" then build_mobile_project(arguments)
+      when "install" then install_mobile_project(arguments)
       when "doctor" then doctor(arguments)
       when "version", "--version", "-v" then print_version(arguments)
       else unknown_command(command)
@@ -207,21 +324,295 @@ module Zui
         packager = DistPackager.new(tree_shake: options[:tree_shake], runtime_mode:)
         paths = packager.package(source, output: options[:destination])
         paths.each { |path| @out.puts("Created distribution artifact #{path}") }
-        report_tree_shaking(packager.tree_shake_report)
+        report_tree_shaking(
+          packager.tree_shake_report,
+          packager.respond_to?(:runtime_tree_shake_report) ? packager.runtime_tree_shake_report : nil
+        )
         return 0
       end
 
       distribution = Distribution.new(tree_shake: options[:tree_shake], runtime_mode:)
       path = distribution.bundle(source, name: options[:name], destination: options[:destination])
       @out.puts("Bundled #{Platform.current.os} application in #{path}")
-      report_tree_shaking(distribution.tree_shake_report)
+      report_tree_shaking(
+        distribution.tree_shake_report,
+        distribution.respond_to?(:runtime_tree_shake_report) ? distribution.runtime_tree_shake_report : nil
+      )
       0
     end
 
-    def report_tree_shaking(report)
-      return unless report
+    def mobile_project(arguments)
+      setup = Mobile::Setup.new(out: @out)
+      if arguments.empty?
+        @out.puts(setup.summary)
+        if setup.enabled?
+          @out.puts("Build with `zui build ios` or `zui build android`; run `zui mobile --fix` if a dependency is missing.")
+        else
+          @out.puts("Run `zui mobile --enable`, then `zui mobile --fix` to prepare mobile development.")
+        end
+        return 0
+      end
+      if arguments.first == "--enable"
+        arguments.shift
+        source = File.expand_path(arguments.shift || Dir.pwd)
+        raise UsageError, "mobile --enable accepts only one project directory" unless arguments.empty?
 
-      @out.puts("Tree-shaken runtime: #{report.components.length} components, #{format_bytes(report.saved_bytes)} removed")
+        directories = setup.prepare_project!(source)
+        setup.enable!
+        @out.puts("Mobile development enabled.")
+        @out.puts("Android configuration: #{directories.fetch(0)}")
+        @out.puts("iOS configuration: #{directories.fetch(1)}")
+        @out.puts("Run `zui mobile --fix` to install or repair its dependencies.")
+        return 0
+      end
+      if arguments.first == "--fix"
+        raise UsageError, "mobile --fix accepts no other arguments" unless arguments == ["--fix"]
+
+        config = setup.fix!
+        @out.puts(setup.summary(config))
+        @out.puts("Mobile development is ready.")
+        return 0
+      end
+
+      target = arguments.shift
+      return mobile_ios_project(arguments) if target == "ios"
+      return mobile_android_project(arguments) if target == "android"
+
+      raise UsageError, "unsupported mobile target #{target.inspect}; choose ios or android"
+    end
+
+    def mobile_ios_project(arguments)
+      options = { install: true, runtime_mode: :lite }
+      parser = OptionParser.new do |option|
+        option.on("--qt-ios PATH") { |value| options[:qt_ios] = value }
+        option.on("--qt-host PATH") { |value| options[:qt_host] = value }
+        option.on("--mruby PATH") { |value| options[:mruby_root] = value }
+        option.on("--mruby-json PATH") { |value| options[:mruby_json] = value }
+        option.on("--cruby-source PATH") { |value| options[:cruby_source_root] = value }
+        option.on("--cruby-build PATH") { |value| options[:cruby_build_root] = value }
+        option.on("--lite") { options[:lite] = true }
+        option.on("--full") { options[:full] = true }
+        option.on("--simulator ID") { |value| options[:simulator] = value }
+        option.on("--device ID") { |value| options[:device] = value }
+        option.on("--team ID") { |value| options[:team] = value }
+        option.on("--architecture ARCH") { |value| options[:architecture] = value }
+        option.on("--deployment VERSION") { |value| options[:deployment_target] = value }
+        option.on("--verify-reproducible") { options[:verify_reproducible] = true }
+        option.on("-o PATH", "--output PATH") { |value| options[:output] = value }
+        option.on("--build-only") { options[:install] = false }
+      end
+      parser.parse!(arguments)
+      select_ios_runtime!(options, command: "mobile ios")
+      source = File.expand_path(arguments.shift || Dir.pwd)
+      raise UsageError, "mobile ios accepts only one directory" unless arguments.empty?
+
+      install = options.delete(:install)
+      result = Mobile::IOSBuilder.new(project: source, out: @out, **options).build(install:)
+      @out.puts("Built iOS application #{result.app}")
+      if install
+        target = result.device ? "physical device #{result.device}" : "simulator #{result.simulator}"
+        @out.puts("Launched #{result.bundle_id} on #{target}#{result.pid ? " (PID #{result.pid})" : ''}")
+      end
+      0
+    end
+
+    def build_mobile_project(arguments)
+      target = mobile_target!(arguments.shift, command: "build")
+      options = parse_mobile_build_options(arguments, target:)
+      source = mobile_source!(arguments, command: "build")
+      result = mobile_builder(target, source, options).build(install: false)
+      report_mobile_build(target, result)
+      0
+    end
+
+    def install_mobile_project(arguments)
+      options = parse_mobile_install_options(arguments)
+      target = arguments.first && %w[ios android].include?(arguments.first) ? arguments.shift : nil
+      source = mobile_source!(arguments, command: "install")
+      target ||= infer_mobile_target(source)
+      target = mobile_target!(target, command: "install")
+      validate_mobile_install_options!(target, options)
+
+      device_requested = options.delete(:device_requested)
+      if target == "ios"
+        options[:device] = options.delete(:device) || "auto" if device_requested
+      else
+        requested_device = options.delete(:device)
+        options[:device] = requested_device unless requested_device.nil? || requested_device == "auto"
+        options[:device_kind] = device_requested ? :physical : :emulator
+      end
+
+      result = mobile_builder(target, source, options).build(install: true)
+      report_mobile_build(target, result)
+      destination = if target == "ios"
+                      result.device ? "physical iPhone #{result.device}" : "iOS Simulator #{result.simulator}"
+                    elsif device_requested
+                      "physical Android device #{result.device}"
+                    else
+                      "Android emulator #{result.device}"
+                    end
+      @out.puts("Launched #{result.bundle_id} on #{destination}#{result.pid ? " (PID #{result.pid})" : ''}")
+      0
+    end
+
+    def parse_mobile_build_options(arguments, target:)
+      options = {}
+      OptionParser.new do |option|
+        if target == "ios"
+          option.on("--lite") { options[:lite] = true }
+          option.on("--full") { options[:full] = true }
+          option.on("--architecture ARCH") { |value| options[:architecture] = value }
+          option.on("--deployment VERSION") { |value| options[:deployment_target] = value }
+        else
+          option.on("--abi ABI") { |value| options[:abi] = value }
+          option.on("--api LEVEL", Integer) { |value| options[:api] = value }
+          option.on("--target-api LEVEL", Integer) { |value| options[:target_api] = value }
+        end
+        option.on("--verify-reproducible") { options[:verify_reproducible] = true }
+      end.parse!(arguments)
+      select_ios_runtime!(options, command: "build ios") if target == "ios"
+      options
+    end
+
+    def parse_mobile_install_options(arguments)
+      options = { device_requested: false }
+      OptionParser.new do |option|
+        option.on("--device[=ID]") do |value|
+          options[:device_requested] = true
+          options[:device] = value || "auto"
+        end
+        option.on("--simulator ID") { |value| options[:simulator] = value }
+        option.on("--architecture ARCH") { |value| options[:architecture] = value }
+        option.on("--deployment VERSION") { |value| options[:deployment_target] = value }
+        option.on("--lite") { options[:lite] = true }
+        option.on("--full") { options[:full] = true }
+        option.on("--abi ABI") { |value| options[:abi] = value }
+        option.on("--api LEVEL", Integer) { |value| options[:api] = value }
+        option.on("--target-api LEVEL", Integer) { |value| options[:target_api] = value }
+        option.on("--verify-reproducible") { options[:verify_reproducible] = true }
+      end.parse!(arguments)
+      select_ios_runtime!(options, command: "install") if options[:lite] || options[:full]
+      options
+    end
+
+    def select_ios_runtime!(options, command:)
+      if options[:lite] && options[:full]
+        raise UsageError, "#{command} accepts only one of --lite or --full"
+      end
+
+      options[:runtime_mode] = options.delete(:full) ? :full : :lite
+      options.delete(:lite)
+    end
+
+    def validate_mobile_install_options!(target, options)
+      unsupported = if target == "ios"
+                      %i[abi api target_api]
+                    else
+                      %i[simulator architecture deployment_target runtime_mode]
+                    end
+      supplied = unsupported.select { |key| options.key?(key) }
+      return if supplied.empty?
+
+      names = supplied.map { |key| "--#{key.to_s.tr('_', '-')}" }.join(", ")
+      raise UsageError, "#{names} #{supplied.one? ? 'is' : 'are'} not valid for #{target}"
+    end
+
+    def mobile_source!(arguments, command:)
+      source = File.expand_path(arguments.shift || Dir.pwd)
+      raise UsageError, "#{command} accepts only one project directory" unless arguments.empty?
+
+      source
+    end
+
+    def mobile_target!(target, command:)
+      return target if %w[ios android].include?(target)
+
+      raise UsageError, "#{command} requires a target: ios or android"
+    end
+
+    def infer_mobile_target(source)
+      targets = %w[ios android].select { |target| File.directory?(File.join(source, "dist", target)) }
+      return targets.first if targets.one?
+      raise UsageError, "install cannot infer a target; pass ios or android" if targets.empty?
+
+      raise UsageError, "install found both dist/ios and dist/android; pass a target"
+    end
+
+    def mobile_builder(target, source, options)
+      dependencies = Mobile::Setup.new(out: @out).dependencies(target)
+      output = File.join(source, "dist", target)
+      if target == "ios"
+        Mobile::IOSBuilder.new(
+          project: source, output:, out: @out,
+          qt_ios: dependencies.fetch("qt_ios"), qt_host: dependencies.fetch("qt_host"),
+          mruby_root: dependencies.fetch("mruby_root"), mruby_json: dependencies.fetch("mruby_json"),
+          team: dependencies["apple_team"], **options
+        )
+      else
+        Mobile::AndroidBuilder.new(
+          project: source, output:, out: @out,
+          qt_android: dependencies.fetch("qt_android"), qt_host: dependencies.fetch("qt_host"),
+          android_sdk: dependencies.fetch("android_sdk"), android_ndk: dependencies.fetch("android_ndk"),
+          mruby_root: dependencies.fetch("mruby_root"), mruby_json: dependencies.fetch("mruby_json"),
+          **options
+        )
+      end
+    end
+
+    def report_mobile_build(target, result)
+      artifact = target == "ios" ? result.app : result.apk
+      @out.puts("Built #{target == 'ios' ? 'iOS application' : 'Android APK'} #{artifact}")
+      if result.reproducibility
+        detail = result.reproducibility.artifact_byte_identical ? "artifact and payload" : "signature-normalized payload"
+        @out.puts("Verified reproducible #{detail}: #{result.identity.payload_sha256}")
+      end
+      @out.puts("Build identity #{result.metadata}") if result.metadata
+    end
+
+    def mobile_android_project(arguments)
+      options = { install: true }
+      parser = OptionParser.new do |option|
+        option.on("--qt-android PATH") { |value| options[:qt_android] = value }
+        option.on("--qt-host PATH") { |value| options[:qt_host] = value }
+        option.on("--android-sdk PATH") { |value| options[:android_sdk] = value }
+        option.on("--android-ndk PATH") { |value| options[:android_ndk] = value }
+        option.on("--mruby PATH") { |value| options[:mruby_root] = value }
+        option.on("--mruby-json PATH") { |value| options[:mruby_json] = value }
+        option.on("--device ID") { |value| options[:device] = value }
+        option.on("--abi ABI") { |value| options[:abi] = value }
+        option.on("--api LEVEL", Integer) { |value| options[:api] = value }
+        option.on("--target-api LEVEL", Integer) { |value| options[:target_api] = value }
+        option.on("--verify-reproducible") { options[:verify_reproducible] = true }
+        option.on("-o PATH", "--output PATH") { |value| options[:output] = value }
+        option.on("--build-only") { options[:install] = false }
+      end
+      parser.parse!(arguments)
+      source = File.expand_path(arguments.shift || Dir.pwd)
+      raise UsageError, "mobile android accepts only one directory" unless arguments.empty?
+
+      install = options.delete(:install)
+      result = Mobile::AndroidBuilder.new(project: source, out: @out, **options).build(install:)
+      @out.puts("Built Android APK #{result.apk}")
+      if install
+        @out.puts("Launched #{result.bundle_id} on Android device #{result.device}#{result.pid ? " (PID #{result.pid})" : ''}")
+      end
+      0
+    end
+
+    def report_tree_shaking(report, runtime_report = nil)
+      if report
+        @out.puts("Tree-shaken runtime: #{report.components.length} components, #{format_bytes(report.saved_bytes)} removed")
+      end
+      return unless runtime_report
+
+      if runtime_report.tree_shaken?
+        @out.puts(
+          "Tree-shaken CRuby: #{runtime_report.features.length} standard-library features, " \
+          "#{format_bytes(runtime_report.saved_bytes)} removed"
+        )
+      else
+        @out.puts("CRuby tree-shaking fallback: #{runtime_report.fallback}")
+      end
     end
 
     def doctor(arguments)

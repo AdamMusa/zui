@@ -17,6 +17,7 @@ transitions, and animation groups receive Ruby APIs even though they are not vis
 
 ## Foundation and layout
 
+- [x] control
 - [x] container
 - [x] row
 - [x] column
@@ -61,6 +62,8 @@ transitions, and animation groups receive Ruby APIs even though they are not vis
 - [x] rich_text
 - [x] selectable_text
 - [x] animated_image
+- [x] lottie_animation
+- [x] pdf_view
 - [x] video
 - [x] audio
 - [x] avatar
@@ -75,6 +78,7 @@ transitions, and animation groups receive Ruby APIs even though they are not vis
 
 ## Buttons and input
 
+- [x] abstract_button
 - [x] button
 - [x] action_button
 - [x] bar_icon_button
@@ -143,6 +147,7 @@ transitions, and animation groups receive Ruby APIs even though they are not vis
 - [x] menu_item
 - [x] menu_separator
 - [x] menu_bar
+- [x] menu_bar_item
 - [x] context_menu
 - [x] popup
 - [x] dialog
@@ -177,6 +182,7 @@ transitions, and animation groups receive Ruby APIs even though they are not vis
 - [x] reorderable_list
 - [x] carousel
 - [x] calendar
+- [x] calendar_model
 - [x] month_grid
 - [x] week_number_column
 - [x] day_of_week_row
@@ -216,6 +222,11 @@ transitions, and animation groups receive Ruby APIs even though they are not vis
 - [x] drop_area
 - [x] pinch_area
 - [x] hover_area
+- [x] tap_area
+- [x] point_handler
+- [x] multi_touch_area
+- [x] wheel_area
+- [x] safe_area
 - [x] selection_rectangle
 - [x] scroll_bar
 - [x] scroll_indicator
@@ -289,4 +300,78 @@ transitions, and animation groups receive Ruby APIs even though they are not vis
 - [x] folder_list_model
 - [x] settings
 - [x] standard_paths
+- [x] system_info
+- [x] network_status
 - [x] clipboard
+
+## Mobile permissions
+
+- [x] bluetooth_permission
+- [x] calendar_permission
+- [x] camera_permission
+- [x] contacts_permission
+- [x] location_permission
+- [x] microphone_permission
+
+## Mobile virtual keyboard
+
+- [x] virtual_keyboard
+- [x] handwriting_input
+- [x] keyboard_context
+- [x] keyboard_settings
+- [x] keyboard_text_field
+
+## Mobile sensors
+
+- [x] accelerometer
+- [x] ambient_light_sensor
+- [x] ambient_temperature_sensor
+- [x] compass
+- [x] gyroscope
+- [x] humidity_sensor
+- [x] ir_proximity_sensor
+- [x] lid_sensor
+- [x] light_sensor
+- [x] magnetometer
+- [x] orientation_sensor
+- [x] pressure_sensor
+- [x] proximity_sensor
+- [x] rotation_sensor
+- [x] tap_sensor
+- [x] tilt_sensor
+
+## Mobile positioning
+
+- [x] position_source
+- [x] satellite_source
+
+## Mobile maps
+
+- [x] map
+- [x] map_circle
+- [x] map_rectangle
+- [x] map_polygon
+- [x] map_polyline
+- [x] map_route
+- [x] map_marker
+- [x] map_item_group
+- [x] map_item_view
+- [x] map_copyright
+- [x] geo_json_data
+- [x] geocode_model
+- [x] route_model
+- [x] place_search
+- [x] place_suggestions
+- [x] place_categories
+- [x] place_details
+- [x] place_category
+
+## Mobile speech
+
+- [x] text_to_speech
+
+## Mobile web content
+
+- [x] web_view
+- [x] web_socket
+- [x] web_socket_server

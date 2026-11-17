@@ -29,6 +29,17 @@ class LiteSourceTest < Minitest::Test
     end
   end
 
+  def test_full_mobile_source_preserves_external_gem_requires
+    Dir.mktmpdir do |directory|
+      File.write(File.join(directory, "main.rb"), "require 'paint'\nPaint.run\n")
+
+      source = Zui::LiteSource.new(project: directory, allow_external_requires: true).call
+
+      assert_includes source, "require 'paint'"
+      assert_includes source, "Paint.run"
+    end
+  end
+
   def test_every_example_runs_on_the_zui_mruby
     mruby = ENV["ZUI_MRUBY"]
     skip "set ZUI_MRUBY to run the prebuilt lite-runtime smoke" unless mruby && File.executable?(mruby)

@@ -1,8 +1,9 @@
 # Platform support
 
 Zui applications use the same Ruby API, protocol, renderer, catalog, and source on Linux, macOS,
-and Windows. A small versioned client supplies the native Qt/QML engine for each operating system.
-Application source never goes into that development client.
+Windows, iOS, and Android. A small versioned client supplies the native Qt/QML engine on desktop.
+Mobile builds embed that renderer and mruby inside the application instead of starting a child
+process.
 
 ## Setup
 
@@ -20,7 +21,7 @@ zui run main.rb
 release. (`zui configure` is the equivalent explicit setup command.) Zui checks each checksum,
 archive path, manifest, version, platform, and executable before atomic activation. These archives
 are not part of the RubyGem. CMake, C++, mruby build tools, Qt SDKs, Homebrew Qt packages, and Linux
-Qt development packages are not end-user prerequisites.
+Qt development packages are not desktop end-user prerequisites.
 
 The client contains only:
 
@@ -45,9 +46,96 @@ Native CI builds, packages, installs, and launches clients on these target famil
 - macOS Intel;
 - Windows x86-64.
 
+iOS and Android builds are currently a developer preview. iOS is built on macOS with Xcode and
+Qt 6.8 for iOS. Android uses the Android SDK, NDK, and Qt 6.8 Android SDK on macOS, Linux, or
+Windows. Both use mruby 4.0 and mruby-json. The resulting `.app` or APK does not require Ruby or
+Qt to be installed on the target.
+
 An unavailable architecture fails explicitly during configuration. Zui does not silently compile a
 host from source or fall back to a system Qt installation. Additional architectures become supported
 when a native release runner and client artifact are added.
+
+## Mobile
+
+The mobile host keeps the Qt event loop and Zui renderer native while replacing the desktop child
+process with an in-process mruby bridge:
+
+```text
+Application.app or application.apk
+├── native Qt/Zui executable and libraries
+├── embedded Zui QML and fonts
+├── embedded application Ruby bytecode and assets
+├── embedded mruby runtime
+└── platform launcher icon and optional splash artwork
+```
+
+From a project containing `main.rb`, `config.rb`, and mobile PNG icons:
+
+```bash
+zui mobile --enable
+zui mobile --fix
+zui build ios
+zui build android
+```
+
+The enable step creates project-owned, editable platform configuration without replacing files
+that already exist:
+
+```text
+android/AndroidManifest.xml
+android/zui.gradle
+android/Zui.cmake
+ios/Info.plist.in
+ios/Zui.entitlements
+ios/Zui.cmake
+ios/Zui.xcconfig
+```
+
+The Android directory is used as Qt's `QT_ANDROID_PACKAGE_SOURCE_DIR` overlay, so it can also hold
+`res/`, `src/`, and Gradle customizations. Preserve the Qt insertion markers in the generated
+manifest. The iOS plist is installed as the Xcode bundle plist and the entitlements file is used
+during code signing; an optional `ios/LaunchScreen.storyboard` overrides the generated launch
+screen. Android dangerous permissions still require a runtime request, while iOS protected access
+requires a matching usage-description string in `Info.plist.in`.
+
+These are vendor-neutral Qt extension points. Put Android module-root configuration in `android/`,
+provider plugins/dependencies/repositories and required API-level overrides in `android/zui.gradle`,
+and native link rules in `android/Zui.cmake`. Standard `res/`, `assets/`, `libs/`, and `src/`
+subdirectories are passed through unchanged. A manifest permission may declare its own
+`android:maxSdkVersion`; application-wide compile, minimum, target, or maximum SDK settings belong
+in the `android { ... }` block in `zui.gradle`.
+
+On iOS, otherwise-unrecognized files at the `ios/` root are bundled directly, so provider files
+such as configuration plists have a defined destination. `ios/Resources/` preserves nested bundle
+resources, `ios/Sources/` compiles native bridge code, `ios/Zui.cmake` links or embeds SDKs and
+frameworks, and `ios/Zui.xcconfig` supplies Xcode build settings. URL schemes and usage descriptions
+belong in `Info.plist.in`, while Apple capabilities belong in `Zui.entitlements`.
+
+`zui mobile --fix` records detected dependency paths in the user's Zui mobile configuration and
+repairs missing Qt and mruby sources. It installs and verifies the complete Qt 6.8 mobile add-on
+catalog for the host, iOS, and Android SDKs: multimedia, maps and positioning, sensors, speech,
+WebView, virtual keyboard, Bluetooth/connectivity, OAuth/network authentication, WebSockets,
+WebChannel, charts/graphs, PDF, 3D, animation, state machines, and remote objects. This is a
+development SDK capability set, not an application payload: the QML import scanner and Zui tree
+shaker link and package only modules used by the selected application components.
+The installer follows Qt's target catalog exactly; for example, Qt 6.8 publishes Qt PDF for iOS
+but not for Android, so `pdf_view` is an iOS/desktop component in this Qt release.
+
+The build commands create lean pinned mobile mruby runtimes,
+precompile the bundled Ruby source to bytecode, and write products below `dist/ios` and
+`dist/android`. The mruby VM and Qt renderer share one native process; mobile does not invoke the
+desktop `zui run` child-process launcher.
+
+Install and launch on a simulator or emulator with `zui install ios` or `zui install android`.
+For a paired physical phone, use `zui install ios --device` or `zui install android --device`.
+An explicit CoreDevice UDID or adb serial can be supplied as `--device=ID`. Physical iPhone builds
+request automatic Xcode development signing and require an Apple team saved by setting
+`ZUI_APPLE_TEAM` when running `zui mobile --fix`. Physical Android devices require USB debugging
+and host authorization. Advanced `zui mobile ios` and `zui mobile android` commands accept SDK
+paths and lower-level target options directly.
+
+The current mobile path is lite-only: application code must be mruby compatible and cannot require
+arbitrary CRuby gems. App Store and Play Store distribution remain application-owner steps.
 
 ## Application bundles
 
@@ -66,14 +154,33 @@ Release builds scan a clean copy of the Zui runtime and package only catalog mod
 Qt dependencies; they never copy the host machine's complete Qt installation.
 Application bundling then performs a second, project-specific tree-shaking pass. It analyzes
 production Ruby sources, lazily routes component adapters, resolves transitive QML imports, and
-retains the native binary dependency closure for the components that application can create.
-Computed component names can be declared in `.zui-bundle.json`; `--no-tree-shake` is the explicit
-fallback for applications whose metaprogramming cannot be bounded.
+retains the native binary dependency closure for the components that application can create. Image
+codec and TLS plugins are selected from literal production asset/URL strings. `.zui-bundle.json`
+can declare computed component names plus a Qt Controls `style`, dynamic `features`, additional
+`qml_modules`, and exact `plugins`. Requested native capabilities are validated against the client
+before pruning; `--no-tree-shake` is the explicit fallback for applications whose metaprogramming
+cannot be bounded.
+Full CRuby bundles apply the same closure rule to the Ruby runtime. Literal requires in production
+application files and locked gem runtime files select standard-library Ruby files, native extensions,
+and their linked libraries. CRuby's encoding/transcoding catalog remains complete. The locked gem
+require paths are added directly to the private runtime, while Bundler, automatic RubyGems activation,
+debug symbols, unused standard-library features, and libraries used only by removed extensions are
+omitted. Windows follows the same rule by walking the PE import closure from `ruby.exe`, selected
+standard-library extensions, and locked gem extensions instead of copying every DLL beside the build
+Ruby. A computed standard-library require can be declared as `ruby.stdlib` in
+`.zui-bundle.json`; an unbounded computed require or RubyGems runtime API use conservatively keeps the
+complete standard library. `--no-tree-shake` disables both the native and CRuby closure passes.
 `zui bundle --dist` adds a native installer layer around this bundle. Release identity and artwork
 come from the required project-root `config.rb`. Linux emits DEB and RPM packages, macOS emits a
 DMG, and Windows emits an Inno Setup executable. Packaging is native to the target operating system,
 validates its icon before bundling, creates artifacts transactionally, and refuses to overwrite an
 existing release file.
+Generated build, package, dependency-cache, and IDE directories are excluded from the application
+payload. Locked local path gems under the project are installed once in the private gem home while
+ordinary project resources in the same parent directory remain application assets.
+Every bundle records its normalized `source_date_epoch` and `payload_sha256`. Native release CI
+builds a full-CRuby installer twice after changing source mtimes and requires exact byte equality for
+DMG, DEB, RPM, and Inno Setup EXE output.
 The current templates require no Ruby installation on the destination. `--lite` is the default and
 uses the pinned, platform-specific mruby runtime; applications with external gem requirements use
 `--full`, which copies private CRuby and only dependencies resolved by `Gemfile.lock`.

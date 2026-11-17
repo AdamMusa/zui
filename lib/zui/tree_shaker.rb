@@ -7,29 +7,31 @@ require "set"
 
 module Zui
   class TreeShaker
-    CONFIG_FILE = ".zui-bundle.json"
-    EXCLUDED_SOURCE_DIRECTORIES = %w[.git dist node_modules spec test tmp vendor].freeze
+    CONFIG_FILE = QtBundleConfiguration::CONFIG_FILE
+    EXCLUDED_SOURCE_DIRECTORIES = %w[.git android dist ios node_modules spec test tmp vendor].freeze
     EXCLUDED_SOURCE_FILES = %w[config.rb].freeze
     BASE_COMPONENTS = %i[container].freeze
     RUBY_ONLY_DSL_METHODS = %w[animation state].freeze
     COMPONENT_DISPATCH_METHODS = %w[component dynamic qml_component send public_send widget].freeze
     BASE_QML_MODULES = %w[
       QML QtCore QtQml QtQml.Models QtQml.WorkerScript QtQuick QtQuick.Window
-      QtQuick.Controls QtQuick.Controls.impl QtQuick.Controls.Basic
-      QtQuick.Controls.Basic.impl QtQuick.Controls.Fusion QtQuick.Controls.Fusion.impl
-      QtQuick.Layouts QtQuick.Templates
+      QtQuick.Controls QtQuick.Controls.impl QtQuick.Layouts QtQuick.Templates
     ].freeze
-    IMAGE_COMPONENTS = %i[
-      alert_dialog animated_image avatar border_image carousel image menu navigation_rail
-      tab_button vector_animation vector_image
-    ].freeze
-    NETWORK_COMPONENTS = (IMAGE_COMPONENTS + %i[audio media_player video]).freeze
+    IMAGE_FORMAT_FEATURES = {
+      "gif" => "gif", "ico" => "ico", "jpg" => "jpeg", "jpeg" => "jpeg",
+      "svg" => "svg", "svgz" => "svg", "webp" => "webp"
+    }.freeze
+    IMAGE_PLUGIN_FEATURES = {
+      "qgif" => "gif", "qico" => "ico", "qjpeg" => "jpeg", "qsvg" => "svg",
+      "qwebp" => "webp"
+    }.freeze
     TEXT_INPUT_COMPONENTS = %i[
       color_picker date_picker double_spin_box file_picker folder_picker font_picker number_field
       password_field search_field spin_box text_area text_field time_picker
     ].freeze
 
-    Report = Struct.new(:components, :qml_modules, :before_bytes, :after_bytes, :warnings,
+    Report = Struct.new(:components, :qml_modules, :qt_style, :qt_features, :qt_plugins,
+                        :before_bytes, :after_bytes, :warnings,
                         keyword_init: true) do
       def saved_bytes = before_bytes - after_bytes
 
@@ -37,6 +39,11 @@ module Zui
         {
           "components" => components.map(&:to_s),
           "qml_modules" => qml_modules,
+          "qt" => {
+            "style" => qt_style,
+            "features" => qt_features,
+            "plugins" => qt_plugins
+          },
           "before_bytes" => before_bytes,
           "after_bytes" => after_bytes,
           "saved_bytes" => saved_bytes,
@@ -48,23 +55,32 @@ module Zui
     def initialize(project:, framework:, native:, platform: Platform.current)
       @project = File.expand_path(project)
       @framework = File.expand_path(framework)
-      @native = File.expand_path(native)
+      @native = File.expand_path(native) if native
       @platform = platform.assert_supported!
+      @configuration = QtBundleConfiguration.load(@project)
       @warnings = []
     end
 
     def shake!
-      before_bytes = tree_bytes(@framework) + tree_bytes(@native)
+      before_bytes = tree_bytes(@framework) + (@native ? tree_bytes(@native) : 0)
       components, adapters = analyze_components
+      @qt_features = detected_qt_features
       prune_framework(adapters)
       imports = qml_imports(Dir[File.join(@framework, "**", "*.qml")])
-      qml_modules = prune_native_qml(imports)
-      prune_native_plugins(components, qml_modules)
-      prune_translations
-      prune_native_libraries
-      update_client_manifest(components, qml_modules)
-      after_bytes = tree_bytes(@framework) + tree_bytes(@native)
+      qml_modules = if @native
+                      modules = prune_native_qml(imports)
+                      prune_native_plugins(components, modules)
+                      prune_translations
+                      prune_native_libraries
+                      update_client_manifest(components, modules)
+                      modules
+                    else
+                      imports.to_a
+                    end
+      after_bytes = tree_bytes(@framework) + (@native ? tree_bytes(@native) : 0)
       Report.new(components: components.sort, qml_modules: qml_modules.sort,
+                 qt_style: @configuration.style, qt_features: @qt_features.to_a.sort,
+                 qt_plugins: retained_native_plugins,
                  before_bytes:, after_bytes:, warnings: @warnings.dup.freeze)
     end
 
@@ -79,7 +95,7 @@ module Zui
 
         component_references(syntax, known).each { |component| selected << component }
       end
-      configured_components.each do |name|
+      @configuration.components.each do |name|
         selected << known.fetch(name) do
           raise ArgumentError, "unknown component in #{CONFIG_FILE}: #{name}"
         end
@@ -172,21 +188,6 @@ module Zui
       end.sort
     end
 
-    def configured_components
-      path = File.join(@project, CONFIG_FILE)
-      return [] unless File.file?(path)
-
-      document = JSON.parse(File.read(path))
-      raise ArgumentError, "#{CONFIG_FILE} must contain a JSON object" unless document.is_a?(Hash)
-      components = document.fetch("components", [])
-      unless components.is_a?(Array) && components.all? { |name| name.is_a?(String) && !name.empty? }
-        raise ArgumentError, "#{CONFIG_FILE} components must be an array of component names"
-      end
-      components
-    rescue JSON::ParserError => error
-      raise ArgumentError, "invalid #{CONFIG_FILE}: #{error.message}"
-    end
-
     def adapter_name(name)
       "#{name.to_s.split('_').map(&:capitalize).join}.qml"
     end
@@ -197,13 +198,58 @@ module Zui
         FileUtils.rm_f(path) unless adapters.include?(File.basename(path))
       end
       sources = adapters.map { |name| File.join(builtins, name) }
-      support_required = sources.any? do |path|
-        source = File.read(path)
-        source.include?('import "Support"') || source.include?("Support/")
-      end
+      prune_framework_support(File.join(builtins, "Support"), sources)
       shaders_required = adapters.include?("ShaderEffect.qml")
-      remove_tree(File.join(builtins, "Support")) unless support_required
       remove_tree(File.join(builtins, "Shaders")) unless shaders_required
+    end
+
+    def prune_framework_support(root, adapter_sources)
+      return unless File.directory?(root)
+
+      available = Dir[File.join(root, "**", "{*.qml,*.js}")].to_h do |path|
+        [path.delete_prefix("#{root}#{File::SEPARATOR}"), path]
+      end
+      by_component = available.each_with_object({}) do |(relative, _path), components|
+        components[File.basename(relative, ".qml")] = relative if relative.end_with?(".qml")
+      end
+      required = Set.new
+      queue = adapter_sources.dup
+      until queue.empty?
+        source_path = queue.shift
+        source = File.read(source_path)
+        support_references(source, source_path.start_with?("#{root}#{File::SEPARATOR}"), by_component).each do |relative|
+          path = available[relative]
+          next unless path && required.add?(path)
+
+          queue << path
+        end
+      end
+
+      return remove_tree(root) if required.empty?
+
+      available.each_value { |path| FileUtils.rm_f(path) unless required.include?(path) }
+      Dir[File.join(root, "**", "*")].sort_by { |path| -path.count(File::SEPARATOR) }.each do |path|
+        Dir.rmdir(path) if File.directory?(path) && Dir.empty?(path)
+      end
+    end
+
+    def support_references(source, support_source, by_component)
+      references = Set.new
+      source.scan(/\bSupport\.([A-Z][A-Za-z0-9_]*)\b/) do |match|
+        references << "#{match.first}.qml"
+      end
+      source.scan(/["']Support\/([^"']+\.(?:qml|js))["']/) do |match|
+        references << match.first
+      end
+      if support_source
+        by_component.each do |name, relative|
+          references << relative if source.match?(/\b#{Regexp.escape(name)}\s*\{/)
+        end
+        source.scan(/["']([^"']+\.(?:qml|js))["']/) do |match|
+          references << match.first unless match.first.include?("..")
+        end
+      end
+      references
     end
 
     def qml_imports(paths)
@@ -221,7 +267,18 @@ module Zui
       return [] unless root && File.directory?(root)
 
       modules = module_directories(root)
-      required = Set.new((BASE_QML_MODULES + framework_imports.to_a).select { |name| modules.key?(name) })
+      style_module = "QtQuick.Controls.#{@configuration.style}"
+      missing = @configuration.qml_modules.reject { |name| modules.key?(name) }
+      if @configuration.style_explicit? && !modules.key?(style_module)
+        missing << style_module
+      end
+      unless missing.empty?
+        raise ArgumentError, "configured Qt QML module is unavailable: #{missing.sort.join(', ')}"
+      end
+      explicitly_required = @configuration.qml_modules.dup
+      explicitly_required << style_module if modules.key?(style_module)
+      required = Set.new((BASE_QML_MODULES + framework_imports.to_a + explicitly_required)
+                           .select { |name| modules.key?(name) })
       queue = required.to_a
       until queue.empty?
         name = queue.shift
@@ -232,7 +289,6 @@ module Zui
         end
       end
 
-      module_paths = modules.values
       modules.sort_by { |_name, path| -path.count(File::SEPARATOR) }.each do |name, path|
         next if required.include?(name)
         next if required.any? { |kept| descendant?(modules.fetch(kept), path) }
@@ -266,6 +322,8 @@ module Zui
     end
 
     def native_path_for(environment_name)
+      return nil unless @native
+
       manifest_path = File.join(@native, "client.json")
       return nil unless File.file?(manifest_path)
 
@@ -284,24 +342,118 @@ module Zui
       root = native_path_for("QT_PLUGIN_PATH")
       return unless root && File.directory?(root)
 
-      component_set = components.to_set
-      has_images = !(component_set & IMAGE_COMPONENTS).empty?
-      has_network = !(component_set & NETWORK_COMPONENTS).empty?
-      has_text_input = !(component_set & TEXT_INPUT_COMPONENTS).empty?
+      explicit_plugins = resolve_explicit_plugins(root)
+      has_text_input = !(components.to_set & TEXT_INPUT_COMPONENTS).empty?
       has_multimedia = qml_modules.include?("QtMultimedia")
       has_quick3d = qml_modules.any? { |name| name.start_with?("QtQuick3D") }
 
-      remove_tree(File.join(root, "assetimporters")) unless has_quick3d
-      remove_tree(File.join(root, "multimedia")) unless has_multimedia
-      remove_tree(File.join(root, "imageformats")) unless has_images
-      remove_tree(File.join(root, "iconengines")) unless has_images
-      remove_tree(File.join(root, "networkinformation")) unless has_network
-      remove_tree(File.join(root, "tls")) unless has_network
+      prune_plugin_directory(root, "assetimporters", keep_all: has_quick3d, explicit_plugins:)
+      prune_plugin_directory(root, "multimedia", keep_all: has_multimedia, explicit_plugins:)
+      prune_plugin_directory(root, "imageformats", explicit_plugins:) do |path|
+        feature = IMAGE_PLUGIN_FEATURES[plugin_identity(path)]
+        feature && @qt_features.include?(feature)
+      end
+      prune_plugin_directory(root, "iconengines", explicit_plugins:) do |path|
+        @qt_features.include?("svg-icons") && plugin_identity(path).include?("svg")
+      end
+      prune_plugin_directory(root, "networkinformation", explicit_plugins:) do |_path|
+        @qt_features.include?("network-reachability")
+      end
+      tls_plugins = preferred_tls_plugins(File.join(root, "tls"))
+      prune_plugin_directory(root, "tls", explicit_plugins:) do |path|
+        @qt_features.include?("tls") && tls_plugins.include?(path)
+      end
+      prune_plugin_directory(root, "styles", explicit_plugins:)
+      if qml_modules.include?("QtQuick.LocalStorage")
+        prune_plugin_directory(root, "sqldrivers", explicit_plugins:) do |path|
+          plugin_identity(path).include?("sqlite")
+        end
+      else
+        prune_plugin_directory(root, "sqldrivers", explicit_plugins:)
+      end
       remove_tree(File.join(root, "platformthemes")) if @platform.linux?
       remove_tree(File.join(root, "platforminputcontexts")) if @platform.linux? && !has_text_input
       remove_tree(File.join(root, "generic")) if @platform.linux?
       FileUtils.rm_f(File.join(root, "wayland-decoration-client", "libadwaita.so")) if @platform.linux?
       prune_linux_platform_plugins(root) if @platform.linux?
+    end
+
+    def detected_qt_features
+      features = Set.new(@configuration.features)
+      ruby_sources.each do |path|
+        Ripper.lex(File.read(path)).each do |_position, event, token, _state|
+          next unless event == :on_tstring_content
+
+          token.scan(/\.([A-Za-z0-9]+)(?:\z|[?#])/).flatten.each do |extension|
+            feature = IMAGE_FORMAT_FEATURES[extension.downcase]
+            features << feature if feature
+          end
+          features << "tls" if token.match?(%r{(?:https|wss)://}i)
+        end
+      end
+      features
+    end
+
+    def resolve_explicit_plugins(root)
+      inventory = Dir[File.join(root, "*", "*")].select { |path| File.file?(path) }
+      resolved = Set.new
+      missing = []
+      @configuration.plugins.each do |configured|
+        category, requested = configured.split("/", 2)
+        match = inventory.find do |path|
+          File.basename(File.dirname(path)) == category && plugin_identity(path) == plugin_identity(requested)
+        end
+        match ? resolved << match : missing << configured
+      end
+      unless missing.empty?
+        raise ArgumentError, "configured Qt plugin is unavailable: #{missing.join(', ')}"
+      end
+      resolved
+    end
+
+    def prune_plugin_directory(root, name, keep_all: false, explicit_plugins:)
+      directory = File.join(root, name)
+      return unless File.directory?(directory)
+
+      Dir.children(directory).sort.each do |entry|
+        path = File.join(directory, entry)
+        keep = keep_all || explicit_plugins.include?(path) || (block_given? && yield(path))
+        FileUtils.rm_f(path) if File.file?(path) && !keep
+      end
+      remove_tree(directory) if Dir.empty?(directory)
+    end
+
+    def plugin_identity(path)
+      File.basename(path.to_s)
+          .sub(/\.(?:dylib|dll|so(?:\..*)?)\z/i, "")
+          .sub(/\Alib/, "")
+          .downcase
+    end
+
+    def preferred_tls_plugins(directory)
+      return Set.new unless File.directory?(directory)
+
+      candidates = Dir[File.join(directory, "*")].select { |path| File.file?(path) }
+      preferred = if @platform.macos?
+                    "qsecuretransportbackend"
+                  elsif @platform.windows?
+                    "qschannelbackend"
+                  else
+                    "qopensslbackend"
+                  end
+      matches = candidates.select { |path| plugin_identity(path).include?(preferred) }
+      Set.new(matches.empty? ? candidates : matches)
+    end
+
+    def retained_native_plugins
+      return [] unless @native
+
+      root = native_path_for("QT_PLUGIN_PATH")
+      return [] unless root && File.directory?(root)
+
+      Dir[File.join(root, "*", "*")].select { |path| File.file?(path) }.map do |path|
+        path.delete_prefix("#{root}#{File::SEPARATOR}").tr(File::SEPARATOR, "/")
+      end.sort
     end
 
     def prune_linux_platform_plugins(plugin_root)
@@ -435,8 +587,10 @@ module Zui
         binary = queue.shift
         next unless File.file?(binary) && inspected.add?(binary)
 
-        dependencies = pe_dependencies(binary)
-        parsed = true unless dependencies.empty?
+        dependencies = PEDependencies.imports(binary)
+        next unless dependencies
+
+        parsed = true
         dependencies.each do |name|
           key = name.downcase
           next unless available.key?(key) && required.add?(key)
@@ -444,52 +598,12 @@ module Zui
           queue << available.fetch(key)
         end
       end
-      return unless parsed
+      unless parsed
+        @warnings << "native Windows library analysis was unavailable; libraries were retained"
+        return
+      end
 
       available.each { |name, path| FileUtils.rm_f(path) unless required.include?(name) }
-    end
-
-    def pe_dependencies(path)
-      data = File.binread(path)
-      return [] unless data.start_with?("MZ") && data.bytesize >= 64
-
-      pe_offset = data.byteslice(0x3c, 4)&.unpack1("V")
-      return [] unless pe_offset && data.byteslice(pe_offset, 4) == "PE\0\0"
-
-      section_count = data.byteslice(pe_offset + 6, 2).unpack1("v")
-      optional_size = data.byteslice(pe_offset + 20, 2).unpack1("v")
-      optional = pe_offset + 24
-      magic = data.byteslice(optional, 2).unpack1("v")
-      directory = optional + (magic == 0x20b ? 112 : 96)
-      import_rva = data.byteslice(directory + 8, 4)&.unpack1("V")
-      return [] unless import_rva&.positive?
-
-      sections = section_count.times.map do |index|
-        offset = optional + optional_size + index * 40
-        [data.byteslice(offset + 12, 4).unpack1("V"), data.byteslice(offset + 8, 4).unpack1("V"),
-         data.byteslice(offset + 16, 4).unpack1("V"), data.byteslice(offset + 20, 4).unpack1("V")]
-      end
-      rva_offset = lambda do |rva|
-        section = sections.find { |virtual, size, raw_size, _raw| rva >= virtual && rva < virtual + [size, raw_size].max }
-        section && section[3] + rva - section[0]
-      end
-      descriptor = rva_offset.call(import_rva)
-      return [] unless descriptor
-
-      dependencies = []
-      loop do
-        name_rva = data.byteslice(descriptor + 12, 4)&.unpack1("V")
-        break unless name_rva&.positive?
-
-        name_offset = rva_offset.call(name_rva)
-        break unless name_offset
-        name = data.byteslice(name_offset..)&.split("\0", 2)&.first
-        dependencies << name if name&.match?(/\.dll\z/i)
-        descriptor += 20
-      end
-      dependencies
-    rescue NoMethodError, RangeError
-      []
     end
 
     def native_binary_roots(patterns)
@@ -509,6 +623,9 @@ module Zui
       manifest["tree_shaken"] = true
       manifest["components"] = components.map(&:to_s).sort
       manifest["qml_modules"] = qml_modules.sort
+      manifest["qt_style"] = @configuration.style
+      manifest["qt_features"] = @qt_features.to_a.sort
+      manifest["qt_plugins"] = retained_native_plugins
       File.write(path, "#{JSON.pretty_generate(manifest)}\n")
     end
 

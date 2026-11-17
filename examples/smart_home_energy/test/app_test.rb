@@ -26,6 +26,20 @@ class SmartHomeEnergyTest < Minitest::Test
     room = nodes.find { |node| node["id"] == "room_image" }
     assert_equal "image", room.fetch("type")
     assert_equal "assets/smart-living-room.png", room.dig("props", "source")
+    feed = nodes.find { |node| node["id"] == "home_feed" }
+    assert_equal "responsive_view", feed.fetch("type")
+    assert_equal 348, feed.dig("props", "card_width")
+  end
+
+  def test_navigation_targets_each_responsive_dashboard_section
+    app = SmartHomeEnergy.build
+    app.start(output: StringIO.new, error: StringIO.new)
+    app.receive(event("section.energy"))
+    assert_equal 2, app.state.section
+    app.receive(event("section.comfort"))
+    assert_equal 4, app.state.section
+  ensure
+    app&.stop
   end
 
   def test_room_lighting_changes_scene_brightness_and_power

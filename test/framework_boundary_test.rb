@@ -11,7 +11,7 @@ class FrameworkBoundaryTest < Minitest::Test
     "Controls/**/*.qml",
     "Theme/**/*.qml",
     "lib/**/*.rb",
-    "native/**/*.{cpp,h}",
+    "native/**/*.{cpp,h,mm}",
     "bin/*"
   ].freeze
   SHOWCASE_MARKERS = [
@@ -50,6 +50,7 @@ class FrameworkBoundaryTest < Minitest::Test
     audio_output: "AudioOutput.qml", screen_capture: "ScreenCapture.qml",
     window_capture: "WindowCapture.qml", media_recorder: "MediaRecorder.qml",
     image_capture: "ImageCapture.qml", loader: "Loader.qml", alert_dialog: "AlertDialog.qml",
+    web_view: "WebView.qml",
     tab_button: "TabButton.qml", navigation_rail: "NavigationRail.qml",
     breadcrumb: "Breadcrumb.qml", item_delegate: "ItemDelegate.qml",
     swipe_delegate: "SwipeDelegate.qml", carousel: "Carousel.qml"
@@ -95,11 +96,87 @@ class FrameworkBoundaryTest < Minitest::Test
 
     refute_nil builder
     assert_raises(ArgumentError) { Zui::Application.new { app { component(:not_a_component) } } }
-    assert_raises(ArgumentError) { Zui::Application.new { app { component(:web_view) } } }
+    refute_nil Zui::Builder.instance_method(:web_view).source_location
     assert_includes router, "sourceComponent: null"
     assert_includes router, "builtInSource(node.type)"
     assert_includes router, 'builtIn ? builtInSource(node.type) : bridge.componentSource(node.type)'
     refute_match(/node\.type === "model_view_3d"[^\n]+imageComponent/, router)
+  end
+
+
+  def test_mobile_webview_is_linked_and_initialized_only_when_tree_shaking_keeps_it
+    cmake = File.read(File.join(ROOT, "native", "CMakeLists.txt"))
+    host = File.read(File.join(ROOT, "native", "main.cpp"))
+
+    assert_includes cmake, 'EXISTS "${ZUI_FRAMEWORK_ROOT}/Components/Builtins/WebView.qml"'
+    assert_includes cmake, "target_link_libraries(zui-host PRIVATE Qt6::WebView)"
+    assert_includes cmake, "INCLUDE_BY_TYPE multimedia Qt6::QDarwinMediaPlugin"
+    assert_includes cmake, "INCLUDE_BY_TYPE texttospeech Qt6::QTextToSpeechDarwinPlugin"
+    assert_includes cmake, "INCLUDE_BY_TYPE position Qt6::QGeoPositionInfoSourceFactoryCLPlugin"
+    assert_includes cmake, "INCLUDE_BY_TYPE sensors Qt6::IOSSensorPlugin"
+    assert_includes cmake, "INCLUDE_BY_TYPE webview Qt6::QDarwinWebViewPlugin"
+    assert_includes host, "QtWebView::initialize();"
+    assert_operator host.index("QtWebView::initialize();"), :<,
+                    host.index("QGuiApplication application(argc, argv);")
+    assert_includes host, "ZUI_USES_WEBVIEW"
+    refute_includes host, 'qputenv("QML_DISABLE_DISK_CACHE", QByteArrayLiteral("1"));'
+    assert_includes host, 'qputenv("QML_DISK_CACHE_PATH"'
+    assert_includes host, 'QStandardPaths::writableLocation(QStandardPaths::CacheLocation)'
+    refute_includes host, "QDir(qmlCache).removeRecursively();"
+    assert_includes host, "ZUI_QML_CACHE_IDENTITY"
+    assert_includes cmake, "file(SHA256"
+    assert_includes cmake, "string(SHA256 zui_qml_cache_identity"
+  end
+
+  def test_mobile_shell_covers_native_startup_until_the_first_qml_frame
+    host = File.read(File.join(ROOT, "native", "main.cpp"))
+
+    assert_includes host, "QQuickWindow startupWindow;"
+    assert_includes host, "startupWindow.showFullScreen();"
+    assert_includes host, "&QQuickWindow::frameSwapped"
+    assert_includes host, "startupWindow.destroy();"
+    assert_includes host, "Zui startup: first frame visible in"
+    assert_operator host.index("startupWindow.showFullScreen();"), :<,
+                    host.index("installBundledFonts(qmlRoot)")
+  end
+
+  def test_ios_simulator_capabilities_are_exposed_to_fragile_native_adapters
+    host = File.read(File.join(ROOT, "native", "main.cpp"))
+
+    assert_includes host, "#include <TargetConditionals.h>"
+    assert_includes host, 'QStringLiteral("zuiIosSimulator")'
+    assert_includes host, "TARGET_OS_SIMULATOR"
+  end
+
+  def test_mruby_startup_overlaps_qml_loading_without_racing_running_state
+    host = File.read(File.join(ROOT, "native", "main.cpp"))
+    runtime = File.read(File.join(ROOT, "native", "ZuiEmbeddedRuntime.h"))
+
+    assert_includes host, "std::async(std::launch::async"
+    assert_includes host, "runtimeStartup.get();"
+    assert_includes host, "!defined(ZUI_EMBEDDED_CRUBY)"
+    assert_operator host.index("std::async(std::launch::async"), :<,
+                    host.index("installBundledFonts(qmlRoot)")
+    assert_operator host.index("engine.load(QUrl(QStringLiteral(\"qrc:/zui/Desktop.qml\")))"), :<,
+                    host.index("runtimeStartup.get();")
+    assert_includes runtime, "std::atomic_bool m_running"
+  end
+
+  def test_mobile_virtual_keyboard_is_linked_and_activated_only_when_tree_shaking_keeps_it
+    cmake = File.read(File.join(ROOT, "native", "CMakeLists.txt"))
+    host = File.read(File.join(ROOT, "native", "main.cpp"))
+
+    assert_includes cmake, 'EXISTS "${ZUI_FRAMEWORK_ROOT}/Components/Builtins/VirtualKeyboard.qml"'
+    assert_includes cmake, "target_link_libraries(zui-host PRIVATE Qt6::VirtualKeyboard)"
+    assert_includes host, "ZUI_USES_VIRTUAL_KEYBOARD"
+    assert_includes host, 'qputenv("QT_IM_MODULE", QByteArrayLiteral("qtvirtualkeyboard"));'
+  end
+
+  def test_mobile_permission_status_events_are_deduplicated
+    permission = File.read(File.join(ROOT, "Components", "Builtins", "Support", "PermissionBridge.qml"))
+
+    assert_includes permission, "property int lastPublishedNativeStatus: -1"
+    assert_includes permission, "if (nativeStatus === lastPublishedNativeStatus) return"
   end
 
   def test_component_and_resource_failures_use_the_framework_error_channel
@@ -117,14 +194,18 @@ class FrameworkBoundaryTest < Minitest::Test
     end
   end
 
-  def test_gem_and_runtime_packages_exclude_examples
+  def test_gem_excludes_examples_and_release_only_builders
     specification = Gem::Specification.load(File.join(ROOT, "zui.gemspec"))
 
     refute_nil specification
     assert_empty specification.files.grep(%r{\Aexamples(?:/|\z)})
     assert_empty specification.files.grep(/(?:\A|\/)examples(?:\/|\z)/)
-    assert_empty specification.files.grep(%r{\A(?:native|vendor)/})
+    assert_empty specification.files.grep(%r{\Avendor/})
     assert_empty specification.files.grep(%r{\Alib/zui/client_(?:builder|packager)\.rb\z})
+    assert_includes specification.files, "native/CMakeLists.txt"
+    assert_includes specification.files, "native/ZuiEmbeddedRuntime.cpp"
+    assert_includes specification.files, "runtime/mruby/ios_simulator_build_config.rb"
+    assert_includes specification.files, "runtime/mruby/android_build_config.rb"
   end
 
   def test_core_has_no_omarchy_or_quickshell_dependency

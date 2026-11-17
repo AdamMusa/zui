@@ -8,9 +8,10 @@ module Zui
     ].freeze
     REQUIRE = /^\s*require\s*(?:\(\s*)?["']([^"']+)["']/
 
-    def initialize(project:, framework_root: FRAMEWORK_ROOT)
+    def initialize(project:, framework_root: FRAMEWORK_ROOT, allow_external_requires: false)
       @project = File.expand_path(project)
       @framework_root = File.expand_path(framework_root)
+      @allow_external_requires = allow_external_requires == true
     end
 
     def call
@@ -18,7 +19,7 @@ module Zui
         File.join(@project, "main.rb"), root: @project, embedded_frameworks: ["zui"]
       ).call
       external = application.scan(REQUIRE).flatten.uniq
-      unless external.empty?
+      unless @allow_external_requires || external.empty?
         raise ArgumentError,
               "--lite does not support CRuby gem requires (#{external.join(', ')}); use --full"
       end

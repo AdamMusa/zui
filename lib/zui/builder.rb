@@ -4,11 +4,12 @@ module Zui
   class Builder
     UNSET = Object.new.freeze
     CONTAINERS = %i[
-      row column container grid row_layout column_layout grid_layout flow center card
-      stack scroll rectangle aspect_ratio constrained_box fitted_box wrap split_view stack_layout loader flickable focus_scope flipable border_image key_catcher
+      abstract_button control row column container grid row_layout column_layout grid_layout flow center card
+      stack scroll rectangle responsive_view aspect_ratio constrained_box fitted_box wrap split_view stack_layout loader flickable focus_scope flipable border_image key_catcher
       page pane frame group_box tabs stack_view swipe_view drawer expansion_panel accordion tool_bar popup dialog
       shader_effect shader_effect_source multi_effect rectangular_shadow opacity_mask blur drop_shadow colorize glow
-      drag_area drop_area pinch_area hover_area capture_session cursor_surface
+      drag_area drop_area pinch_area hover_area tap_area point_handler multi_touch_area wheel_area safe_area
+      capture_session cursor_surface map map_marker map_item_group
     ].freeze
     VALUE_INPUTS = {
       text_field: :text,
@@ -145,6 +146,9 @@ module Zui
     end
     def group_box(title = "", id: nil, **props, &block)
       component(:group_box, id:, title: title.to_s, **props, &block)
+    end
+    def menu_bar_item(label = "", id: nil, **props, &handler)
+      action_component(:menu_bar_item, :text, label, id:, props:, handler:)
     end
     def tabs(labels = [], id: nil, **props, &block)
       component(:tabs, id:, labels: Array(labels), **props, &block)
@@ -344,6 +348,7 @@ module Zui
       calendar_props[:date] = date.to_s unless date.nil?
       component(:calendar, id:, **calendar_props)
     end
+    def calendar_model(id: nil, **props) = component(:calendar_model, id:, **props)
     def month_grid(id: nil, **props) = component(:month_grid, id:, **props)
     def week_number_column(id: nil, **props) = component(:week_number_column, id:, **props)
     def day_of_week_row(id: nil, **props) = component(:day_of_week_row, id:, **props)
@@ -603,9 +608,171 @@ module Zui
     def folder_list_model(folder = "", id: nil, **props) = component(:folder_list_model, id:, folder: folder.to_s, **props)
     def settings(values = {}, id: nil, **props) = component(:settings, id:, values:, **props)
     def standard_paths(location = :home, id: nil, **props) = component(:standard_paths, id:, location: location.to_s, **props)
+    def system_info(id: nil, **props, &handler)
+      node = component(:system_info, id:, **props)
+      @application.register_handler(node.id, :information, handler) if handler
+      node
+    end
+    def network_status(id: nil, **props, &handler)
+      node = component(:network_status, id:, **props)
+      @application.register_handler(node.id, :change, handler) if handler
+      node
+    end
+    def virtual_keyboard(id: nil, **props, &handler)
+      node = component(:virtual_keyboard, id:, **props)
+      @application.register_handler(node.id, :active_change, handler) if handler
+      node
+    end
+    def handwriting_input(input_panel = nil, id: nil, **props, &handler)
+      props = props.merge(input_panel: node_id(input_panel)) unless input_panel.nil?
+      node = component(:handwriting_input, id:, **props)
+      @application.register_handler(node.id, :active_change, handler) if handler
+      node
+    end
+    def keyboard_context(id: nil, **props, &handler)
+      node = component(:keyboard_context, id:, **props)
+      @application.register_handler(node.id, :change, handler) if handler
+      node
+    end
+    def keyboard_settings(id: nil, **props, &handler)
+      node = component(:keyboard_settings, id:, **props)
+      @application.register_handler(node.id, :change, handler) if handler
+      node
+    end
+    def keyboard_text_field(value = "", id: nil, **props, &handler)
+      node = component(:keyboard_text_field, id:, text: value.to_s, **props)
+      @application.register_handler(node.id, :change, handler) if handler
+      node
+    end
     def clipboard(text = UNSET, id: nil, **props)
       props = props.merge(text:) unless text.equal?(UNSET)
       component(:clipboard, id:, **props)
+    end
+
+    %i[bluetooth_permission calendar_permission camera_permission contacts_permission location_permission microphone_permission].each do |type|
+      define_method(type) do |id: nil, **props, &handler|
+        node = component(type, id:, **props)
+        @application.register_handler(node.id, :change, handler) if handler
+        node
+      end
+    end
+
+    %i[accelerometer ambient_light_sensor ambient_temperature_sensor compass gyroscope humidity_sensor
+       ir_proximity_sensor lid_sensor light_sensor magnetometer orientation_sensor pressure_sensor
+       proximity_sensor rotation_sensor tap_sensor tilt_sensor].each do |type|
+      define_method(type) do |id: nil, **props, &handler|
+        node = component(type, id:, **props)
+        @application.register_handler(node.id, :reading, handler) if handler
+        node
+      end
+    end
+
+    def position_source(id: nil, **props, &handler)
+      node = component(:position_source, id:, **props)
+      @application.register_handler(node.id, :position, handler) if handler
+      node
+    end
+
+    def satellite_source(id: nil, **props, &handler)
+      node = component(:satellite_source, id:, **props)
+      @application.register_handler(node.id, :in_view, handler) if handler
+      node
+    end
+
+    def map_circle(id: nil, **props, &handler) = map_item_component(:map_circle, id:, props:, handler:)
+    def map_rectangle(id: nil, **props, &handler) = map_item_component(:map_rectangle, id:, props:, handler:)
+    def map_polygon(path = [], id: nil, **props, &handler) = map_item_component(:map_polygon, id:, props: props.merge(path: Array(path)), handler:)
+    def map_polyline(path = [], id: nil, **props, &handler) = map_item_component(:map_polyline, id:, props: props.merge(path: Array(path)), handler:)
+    def map_route(path = [], id: nil, **props, &handler) = map_item_component(:map_route, id:, props: props.merge(path: Array(path)), handler:)
+    def map_item_view(items = [], id: nil, **props, &handler)
+      node = component(:map_item_view, id:, items: Array(items), **props)
+      @application.register_handler(node.id, :click, handler) if handler
+      node
+    end
+    def map_copyright(id: nil, **props, &handler)
+      node = component(:map_copyright, id:, **props)
+      @application.register_handler(node.id, :link, handler) if handler
+      node
+    end
+    def geo_json_data(source = nil, id: nil, **props, &handler)
+      props = props.merge(source:) unless source.nil?
+      node = component(:geo_json_data, id:, **props)
+      @application.register_handler(node.id, :change, handler) if handler
+      node
+    end
+    def geocode_model(query = nil, id: nil, **props, &handler)
+      props = props.merge(query:) unless query.nil?
+      node = component(:geocode_model, id:, **props)
+      @application.register_handler(node.id, :results, handler) if handler
+      node
+    end
+    def route_model(waypoints = [], id: nil, **props, &handler)
+      node = component(:route_model, id:, waypoints: Array(waypoints), **props)
+      @application.register_handler(node.id, :routes, handler) if handler
+      node
+    end
+    def place_search(term = "", id: nil, **props, &handler)
+      node = component(:place_search, id:, term: term.to_s, **props)
+      @application.register_handler(node.id, :results, handler) if handler
+      node
+    end
+    def place_suggestions(term = "", id: nil, **props, &handler)
+      node = component(:place_suggestions, id:, term: term.to_s, **props)
+      @application.register_handler(node.id, :suggestions, handler) if handler
+      node
+    end
+    def place_categories(id: nil, **props, &handler)
+      node = component(:place_categories, id:, **props)
+      @application.register_handler(node.id, :categories, handler) if handler
+      node
+    end
+    def place_details(place_id = nil, id: nil, **props, &handler)
+      props = props.merge(place_id:) unless place_id.nil?
+      node = component(:place_details, id:, **props)
+      @application.register_handler(node.id, :details, handler) if handler
+      node
+    end
+    def place_category(category_id = nil, id: nil, **props, &handler)
+      props = props.merge(category_id:) unless category_id.nil?
+      node = component(:place_category, id:, **props)
+      @application.register_handler(node.id, :details, handler) if handler
+      node
+    end
+
+    def text_to_speech(text = UNSET, id: nil, **props, &handler)
+      unless text.equal?(UNSET)
+        props = props.merge(text: text.to_s)
+        props[:auto_speak] = true unless props.key?(:auto_speak)
+      end
+      node = component(:text_to_speech, id:, **props)
+      @application.register_handler(node.id, :state, handler) if handler
+      node
+    end
+
+    def web_view(url = "", id: nil, **props, &handler)
+      node = component(:web_view, id:, url: url.to_s, **props)
+      @application.register_handler(node.id, :load, handler) if handler
+      node
+    end
+    def web_socket(url = "", id: nil, **props, &handler)
+      node = component(:web_socket, id:, url: url.to_s, **props)
+      @application.register_handler(node.id, :message, handler) if handler
+      node
+    end
+    def web_socket_server(id: nil, **props, &handler)
+      node = component(:web_socket_server, id:, **props)
+      @application.register_handler(node.id, :message, handler) if handler
+      node
+    end
+    def lottie_animation(source, id: nil, **props, &handler)
+      node = component(:lottie_animation, id:, source: source.to_s, **props)
+      @application.register_handler(node.id, :finished, handler) if handler
+      node
+    end
+    def pdf_view(source, id: nil, **props, &handler)
+      node = component(:pdf_view, id:, source: source.to_s, **props)
+      @application.register_handler(node.id, :page_change, handler) if handler
+      node
     end
 
     def animate(node, properties, duration: 200, easing: :in_out_quad, delay: 0)
@@ -643,6 +810,12 @@ module Zui
     end
 
     private
+
+    def map_item_component(type, id:, props:, handler:)
+      node = component(type, id:, **props)
+      @application.register_handler(node.id, :click, handler) if handler
+      node
+    end
 
     def node_id(value)
       value.is_a?(Node) ? value.id : value.to_s

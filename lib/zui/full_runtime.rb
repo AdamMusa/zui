@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "bundler"
+require "digest"
 require "fileutils"
 require "json"
 require "rbconfig"
@@ -9,16 +9,40 @@ require "set"
 module Zui
   class FullRuntime
     SYSTEM_LIBRARIES = /\A(?:ld-linux|libc\.|libdl\.|libgcc_s\.|libm\.|libpthread\.|librt\.|libSystem\.|libutil\.)/.freeze
+    ZUI_RUNTIME_FILES = %w[
+      lib/zui.rb
+      lib/zui/animation.rb
+      lib/zui/application.rb
+      lib/zui/builder.rb
+      lib/zui/component_registry.rb
+      lib/zui/components.rb
+      lib/zui/node.rb
+      lib/zui/protocol.rb
+      lib/zui/runtime_entry.rb
+      lib/zui/scheduler.rb
+      lib/zui/state_store.rb
+      lib/zui/value.rb
+    ].freeze
+    ZUI_RUNTIME_ENTRYPOINT = <<~RUBY.freeze
+      # frozen_string_literal: true
 
-    attr_reader :platform
+      require_relative "zui/runtime_entry"
+    RUBY
+    EXTENSION_BUILD_FILES = %w[.DS_Store Makefile gem_make.out mkmf.log].freeze
+    EXTENSION_BUILD_EXTENSIONS = %w[.a .exp .ilk .lib .o .obj .pdb].freeze
+    NON_RUNTIME_DIRECTORIES = %w[.dSYM].freeze
+
+    attr_reader :platform, :tree_shake_report
 
     def initialize(platform: Platform.current, ruby: RbConfig.ruby, environment: ENV,
-                   rbconfig: RbConfig::CONFIG, spec_loader: nil)
+                   rbconfig: RbConfig::CONFIG, spec_loader: nil, tree_shake: true)
       @platform = platform.assert_supported!
       @ruby = File.expand_path(ruby)
       @environment = environment.to_h
       @rbconfig = rbconfig.to_h
-      @spec_loader = spec_loader || method(:project_specs)
+      @spec_loader = spec_loader || LockedGems.new(environment: @environment).method(:specs)
+      @tree_shake = tree_shake == true
+      @tree_shake_report = nil
     end
 
     def install(project:, destination:)
@@ -31,8 +55,12 @@ module Zui
       executable = install_executable(destination)
       library_paths = install_standard_library(destination)
       install_runtime_libraries(destination)
-      install_native_dependencies(destination)
       gems = install_project_gems(project, destination)
+      prune_non_runtime_artifacts(destination)
+      @tree_shake_report = shake_standard_library(project, destination, library_paths) if @tree_shake
+      install_native_dependencies(destination)
+      optimize_native_binaries(destination)
+      library_paths += gem_load_paths(destination, gems)
       environment = {
         "RUBYLIB" => library_paths,
         "GEM_HOME" => ["gems"],
@@ -46,7 +74,10 @@ module Zui
         version: ruby_version,
         executable:,
         environment:,
-        gems: gems.map(&:full_name)
+        variables: tree_shake_report&.tree_shaken? ? { "RUBYOPT" => "--disable-gems" } : {},
+        gems: gems.map(&:full_name),
+        load_path: "",
+        tree_shake: tree_shake_report&.to_h
       ).write(destination)
     rescue StandardError
       FileUtils.remove_entry(destination) if destination && File.exist?(destination)
@@ -61,8 +92,6 @@ module Zui
       FileUtils.mkdir_p(File.dirname(target))
       FileUtils.cp(@ruby, target)
       FileUtils.chmod(0o755, target) unless platform.windows?
-      strip_binary(target)
-      sign_binary(target)
       File.join("bin", name).tr(File::SEPARATOR, "/")
     end
 
@@ -100,17 +129,22 @@ module Zui
       patterns.flat_map { |pattern| Dir[pattern] }.uniq.each do |source|
         next unless File.file?(source)
 
-        FileUtils.cp(source, File.join(target, File.basename(source)))
+        installed = File.join(target, File.basename(source))
+        if File.symlink?(source)
+          FileUtils.ln_s(File.readlink(source), installed)
+        else
+          FileUtils.cp(source, installed)
+        end
       end
     end
 
     def install_native_dependencies(destination)
-      return if platform.windows?
+      return prune_windows_runtime_libraries(destination) if platform.windows?
 
       library_root = File.join(destination, "lib")
       FileUtils.mkdir_p(library_root)
       binaries = [File.join(destination, "bin", "ruby")]
-      binaries.concat(Dir[File.join(destination, "**", "*.{so,dylib}")])
+      binaries.concat(Dir[File.join(destination, "**", "*.{bundle,so,dylib}")])
       inspected = Set.new
       until binaries.empty?
         binary = binaries.shift
@@ -121,11 +155,103 @@ module Zui
           next if SYSTEM_LIBRARIES.match?(name)
 
           target = File.join(library_root, name)
-          next if File.file?(target)
+          if File.file?(target)
+            identical = File.size(target) == File.size(source) &&
+                        Digest::SHA256.file(target).digest == Digest::SHA256.file(source).digest
+            unless identical
+              raise ArgumentError, "native dependency collision for #{name}: #{source}"
+            end
+            next
+          end
 
           FileUtils.cp(source, target)
           binaries << target
         end
+      end
+    end
+
+    def prune_windows_runtime_libraries(destination)
+      bin = File.join(destination, "bin")
+      available = Dir[File.join(bin, "*.dll")].to_h { |path| [File.basename(path).downcase, path] }
+      return if available.empty?
+
+      roots = [File.join(bin, "ruby.exe")]
+      roots.concat(Dir[File.join(destination, "**", "*.{bundle,dll,so}")])
+      roots.reject! { |path| File.dirname(path) == bin && File.extname(path).casecmp?(".dll") }
+      queue = roots.uniq
+      required = Set.new
+      inspected = Set.new
+      parsed = false
+      until queue.empty?
+        binary = queue.shift
+        next unless File.file?(binary) && inspected.add?(binary)
+
+        dependencies = PEDependencies.imports(binary)
+        next unless dependencies
+
+        parsed = true
+        dependencies.each do |name|
+          key = name.downcase
+          next unless available.key?(key) && required.add?(key)
+
+          queue << available.fetch(key)
+        end
+      end
+      return unless parsed
+
+      available.each { |name, path| FileUtils.rm_f(path) unless required.include?(name) }
+    end
+
+    def shake_standard_library(project, destination, library_paths)
+      configuration = QtBundleConfiguration.load(project)
+      RubyRuntimeShaker.new(
+        project:,
+        runtime: destination,
+        load_paths: library_paths,
+        configured_features: configuration.ruby_stdlib
+      ).shake!
+    end
+
+    def gem_load_paths(destination, specs)
+      paths = specs.flat_map do |spec|
+        require_paths = spec.respond_to?(:require_paths) ? Array(spec.require_paths) : ["lib"]
+        require_paths.map { |path| File.join("gems", "gems", spec.full_name, path) }
+      end
+      specs.each do |spec|
+        root = File.join(destination, "gems", "extensions")
+        Dir.glob(File.join(root, "**", spec.full_name)).sort.each do |path|
+          paths << path.delete_prefix("#{destination}#{File::SEPARATOR}") if File.directory?(path)
+        end
+      end
+      paths.map { |path| path.tr(File::SEPARATOR, "/") }.uniq.sort
+    end
+
+    def prune_non_runtime_artifacts(destination)
+      paths = Dir.glob(File.join(destination, "**", "*"), File::FNM_DOTMATCH).sort_by do |path|
+        -path.count(File::SEPARATOR)
+      end
+      paths.each do |path|
+        name = File.basename(path)
+        if File.directory?(path) && NON_RUNTIME_DIRECTORIES.any? { |suffix| name.end_with?(suffix) }
+          FileUtils.remove_entry(path)
+        elsif File.file?(path) && EXTENSION_BUILD_FILES.include?(name)
+          FileUtils.rm_f(path)
+        elsif File.file?(path) && EXTENSION_BUILD_EXTENSIONS.include?(File.extname(name).downcase)
+          FileUtils.rm_f(path)
+        end
+      end
+    end
+
+    def optimize_native_binaries(destination)
+      patterns = platform.windows? ? %w[*.dll *.exe] : %w[*.bundle *.dylib *.so]
+      binaries = patterns.flat_map { |pattern| Dir.glob(File.join(destination, "**", pattern)) }
+      executable = File.join(destination, "bin", platform.windows? ? "ruby.exe" : "ruby")
+      binaries << executable if File.file?(executable)
+      binaries.uniq.sort.each do |path|
+        next if File.symlink?(path) || !native_binary?(path)
+
+        strip_binary(path)
+        sign_binary(path)
       end
     end
 
@@ -150,21 +276,68 @@ module Zui
     end
 
     def install_project_gems(project, destination)
-      specs = @spec_loader.call(project).reject { |spec| spec.name == "zui" || spec.default_gem? }
+      specs = @spec_loader.call(project).reject(&:default_gem?)
       gem_home = File.join(destination, "gems")
       FileUtils.mkdir_p([File.join(gem_home, "gems"), File.join(gem_home, "specifications")])
       names = Set.new
       specs.sort_by(&:full_name).each do |spec|
-        raise ArgumentError, "duplicate bundled gem: #{spec.full_name}" unless names.add?(spec.full_name)
+        raise ArgumentError, "duplicate bundled gem: #{spec.name}" unless names.add?(spec.name)
         unless File.directory?(spec.full_gem_path)
           raise ArgumentError, "project gem is not installed: #{spec.full_name}; run `bundle install`"
         end
 
-        FileUtils.cp_r(spec.full_gem_path, File.join(gem_home, "gems", spec.full_name))
-        File.write(File.join(gem_home, "specifications", "#{spec.full_name}.gemspec"), spec.to_ruby)
+        files = packaged_gem_files(spec)
+        gem_target = File.join(gem_home, "gems", spec.full_name)
+        install_gem_files(spec, gem_target, files:)
+        install_zui_runtime_entrypoint(gem_target) if spec.name == "zui"
+        File.write(
+          File.join(gem_home, "specifications", "#{spec.full_name}.gemspec"),
+          spec.to_ruby(files:)
+        )
         install_gem_extensions(spec, gem_home)
       end
       specs
+    end
+
+    def install_gem_files(spec, target, files: packaged_gem_files(spec))
+      if files.empty?
+        raise ArgumentError, "gem #{spec.full_name} has no packaged files; set spec.files in its gemspec"
+      end
+
+      root = File.realpath(spec.full_gem_path)
+      FileUtils.mkdir_p(target)
+      files.each do |relative|
+        source = File.expand_path(relative, root)
+        unless inside?(source, root)
+          raise ArgumentError, "gem #{spec.full_name} has an unsafe packaged path: #{relative.inspect}"
+        end
+        unless File.file?(source)
+          raise ArgumentError, "gem #{spec.full_name} is missing packaged file: #{relative}"
+        end
+        unless inside?(File.realpath(source), root)
+          raise ArgumentError, "gem #{spec.full_name} has a packaged symlink outside its root: #{relative.inspect}"
+        end
+
+        destination = File.join(target, relative)
+        FileUtils.mkdir_p(File.dirname(destination))
+        FileUtils.cp(source, destination, preserve: true)
+      end
+    end
+
+    def packaged_gem_files(spec)
+      files = Array(spec.files).map(&:to_s).reject(&:empty?).uniq.sort
+      return files unless spec.name == "zui"
+
+      files & ZUI_RUNTIME_FILES
+    end
+
+    def install_zui_runtime_entrypoint(target)
+      runtime = File.join(target, "lib", "zui", "runtime_entry.rb")
+      unless File.file?(runtime)
+        raise ArgumentError, "zui runtime entrypoint is missing: lib/zui/runtime_entry.rb"
+      end
+
+      File.write(File.join(target, "lib", "zui.rb"), ZUI_RUNTIME_ENTRYPOINT)
     end
 
     def install_gem_extensions(spec, gem_home)
@@ -177,29 +350,23 @@ module Zui
 
       relative = File.join(*parts[(index + 1)..])
       target = File.join(gem_home, "extensions", relative)
-      FileUtils.mkdir_p(File.dirname(target))
-      FileUtils.cp_r(source, target)
-    end
+      root = File.realpath(source)
+      Dir.glob(File.join(source, "**", "*"), File::FNM_DOTMATCH).sort.each do |path|
+        next unless File.file?(path)
 
-    def project_specs(project)
-      gemfile = File.join(project, "Gemfile")
-      lockfile = File.join(project, "Gemfile.lock")
-      raise ArgumentError, "Gemfile not found; add project gems before using --full" unless File.file?(gemfile)
-      unless File.file?(lockfile)
-        raise ArgumentError, "Gemfile.lock not found; run `bundle install` before using --full"
+        name = File.basename(path)
+        next if EXTENSION_BUILD_FILES.include?(name)
+        next if EXTENSION_BUILD_EXTENSIONS.include?(File.extname(name).downcase)
+
+        resolved = File.realpath(path)
+        unless inside?(resolved, root)
+          raise ArgumentError, "gem #{spec.full_name} has an extension file outside its root: #{path}"
+        end
+        extension_relative = path.delete_prefix("#{source}#{File::SEPARATOR}")
+        installed = File.join(target, extension_relative)
+        FileUtils.mkdir_p(File.dirname(installed))
+        FileUtils.cp(path, installed, preserve: true)
       end
-
-      previous = @environment["BUNDLE_GEMFILE"]
-      ENV["BUNDLE_GEMFILE"] = gemfile
-      Bundler.reset!
-      definition = Bundler::Definition.build(gemfile, lockfile, nil)
-      definition.validate_runtime!
-      definition.specs.to_a
-    rescue Bundler::BundlerError => error
-      raise ArgumentError, "project gems are not ready: #{error.message}"
-    ensure
-      previous.nil? ? ENV.delete("BUNDLE_GEMFILE") : ENV["BUNDLE_GEMFILE"] = previous
-      Bundler.reset!
     end
 
     def runtime_relative_path(path)
@@ -218,15 +385,17 @@ module Zui
     end
 
     def strip_binary(path)
-      magic = File.binread(path, 4)
-      mach_o = ["\xCF\xFA\xED\xFE".b, "\xFE\xED\xFA\xCF".b, "\xCA\xFE\xBA\xBE".b]
-      return unless magic.start_with?("\x7FELF".b, "MZ".b) || mach_o.include?(magic)
-
       strip = find_command(platform.macos? ? %w[strip] : %w[strip llvm-strip])
       return unless strip
 
       arguments = platform.macos? ? [strip, "-x", path] : [strip, "--strip-unneeded", path]
       system(*arguments, out: File::NULL, err: File::NULL)
+    end
+
+    def native_binary?(path)
+      magic = File.binread(path, 4)
+      mach_o = ["\xCF\xFA\xED\xFE".b, "\xFE\xED\xFA\xCF".b, "\xCA\xFE\xBA\xBE".b]
+      magic.start_with?("\x7FELF".b, "MZ".b) || mach_o.include?(magic)
     end
 
     def sign_binary(path)
