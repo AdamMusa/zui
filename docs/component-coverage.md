@@ -478,3 +478,14 @@ shaders, buffers and commands are declared inside it, or named by id.
 - [x] buffer_3d
 - [x] buffer_input
 - [x] set_uniform_value
+
+### Helpers: camera controllers
+
+A camera controller is a Qt Quick item that reads input over the viewport,
+so it is declared inside the view_3d whose camera it drives and names
+that camera by id.
+
+- [x] orbit_camera_controller
+- [x] wasd_controller
+- [x] look_at_node
+- [x] lod_manager

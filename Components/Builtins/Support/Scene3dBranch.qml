@@ -23,13 +23,16 @@ Item {
     property int repeatIndex: 0
 
     property var node: null
+    property string instantiatedType: ""
     property string lastComponentErrorKey: ""
     readonly property var bridge: host ? host.bridge : null
     readonly property string surfaceName: host ? String(host.surfaceName) : ""
     readonly property color foreground: host ? host.foreground : "#ffffff"
     readonly property string fontFamily: host ? String(host.fontFamily) : ""
     readonly property int renderDepth: host && host.renderDepth !== undefined ? host.renderDepth + 1 : 1
-    readonly property var object3d: adapterLoader.item
+    // The object this branch owns. It is created rather than loaded so that its
+    // QML parent can be chosen per kind, which a Loader cannot do.
+    property var object3d: null
     // Adapters that keep their children somewhere other than themselves, such
     // as a repeater that replicates them across generated nodes, say so here.
     readonly property var childTargets: {
@@ -142,14 +145,30 @@ Item {
             node = nextNode
     }
 
+    // Not everything in the Qt Quick 3D surface is a scene object. A camera
+    // controller is a Qt Quick Item that reads pointer and key input over the
+    // viewport, and a helper such as InfiniteGrid is a plain QObject that finds
+    // the viewport it belongs to through its QML parent. Each kind is placed
+    // where Qt expects to find it.
+    function creationParent() {
+        return host && host.viewport ? host.viewport : branch
+    }
+
     function attachObject() {
-        var object = adapterLoader.item
+        var object = object3d
         if (!object)
             return
-        // A Qt Quick 3D resource that is not part of the object tree, such as a
-        // texture input handed to a shader, has no 3D parent to attach to. It is
-        // still published to the registry so another node can name it.
-        if (target && object.hasOwnProperty("parent")) {
+        if (object.hasOwnProperty("anchors")) {
+            var itemHost = host && host.itemHost ? host.itemHost : null
+            if (!itemHost) {
+                componentError("scene3d_attach_failed",
+                               "A " + (node ? node.type : "component")
+                               + " needs a viewport to sit over", {})
+                return
+            }
+            object.parent = itemHost
+            object.anchors.fill = itemHost
+        } else if (target && object.hasOwnProperty("parent")) {
             object.parent = target
             if (object.parent !== target) {
                 componentError("scene3d_attach_failed",
@@ -166,6 +185,39 @@ Item {
             emitEvent("mount", {})
     }
 
+    function releaseObject() {
+        if (!object3d)
+            return
+        registerSceneObject(controlId, null)
+        var released = object3d
+        object3d = null
+        if (owner)
+            owner.noteRevision()
+        released.destroy()
+    }
+
+    function instantiate() {
+        releaseObject()
+        if (!node)
+            return
+        var url = Qt.resolvedUrl("../" + adapterName(node.type) + ".qml")
+        var component = Qt.createComponent(url, Component.PreferSynchronous)
+        if (component.status === Component.Error) {
+            componentError("component_load_failed", component.errorString(), { "source": String(url) })
+            return
+        }
+        var created = component.createObject(creationParent(), { "renderer": branch })
+        if (!created) {
+            componentError("component_load_failed",
+                           "Unable to create the declared "
+                           + (node ? node.type : "component") + " renderer",
+                           { "source": String(url) })
+            return
+        }
+        object3d = created
+        attachObject()
+    }
+
     visible: false
     width: 0
     height: 0
@@ -173,32 +225,17 @@ Item {
     onControlIdChanged: synchronizeNode()
     Component.onCompleted: synchronizeNode()
     Component.onDestruction: {
-        registerSceneObject(controlId, null)
-        if (owner)
-            owner.removeBranch(branch)
         if (subscribed("unmount"))
             emitEvent("unmount", {})
+        releaseObject()
+        if (owner)
+            owner.removeBranch(branch)
     }
 
     Connections {
         target: branch.bridge
         function onRevisionChanged() {
             branch.synchronizeNode()
-        }
-    }
-
-    Loader {
-        id: adapterLoader
-
-        asynchronous: false
-        onLoaded: branch.attachObject()
-        onStatusChanged: {
-            if (status === Loader.Error) {
-                branch.componentError("component_load_failed",
-                                      "Unable to load the declared "
-                                      + (branch.node ? branch.node.type : "component") + " renderer",
-                                      { "source": String(source) })
-            }
         }
     }
 
@@ -210,16 +247,14 @@ Item {
         nodes: branch.childNodes
     }
 
+    // Reactive patches keep the node type, so the object is only rebuilt when
+    // the type actually changes; its own bindings carry every other change.
     onNodeChanged: {
-        if (!node) {
-            if (adapterLoader.source !== "")
-                adapterLoader.source = ""
+        var wanted = node ? String(node.type) : ""
+        if (wanted === instantiatedType)
             return
-        }
-        var wanted = Qt.resolvedUrl("../" + adapterName(node.type) + ".qml")
-        if (String(adapterLoader.source) === String(wanted))
-            return
+        instantiatedType = wanted
         lastComponentErrorKey = ""
-        adapterLoader.setSource(wanted, { "renderer": branch })
+        instantiate()
     }
 }

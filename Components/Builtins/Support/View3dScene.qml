@@ -20,6 +20,11 @@ Item {
     readonly property string fontFamily: String(renderer.fontFamily)
     readonly property int renderDepth: renderer.renderDepth
 
+    // The viewport a plain QObject helper is created under, and the item a
+    // camera controller sits over to read pointer and key input.
+    readonly property var viewport: nativeView
+    readonly property var itemHost: controllerHost
+
     readonly property var cameraTypes: ["perspective_camera", "orthographic_camera",
         "frustum_camera", "custom_camera"]
     readonly property var environmentTypes: ["scene_environment", "extended_scene_environment"]
@@ -134,6 +139,12 @@ Item {
         Node {
             id: sceneRoot
         }
+    }
+
+    Item {
+        id: controllerHost
+
+        anchors.fill: parent
     }
 
     Scene3dChildren {
