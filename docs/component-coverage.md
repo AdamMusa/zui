@@ -15,6 +15,11 @@ classes, QML compiler infrastructure, compositor protocols, and operating-system
 are not widgets and are intentionally excluded. Framework concepts such as state, timers,
 transitions, and animation groups receive Ruby APIs even though they are not visual widgets.
 
+Qt types declared `isCreatable: false` cannot be instantiated from application QML, so they get no
+component rather than a renderer that quietly substitutes a concrete subclass. `Animator`, the base
+of `OpacityAnimator` and the rest, is abstract for that reason, and `Vector3dAnimation` is already
+covered under `vector_animation`.
+
 ## Foundation and layout
 
 - [x] control
