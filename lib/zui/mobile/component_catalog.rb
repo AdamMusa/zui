@@ -179,6 +179,17 @@ module Zui
         "QtCharts/CandlestickModelMapper" => :chart_h_candlestick_model_mapper
       }.freeze
 
+      # QtCharts and QtGraphs export several identically named types (BarSeries,
+      # LineSeries, ValueAxis and friends), so chart and graph catalogs are keyed
+      # by the qualified QML type name. A bare key would let one module silently
+      # shadow the other in ALL.
+      GRAPHS = {
+        "QtGraphs/GraphsView" => :graphs_view,
+        "QtGraphs/GraphsTheme" => :graphs_theme,
+        # Value type realized by the theme adapter's grid and axis line groups.
+        "QtGraphs/graphsline" => :graphs_theme
+      }.freeze
+
       TOUCH_INTERACTION = {
         "TapHandler" => :tap_area, "PointHandler" => :point_handler,
         "MultiPointTouchArea" => :multi_touch_area, "WheelHandler" => :wheel_area,
@@ -190,7 +201,7 @@ module Zui
       ALL = CORE.merge(PERMISSIONS).merge(DEVICE_INFORMATION).merge(VIRTUAL_KEYBOARD)
                 .merge(SENSORS).merge(POSITIONING).merge(LOCATION)
                 .merge(TEXT_TO_SPEECH).merge(WEB).merge(WEB_SOCKETS).merge(LOTTIE)
-                .merge(PDF).merge(TOUCH_INTERACTION).merge(CHARTS).freeze
+                .merge(PDF).merge(TOUCH_INTERACTION).merge(GRAPHS).merge(CHARTS).freeze
     end
   end
 end

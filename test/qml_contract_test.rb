@@ -240,6 +240,37 @@ class QmlContractTest < Minitest::Test
     assert_includes source("Components/Builtins/KeyboardTextField.qml"), "EnterKeyAction.actionId"
   end
 
+  def test_graphs_view_renders_the_real_qtgraphs_surface
+    view = source("Components/Builtins/GraphsView.qml")
+    theme = source("Components/Builtins/GraphsTheme.qml")
+
+    assert_includes view, "import QtGraphs"
+    assert_includes view, "GraphsView {"
+    assert_includes view, "readonly property bool zuiGraphsHost: true"
+    assert_includes view, "delegate: renderer.childDelegateComponent"
+    refute_includes view, "Canvas {"
+    refute_includes view, "import QtDataVisualization"
+    assert_includes theme, "GraphsTheme {"
+    assert_includes theme, 'item["zuiGraphsHost"] === true'
+    assert_includes theme, "host.theme = root.nativeTheme"
+    assert_includes theme, "graphs_theme_without_graph"
+    assert_equal true, Zui::COMPONENTS.fetch(:graphs_view).fetch(2)
+    assert_includes Zui::COMPONENTS.fetch(:graphs_theme).fetch(1), :error
+    assert_equal :graphs_view, Zui::Mobile::ComponentCatalog::GRAPHS.fetch("QtGraphs/GraphsView")
+    assert_equal :graphs_theme, Zui::Mobile::ComponentCatalog::GRAPHS.fetch("QtGraphs/GraphsTheme")
+  end
+
+  def test_qtgraphs_scoped_enums_are_named_through_their_enum
+    theme = source("Components/Builtins/GraphsTheme.qml")
+
+    # QtGraphs sets enforcesScopedEnums, so an unscoped GraphsTheme.Dark would
+    # not resolve. Every value has to be named through its enum.
+    assert_includes theme, "GraphsTheme.ColorScheme.Automatic"
+    assert_includes theme, "GraphsTheme.Theme.QtGreen"
+    assert_includes theme, "GraphsTheme.ColorStyle.Uniform"
+    refute_match(/GraphsTheme\.(?:Dark|Light|Automatic|QtGreen|Uniform)\b/, theme)
+  end
+
   def test_chart_model_mappers_bind_a_row_table_to_the_series_above_them
     adapters = {
       chart_h_bar_model_mapper: "HBarModelMapper", chart_v_bar_model_mapper: "VBarModelMapper",
