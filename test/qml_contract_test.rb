@@ -275,6 +275,42 @@ class QmlContractTest < Minitest::Test
     assert_includes File.read(File.join(ROOT, "native", "CMakeLists.txt")), "Qt6::qmlwavefrontmeshplugin"
   end
 
+  MULTI_EFFECT_ADAPTERS = {
+    multi_effect: "MultiEffect", blur: "Blur", drop_shadow: "DropShadow",
+    glow: "Glow", colorize: "Colorize", opacity_mask: "OpacityMask"
+  }.freeze
+
+  def test_multi_effect_family_can_take_a_source_item_from_elsewhere_in_the_tree
+    MULTI_EFFECT_ADAPTERS.each do |component, adapter_name|
+      adapter = File.read(File.join(ROOT, "Components", "Builtins", "#{adapter_name}.qml"))
+
+      assert_includes adapter, "function effectSource()", "#{adapter_name} cannot take an external source"
+      assert_includes adapter, 'renderer.prop("source_item", "")'
+      assert_includes adapter, "source_item_missing", "#{adapter_name} resolves a missing source silently"
+      assert_includes adapter, "source: #{adapter.match(/id: (\w+)/)[1]}.effectSource()"
+      assert_includes Zui::COMPONENTS.fetch(component).first, :source_item
+      assert_includes Zui::COMPONENTS.fetch(component)[1], :error,
+                      "#{component} does not expose its failures to Ruby"
+    end
+  end
+
+  def test_multi_effect_covers_every_writable_property_of_its_qt_type
+    adapter = File.read(File.join(ROOT, "Components", "Builtins", "MultiEffect.qml"))
+    schema = Zui::COMPONENTS.fetch(:multi_effect).first
+
+    %w[source autoPaddingEnabled paddingRect brightness contrast saturation colorization
+       colorizationColor blurEnabled blur blurMax blurMultiplier shadowEnabled shadowOpacity
+       shadowBlur shadowHorizontalOffset shadowVerticalOffset shadowColor shadowScale maskEnabled
+       maskSource maskThresholdMin maskSpreadAtMin maskThresholdMax maskSpreadAtMax
+       maskInverted].each do |member|
+      assert_includes adapter, "#{member}:", "multi_effect does not drive #{member}"
+    end
+    assert_includes adapter, "onItemRectChanged:"
+    assert_includes adapter, "mask_source_missing"
+    assert_includes schema, :source_item
+    assert_includes Zui::COMPONENTS.fetch(:multi_effect)[1], :geometry
+  end
+
   def test_graphical_effects_reach_desktop_clients_and_static_mobile_builds
     cmake = File.read(File.join(ROOT, "native", "CMakeLists.txt"))
     audit = File.read(File.join(ROOT, "scripts", "audit_client.rb"))

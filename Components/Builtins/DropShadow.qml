@@ -2,12 +2,23 @@ import QtQuick
 import QtQuick.Effects
 
 Item {
+  id: shadowRoot
   required property var renderer
   implicitWidth: Number(renderer.prop("width", 240)); implicitHeight: Number(renderer.prop("height", 160))
+
+  function effectSource() {
+    var target = String(renderer.prop("source_item", ""))
+    if (target === "") return sourceTexture
+    var resolved = renderer.findRenderedItem(target)
+    if (resolved) return resolved
+    renderer.componentError("source_item_missing", "No rendered item with id " + target, { source_item: target })
+    return sourceTexture
+  }
+
   Item { id: sourceHost; anchors.fill: parent; Repeater { model: renderer.node.children || []; delegate: renderer.childDelegateComponent } }
   ShaderEffectSource { id: sourceTexture; anchors.fill: parent; sourceItem: sourceHost; hideSource: true; visible: false }
   MultiEffect {
-    anchors.fill: parent; source: sourceTexture; shadowEnabled: true
+    anchors.fill: parent; source: shadowRoot.effectSource(); shadowEnabled: true
     shadowBlur: Number(renderer.prop("blur", 1)); blurMax: Number(renderer.prop("maximum", 32)); blurMultiplier: Number(renderer.prop("multiplier", 1))
     shadowHorizontalOffset: Number(renderer.prop("horizontal_offset", 0)); shadowVerticalOffset: Number(renderer.prop("vertical_offset", 4))
     shadowColor: renderer.prop("color", "black"); shadowOpacity: Number(renderer.prop("opacity", 0.6)); shadowScale: Number(renderer.prop("scale", 1))
