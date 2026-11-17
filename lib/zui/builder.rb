@@ -145,7 +145,8 @@ module Zui
       desaturate_3d distortion_ripple distortion_sphere distortion_spiral
       edge_detect emboss flip fxaa
       gaussian_blur_3d hdr_bloom_tonemap motion_blur s_curve_tonemap
-      scatter tilt_shift vignette_3d
+      scatter tilt_shift vignette_3d audio_engine
+      audio_listener audio_room spatial_sound ambient_sound
     ].freeze
     SCENE_3D_COMPONENTS.each do |type|
       define_method(type) { |id: nil, **props, &block| component(type, id:, **props, &block) }

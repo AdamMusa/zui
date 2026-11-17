@@ -415,7 +415,12 @@ module Zui
     s_curve_tonemap: [%i[shoulder_slope shoulder_emphasis toe_slope toe_emphasis contrast_boost saturation_level gamma_value use_exposure white_point exposure_value], %i[error], false],
     scatter: [%i[noise_sample amount direction randomize], %i[error], false],
     tilt_shift: [%i[focus_position focus_width blur_amount is_vertical is_inverted], %i[error], false],
-    vignette_3d: [%i[vignette_strength vignette_color vignette_radius], %i[error], false]
+    vignette_3d: [%i[vignette_strength vignette_color vignette_radius], %i[error], false],
+    audio_engine: [%i[output_mode master_volume], %i[error], false],
+    audio_listener: [%i[position x y z euler_rotation rotation_x rotation_y rotation_z rotation scale pivot opacity visible static_flags], %i[error], true],
+    audio_room: [%i[position x y z euler_rotation rotation_x rotation_y rotation_z rotation scale pivot opacity visible static_flags dimensions left_material right_material front_material back_material floor_material ceiling_material reflection_gain reverb_gain reverb_time reverb_brightness], %i[error], true],
+    spatial_sound: [%i[position x y z euler_rotation rotation_x rotation_y rotation_z rotation scale pivot opacity visible static_flags source volume distance_model size distance_cutoff manual_attenuation occlusion_intensity directivity directivity_order near_field_gain loops auto_play], %i[error], true],
+    ambient_sound: [%i[source volume loops auto_play], %i[error], false]
   }.freeze
 
   DEFAULT_COMPONENTS = ComponentRegistry.new

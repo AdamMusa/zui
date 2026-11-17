@@ -164,6 +164,16 @@ function easing(value) {
     return { "type": curves.hasOwnProperty(key) ? curves[key] : Easing.InOutQuad }
 }
 
+// Qt takes a loop count as a plain integer with one reserved value meaning
+// "forever". The reserved value differs per type, so the caller passes it in
+// and Ruby can write either a count or "infinite".
+function loops(value, infinite) {
+    if (String(value) === "infinite")
+        return infinite
+    var count = Number(value)
+    return isFinite(count) ? count : infinite
+}
+
 function rangeValue(value) {
     if (Array.isArray(value)) {
         if (value.length === 4)
