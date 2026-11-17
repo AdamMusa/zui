@@ -751,6 +751,65 @@ class QmlContractTest < Minitest::Test
                  Zui::Mobile::ComponentCatalog::GRAPHS.fetch("QtGraphs/HeightMapSurfaceDataProxy")
   end
 
+  def test_graphs_3d_axes_fill_either_axis_naming_the_graphs_use
+    value_axis = source("Components/Builtins/GraphValue3dAxis.qml")
+    category_axis = source("Components/Builtins/GraphCategory3dAxis.qml")
+
+    assert_includes value_axis, "Value3DAxis {"
+    assert_includes category_axis, "Category3DAxis {"
+    # Scatter3D and Surface3D name their slots axisX/Y/Z; Bars3D names them
+    # rowAxis/columnAxis/valueAxis. One position property covers both.
+    assert_includes value_axis, 'row: "rowAxis", column: "columnAxis", value: "valueAxis"'
+    assert_includes value_axis, 'x: "axisX", y: "axisY", z: "axisZ"'
+    assert_includes value_axis, "graph_axis_position_unsupported"
+    assert_includes value_axis, 'item["zuiGraphsHost"] === true'
+    assert_includes value_axis, "readonly property bool zuiAxisHost: true"
+    assert_equal true, Zui::COMPONENTS.fetch(:graph_value_3d_axis).fetch(2)
+    assert_equal :graph_value_3d_axis,
+                 Zui::Mobile::ComponentCatalog::GRAPHS.fetch("QtGraphs/Value3DAxis")
+  end
+
+  def test_graphs_3d_axis_formatters_attach_only_to_a_value_axis
+    formatter = source("Components/Builtins/GraphLogValue3dAxisFormatter.qml")
+
+    assert_includes formatter, "LogValue3DAxisFormatter {"
+    assert_includes formatter, 'item["zuiAxisHost"] === true'
+    assert_includes formatter, "host.nativeAxis.formatter = root.nativeFormatter"
+    assert_includes formatter, "graph_formatter_axis_unsupported"
+    assert_includes formatter, "graph_formatter_without_axis"
+    assert_equal :graph_log_value_3d_axis_formatter,
+                 Zui::Mobile::ComponentCatalog::GRAPHS.fetch("QtGraphs/LogValue3DAxisFormatter")
+  end
+
+  def test_graphs_3d_custom_items_are_released_rather_than_destroyed
+    item = source("Components/Builtins/GraphCustom3dItem.qml")
+    label = source("Components/Builtins/GraphCustom3dLabel.qml")
+
+    assert_includes item, "Custom3DItem {"
+    assert_includes label, "Custom3DLabel {"
+    assert_includes item, "host.addCustomItem(root.nativeItem)"
+    # addCustomItem transfers ownership, so the graph must not be left holding a
+    # destroyed object.
+    assert_includes item, "root.ownerGraph.releaseCustomItem(root.nativeItem)"
+    assert_includes item, "graph_custom_item_without_graph"
+    # QML offers only Qt.quaternion(w, x, y, z), so axis-and-angle is converted
+    # here rather than guarded behind a helper that does not exist.
+    assert_includes item, "var scale = Math.sin(half) / length"
+    assert_includes item, "return Qt.quaternion(Math.cos(half)"
+    refute_includes item, "fromAxisAndAngle"
+    assert_equal :graph_custom_3d_label,
+                 Zui::Mobile::ComponentCatalog::GRAPHS.fetch("QtGraphs/Custom3DLabel")
+  end
+
+  def test_qt_data_visualization_is_superseded_by_qtgraphs_and_never_imported
+    framework = (Dir[File.join(ROOT, "*.qml")] +
+      Dir[File.join(ROOT, "{Components,Controls,Theme}", "**", "*.qml")]).map { File.read(_1) }.join("\n")
+
+    refute_includes framework, "import QtDataVisualization"
+    refute_match(/QtDataVisualization/, framework)
+    refute Zui::Mobile::ComponentCatalog::ALL.keys.any? { |key| key.start_with?("QtDataVisualization/") }
+  end
+
   def test_mobile_permissions_can_surface_native_failures
     %i[bluetooth_permission calendar_permission camera_permission contacts_permission
        location_permission microphone_permission].each do |component|

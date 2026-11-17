@@ -610,6 +610,20 @@ module Zui
       component(:graph_height_map_surface_data_proxy, id:, height_map_file: height_map_file.to_s, **props)
     end
 
+    # QtGraphs 3D axes, their formatters, and the custom items a graph can place
+    # in its own coordinate space.
+    GRAPH_3D_AXIS_COMPONENTS = %i[
+      graph_value_3d_axis graph_category_3d_axis graph_value_3d_axis_formatter
+      graph_log_value_3d_axis_formatter graph_custom_3d_item
+    ].freeze
+    GRAPH_3D_AXIS_COMPONENTS.each do |type|
+      define_method(type) { |id: nil, **props, &block| component(type, id:, **props, &block) }
+    end
+
+    def graph_custom_3d_label(text = "", id: nil, **props)
+      component(:graph_custom_3d_label, id:, text: text.to_s, **props)
+    end
+
     # QtGraphs' 2D graph surface and its theme. QtGraphs is Qt's replacement for
     # QtDataVisualization and is separate from both the chart wrappers above and
     # the QtCharts primitives: its axes belong to the view, not to each series.

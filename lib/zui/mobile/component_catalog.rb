@@ -229,7 +229,21 @@ module Zui
         "QtGraphs/ScatterDataProxy" => :graph_item_model_scatter_data_proxy,
         "QtGraphs/ItemModelSurfaceDataProxy" => :graph_item_model_surface_data_proxy,
         "QtGraphs/SurfaceDataProxy" => :graph_item_model_surface_data_proxy,
-        "QtGraphs/HeightMapSurfaceDataProxy" => :graph_height_map_surface_data_proxy
+        "QtGraphs/HeightMapSurfaceDataProxy" => :graph_height_map_surface_data_proxy,
+        "QtGraphs/Value3DAxis" => :graph_value_3d_axis,
+        "QtGraphs/Category3DAxis" => :graph_category_3d_axis,
+        "QtGraphs/Value3DAxisFormatter" => :graph_value_3d_axis_formatter,
+        "QtGraphs/LogValue3DAxisFormatter" => :graph_log_value_3d_axis_formatter,
+        "QtGraphs/Custom3DItem" => :graph_custom_3d_item,
+        "QtGraphs/Custom3DLabel" => :graph_custom_3d_label,
+        "QtGraphs/Abstract3DAxis" => :graph_value_3d_axis,
+        # Declarative-only list elements and types whose data cannot cross the
+        # JSON node protocol, realized by the adapters that would hold them.
+        "QtGraphs/Color" => :graph_bar_3d_series,
+        "QtGraphs/Custom3DVolume" => :graph_custom_3d_item,
+        "QtGraphs/GraphTransition" => :graph_line_series,
+        "QtGraphs/GraphPointAnimation" => :graph_line_series,
+        "QtGraphs/SplineControlAnimation" => :graph_spline_series
       }.freeze
 
       TOUCH_INTERACTION = {
