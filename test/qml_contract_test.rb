@@ -240,6 +240,66 @@ class QmlContractTest < Minitest::Test
     assert_includes source("Components/Builtins/KeyboardTextField.qml"), "EnterKeyAction.actionId"
   end
 
+  def test_graph_series_hand_themselves_to_the_graph_through_add_series
+    adapters = {
+      graph_line_series: "LineSeries", graph_spline_series: "SplineSeries",
+      graph_scatter_series: "ScatterSeries", graph_area_series: "AreaSeries",
+      graph_bar_series: "BarSeries", graph_pie_series: "PieSeries"
+    }
+
+    adapters.each do |component, native|
+      name = component.to_s.split("_").map(&:capitalize).join
+      adapter = source("Components/Builtins/#{name}.qml")
+
+      assert_includes adapter, "import QtGraphs"
+      assert_includes adapter, "#{native} {"
+      assert_includes adapter, "readonly property bool zuiSeriesHost: true"
+      assert_includes adapter, 'item["zuiGraphsHost"] === true'
+      # QtGraphs exposes addSeries to QML, so no object-parenting trick is needed.
+      assert_includes adapter, "host.addSeries(root.nativeSeries)"
+      assert_includes adapter, "root.ownerGraph.removeSeries(root.nativeSeries)"
+      assert_includes adapter, "graph_series_without_graph"
+      refute_includes adapter, "Canvas {"
+      refute_includes adapter, "import QtCharts"
+      assert_includes Zui::COMPONENTS.fetch(component).fetch(1), :error
+      assert_includes Zui::COMPONENTS.fetch(component).fetch(1), :hover_enter
+    end
+  end
+
+  def test_graph_sets_slices_and_points_are_handed_to_their_series
+    barset = source("Components/Builtins/GraphBarSet.qml")
+    slice = source("Components/Builtins/GraphPieSlice.qml")
+    point = source("Components/Builtins/GraphXyPoint.qml")
+
+    # QtGraphs accepts already built sets and slices, unlike QtCharts' bar and
+    # pie series, so both keep real declarative bindings.
+    assert_includes barset, "setComponent.createObject(host.nativeSeries)"
+    assert_includes barset, "root.ownerSeries.append(root.nativeSet)"
+    assert_includes barset, "root.ownerSeries.remove(root.nativeSet)"
+    assert_includes barset, "graph_bar_set_without_series"
+    assert_includes slice, "sliceComponent.createObject(host.nativeSeries)"
+    assert_includes slice, "root.ownerSeries.append(root.nativeSlice)"
+    assert_includes slice, "graph_pie_slice_without_series"
+    assert_includes point, "host.nativeSeries.append(Number(renderer.prop(\"x\", 0))"
+    assert_includes point, "graph_point_without_series"
+    assert_equal :graph_bar_set, Zui::Mobile::ComponentCatalog::GRAPHS.fetch("QtGraphs/BarSet")
+    assert_equal :graph_xy_point, Zui::Mobile::ComponentCatalog::GRAPHS.fetch("QtGraphs/XYPoint")
+  end
+
+  def test_qtgraphs_bar_and_slice_enums_are_named_through_their_enum
+    bars = source("Components/Builtins/GraphBarSeries.qml")
+    slice = source("Components/Builtins/GraphPieSlice.qml")
+
+    # QtGraphs collapses QtCharts' six bar series into one barsType property.
+    assert_includes bars, "BarSeries.BarsType.Groups"
+    assert_includes bars, "BarSeries.BarsType.Stacked"
+    assert_includes bars, "BarSeries.BarsType.StackedPercent"
+    assert_includes bars, "BarSeries.LabelsPosition.Center"
+    assert_includes slice, "PieSlice.LabelPosition.Outside"
+    refute_match(/BarSeries\.(?:Groups|Stacked|StackedPercent)\b/, bars)
+    refute_match(/PieSlice\.(?:Outside|InsideHorizontal)\b/, slice)
+  end
+
   def test_graphs_view_renders_the_real_qtgraphs_surface
     view = source("Components/Builtins/GraphsView.qml")
     theme = source("Components/Builtins/GraphsTheme.qml")

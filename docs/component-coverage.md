@@ -258,6 +258,15 @@ owns its axes and accepts series through addSeries, and the 3D graph types rende
 
 - [x] graphs_view
 - [x] graphs_theme
+- [x] graph_line_series
+- [x] graph_spline_series
+- [x] graph_scatter_series
+- [x] graph_area_series
+- [x] graph_bar_series
+- [x] graph_bar_set
+- [x] graph_pie_series
+- [x] graph_pie_slice
+- [x] graph_xy_point
 
 ## Drawing and interaction
 
