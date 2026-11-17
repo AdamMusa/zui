@@ -180,6 +180,31 @@ class QmlContractTest < Minitest::Test
     assert_equal :opacity_mask, Zui::Mobile::ComponentCatalog::GRAPHICAL_EFFECTS.fetch("OpacityMask")
   end
 
+  GRAPHICAL_EFFECT_MASK_ADAPTERS = {
+    masked_blur: "MaskedBlur", threshold_mask: "ThresholdMask",
+    displace: "Displace", blend: "Blend"
+  }.freeze
+
+  def test_mask_and_displace_family_reports_unresolved_source_references
+    GRAPHICAL_EFFECT_MASK_ADAPTERS.each do |component, type|
+      adapter = File.read(File.join(ROOT, "Components", "Builtins", "#{type}.qml"))
+
+      assert_includes adapter, "import Qt5Compat.GraphicalEffects"
+      assert_includes adapter, "#{type} {", "#{type} does not instantiate its Qt type"
+      assert_includes adapter, "source: sourceHost"
+      assert_includes adapter, "renderer.findRenderedItem(target)"
+      assert_includes adapter, "renderer.componentError(", "#{type} resolves a missing source silently"
+      assert_includes Zui::COMPONENTS.fetch(component)[1], :error,
+                      "#{component} does not expose its failures to Ruby"
+      assert_equal component, Zui::Mobile::ComponentCatalog::GRAPHICAL_EFFECTS.fetch(type)
+    end
+    blend = File.read(File.join(ROOT, "Components", "Builtins", "Blend.qml"))
+
+    assert_includes blend, 'requested.replace(/_/g, "")'
+    assert_includes blend, "blend_mode_unsupported"
+    refute_includes blend, 'return "normal"'
+  end
+
   def test_graphical_effects_reach_desktop_clients_and_static_mobile_builds
     cmake = File.read(File.join(ROOT, "native", "CMakeLists.txt"))
     audit = File.read(File.join(ROOT, "scripts", "audit_client.rb"))

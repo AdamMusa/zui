@@ -138,7 +138,9 @@ module Zui
         "Qt5Compat.GraphicalEffects/RadialGradient" => :effect_radial_gradient,
         "Qt5Compat.GraphicalEffects/ConicalGradient" => :effect_conical_gradient,
         "InnerShadow" => :inner_shadow, "RectangularGlow" => :rectangular_glow,
-        "DropShadow" => :drop_shadow, "Glow" => :glow, "OpacityMask" => :opacity_mask
+        "DropShadow" => :drop_shadow, "Glow" => :glow, "OpacityMask" => :opacity_mask,
+        "MaskedBlur" => :masked_blur, "ThresholdMask" => :threshold_mask,
+        "Displace" => :displace, "Blend" => :blend
       }.freeze
 
       # QtQuick.Shapes. LinearGradient, RadialGradient and ConicalGradient exist

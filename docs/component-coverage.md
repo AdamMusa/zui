@@ -294,6 +294,10 @@ transitions, and animation groups receive Ruby APIs even though they are not vis
 - [x] effect_conical_gradient
 - [x] inner_shadow
 - [x] rectangular_glow
+- [x] masked_blur
+- [x] threshold_mask
+- [x] displace
+- [x] blend
 
 ## Multimedia and capture
 
