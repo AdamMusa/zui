@@ -233,7 +233,7 @@ module Zui
     network_status: [%i[refresh_revision watch visible], %i[information change error], false],
     virtual_keyboard: [%i[active external_language_switch width y z visible], %i[active_change language_switch error], false],
     handwriting_input: [%i[input_panel available active width height z visible], %i[available_change active_change enabled_change error], false],
-    keyboard_context: [%i[command text key modifiers command_revision extra_dictionaries watch visible], %i[change locale_change key error], false],
+    keyboard_context: [%i[command text key modifiers replace_from replace_length input_mode command_revision extra_dictionaries watch visible], %i[change locale_change engine candidates layout key error], false],
     keyboard_settings: [%i[style locale active_locales full_screen_mode user_data_path handwriting_disabled default_input_method_disabled default_dictionary_disabled close_on_return refresh_revision visible], %i[change error], false],
     keyboard_text_field: [%i[text placeholder enter_key enter_key_label enter_key_enabled input_method_hints extra_dictionaries width height enabled visible], %i[input change accept key error], false],
     clipboard: [%i[text watch revision visible], %i[change copied], false],
