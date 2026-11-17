@@ -143,7 +143,11 @@ module Zui
         "QtCharts/HorizontalPercentBarSeries" => :chart_horizontal_percent_bar_series,
         "QtCharts/BarSet" => :chart_bar_set,
         # Abstract base with no QML identity of its own.
-        "QtCharts/AbstractBarSeries" => :chart_bar_series
+        "QtCharts/AbstractBarSeries" => :chart_bar_series,
+        "QtCharts/PieSeries" => :chart_pie_series,
+        "QtCharts/PieSlice" => :chart_pie_slice,
+        "QtCharts/BoxPlotSeries" => :chart_box_plot_series,
+        "QtCharts/BoxSet" => :chart_box_set
       }.freeze
 
       TOUCH_INTERACTION = {
