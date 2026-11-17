@@ -90,7 +90,7 @@ module Zui
       known = COMPONENTS.keys.to_h { |name| [name.to_s, name] }
       selected = Set.new(BASE_COMPONENTS)
       ruby_sources.each do |path|
-        syntax = Ripper.sexp(File.read(path))
+        syntax = Ripper.sexp(SourceText.read(path))
         raise ArgumentError, "cannot tree-shake Ruby file with syntax errors: #{path}" unless syntax
 
         component_references(syntax, known).each { |component| selected << component }
@@ -110,7 +110,7 @@ module Zui
         path = File.join(@framework, "Components", "Builtins", adapter)
         raise ArgumentError, "component adapter is missing while tree-shaking: #{path}" unless File.file?(path)
 
-        File.read(path).scan(/\bBuiltins\.([A-Z][A-Za-z0-9]*)/).flatten.each do |class_name|
+        SourceText.read(path).scan(/\bBuiltins\.([A-Z][A-Za-z0-9]*)/).flatten.each do |class_name|
           dependency = "#{class_name}.qml"
           next unless types_by_adapter.key?(dependency) && adapters.add?(dependency)
 
@@ -216,7 +216,7 @@ module Zui
       queue = adapter_sources.dup
       until queue.empty?
         source_path = queue.shift
-        source = File.read(source_path)
+        source = SourceText.read(source_path)
         support_references(source, source_path.start_with?("#{root}#{File::SEPARATOR}"), by_component).each do |relative|
           path = available[relative]
           next unless path && required.add?(path)
@@ -254,7 +254,7 @@ module Zui
 
     def qml_imports(paths)
       paths.each_with_object(Set.new) do |path, imports|
-        File.foreach(path) do |line|
+        SourceText.foreach(path) do |line|
           line.scan(/(?:^|["'])\s*import\s+([A-Za-z][A-Za-z0-9_.]*)\b/) do |match|
             imports << match.first
           end
@@ -300,7 +300,7 @@ module Zui
 
     def module_directories(root)
       Dir[File.join(root, "**", "qmldir")].each_with_object({}) do |path, modules|
-        module_name = File.foreach(path).filter_map { |line| line[/^\s*module\s+(\S+)/, 1] }.first
+        module_name = SourceText.foreach(path).filter_map { |line| line[/^\s*module\s+(\S+)/, 1] }.first
         modules[module_name] = File.dirname(path) if module_name
       end
     end
@@ -308,7 +308,7 @@ module Zui
     def module_imports(directory, modules)
       imports = Set.new
       qmldir = File.join(directory, "qmldir")
-      File.foreach(qmldir) do |line|
+      SourceText.foreach(qmldir) do |line|
         dependency = line[/^\s*(?:depends|import)\s+([A-Za-z][A-Za-z0-9_.]*)\b/, 1]
         imports << dependency if dependency
       end
@@ -381,7 +381,7 @@ module Zui
     def detected_qt_features
       features = Set.new(@configuration.features)
       ruby_sources.each do |path|
-        Ripper.lex(File.read(path)).each do |_position, event, token, _state|
+        Ripper.lex(SourceText.read(path)).each do |_position, event, token, _state|
           next unless event == :on_tstring_content
 
           token.scan(/\.([A-Za-z0-9]+)(?:\z|[?#])/).flatten.each do |extension|
