@@ -534,3 +534,15 @@ particle_system_3d that owns them, so none of them has to name it.
 - [x] particle_custom_shape_3d
 - [x] vector_direction_3d
 - [x] target_direction_3d
+
+### Particles: affectors
+
+An affector is declared inside the particle_system_3d it belongs to.
+Leaving `particles` unset lets it act on every particle in the system.
+
+- [x] gravity_3d
+- [x] attractor_3d
+- [x] wander_3d
+- [x] repeller_3d
+- [x] point_rotator_3d
+- [x] scale_affector_3d

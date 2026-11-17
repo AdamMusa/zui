@@ -1132,6 +1132,36 @@ class QmlContractTest < Minitest::Test
                  Zui::Mobile::ComponentCatalog::QUICK3D_PARTICLES.fetch("SpriteParticle3D")
   end
 
+  def test_quick3d_particle_affectors_push_particles_around
+    gravity = source("Components/Builtins/Gravity3d.qml")
+    attractor = source("Components/Builtins/Attractor3d.qml")
+    wander = source("Components/Builtins/Wander3d.qml")
+    repeller = source("Components/Builtins/Repeller3d.qml")
+    rotator = source("Components/Builtins/PointRotator3d.qml")
+    scale = source("Components/Builtins/ScaleAffector3d.qml")
+
+    assert_dynamic_component_route(source("ControlNode.qml"), "gravity_3d")
+    assert_includes gravity, "Gravity3D {"
+    # An affector takes the system it is declared inside, and acts on every
+    # particle in it unless `particles` narrows the set.
+    assert_includes gravity, 'renderer.ownerOrReference(Scene3dTypes.particleSystems, "system")'
+    assert_includes gravity, 'renderer.sceneObjects(renderer.prop("particles", []))'
+    assert_includes attractor, 'renderer.childObjectOrReference(Scene3dTypes.particleShapes, "shape")'
+    assert_includes Zui::COMPONENTS.fetch(:attractor_3d).first, :use_cached_positions
+    assert_includes Zui::COMPONENTS.fetch(:wander_3d).first, :unique_pace_variation
+    assert_includes Zui::COMPONENTS.fetch(:repeller_3d).first, :outer_radius
+    assert_includes Zui::COMPONENTS.fetch(:point_rotator_3d).first, :pivot_point
+    assert_includes wander, "Wander3D {"
+    assert_includes repeller, "Repeller3D {"
+    assert_includes rotator, "PointRotator3D {"
+    # Qt spells the saw-tooth scaling type SewSaw; the table follows Qt, not
+    # what the name ought to be.
+    assert_includes scale, '"sew_saw": ScaleAffector3D.SewSaw'
+    assert_includes scale, "Value3d.easing("
+    assert_equal :wander_3d,
+                 Zui::Mobile::ComponentCatalog::QUICK3D_PARTICLE_AFFECTORS.fetch("Wander3D")
+  end
+
   def test_optional_3d_properties_leave_qt_defaults_alone
     helper = source("Components/Builtins/Support/Prop3dBinding.qml")
 

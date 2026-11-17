@@ -388,7 +388,13 @@ module Zui
     particle_model_shape_3d: [%i[fill source materials geometry], %i[error], false],
     particle_custom_shape_3d: [%i[source randomize_data], %i[error], false],
     vector_direction_3d: [%i[direction direction_variation normalized], %i[error], false],
-    target_direction_3d: [%i[position position_variation normalized magnitude magnitude_variation], %i[error], false]
+    target_direction_3d: [%i[position position_variation normalized magnitude magnitude_variation], %i[error], false],
+    gravity_3d: [%i[position x y z euler_rotation rotation_x rotation_y rotation_z rotation scale pivot opacity visible static_flags system particles magnitude direction enabled], %i[error], true],
+    attractor_3d: [%i[position x y z euler_rotation rotation_x rotation_y rotation_z rotation scale pivot opacity visible static_flags system particles shape position_variation duration duration_variation hide_at_end use_cached_positions positions_amount enabled], %i[error], true],
+    wander_3d: [%i[position x y z euler_rotation rotation_x rotation_y rotation_z rotation scale pivot opacity visible static_flags system particles global_amount global_pace global_pace_start unique_amount unique_pace unique_amount_variation unique_pace_variation fade_in_duration fade_out_duration enabled], %i[error], true],
+    repeller_3d: [%i[position x y z euler_rotation rotation_x rotation_y rotation_z rotation scale pivot opacity visible static_flags system particles radius outer_radius strength enabled], %i[error], true],
+    point_rotator_3d: [%i[position x y z euler_rotation rotation_x rotation_y rotation_z rotation scale pivot opacity visible static_flags system particles magnitude direction pivot_point enabled], %i[error], true],
+    scale_affector_3d: [%i[position x y z euler_rotation rotation_x rotation_y rotation_z rotation scale pivot opacity visible static_flags system particles min_size max_size duration type easing_curve enabled], %i[error], true]
   }.freeze
 
   DEFAULT_COMPONENTS = ComponentRegistry.new

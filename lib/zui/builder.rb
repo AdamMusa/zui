@@ -139,6 +139,8 @@ module Zui
       model_particle_3d model_blend_particle_3d sprite_sequence_3d particle_emitter_3d
       trail_emitter_3d emit_burst_3d dynamic_burst_3d particle_shape_3d
       particle_model_shape_3d particle_custom_shape_3d vector_direction_3d target_direction_3d
+      gravity_3d attractor_3d wander_3d repeller_3d
+      point_rotator_3d scale_affector_3d
     ].freeze
     SCENE_3D_COMPONENTS.each do |type|
       define_method(type) { |id: nil, **props, &block| component(type, id:, **props, &block) }

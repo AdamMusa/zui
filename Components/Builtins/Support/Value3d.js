@@ -147,6 +147,23 @@ function meshSource(renderer, value) {
 // An instance range bound is a number for a scalar property and a vector for a
 // position, scale, rotation or custom-data property. Qt takes whichever the
 // property expects, so the shape Ruby wrote decides.
+// A Qt easing curve property accepts an object carrying a type, so a protocol
+// name maps onto the same curve names the rest of Zui's animations use.
+function easing(value) {
+    var curves = {
+        "linear": Easing.Linear,
+        "in_quad": Easing.InQuad, "out_quad": Easing.OutQuad, "in_out_quad": Easing.InOutQuad,
+        "in_cubic": Easing.InCubic, "out_cubic": Easing.OutCubic, "in_out_cubic": Easing.InOutCubic,
+        "in_back": Easing.InBack, "out_back": Easing.OutBack, "in_out_back": Easing.InOutBack,
+        "in_elastic": Easing.InElastic, "out_elastic": Easing.OutElastic,
+        "in_out_elastic": Easing.InOutElastic,
+        "in_bounce": Easing.InBounce, "out_bounce": Easing.OutBounce,
+        "in_out_bounce": Easing.InOutBounce
+    }
+    var key = String(value === undefined || value === null ? "" : value)
+    return { "type": curves.hasOwnProperty(key) ? curves[key] : Easing.InOutQuad }
+}
+
 function rangeValue(value) {
     if (Array.isArray(value)) {
         if (value.length === 4)

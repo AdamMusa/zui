@@ -216,6 +216,13 @@ module Zui
         "TargetDirection3D" => :target_direction_3d
       }.freeze
 
+      # Qt Quick 3D particle affectors.
+      QUICK3D_PARTICLE_AFFECTORS = {
+        "Gravity3D" => :gravity_3d, "Attractor3D" => :attractor_3d,
+        "Wander3D" => :wander_3d, "Repeller3D" => :repeller_3d,
+        "PointRotator3D" => :point_rotator_3d, "ScaleAffector3D" => :scale_affector_3d
+      }.freeze
+
       CORE = QUICK_CONTROLS.merge(QUICK_DIALOGS).merge(QUICK_LAYOUTS).freeze
       ALL = CORE.merge(PERMISSIONS).merge(DEVICE_INFORMATION).merge(VIRTUAL_KEYBOARD)
                 .merge(SENSORS).merge(POSITIONING).merge(LOCATION)
@@ -232,7 +239,8 @@ module Zui
                 .merge(QUICK3D_HELPER_CONTROLLERS)
                 .merge(QUICK3D_HELPERS)
                 .merge(QUICK3D_ASSETS)
-                .merge(QUICK3D_PARTICLES).freeze
+                .merge(QUICK3D_PARTICLES)
+                .merge(QUICK3D_PARTICLE_AFFECTORS).freeze
     end
   end
 end
