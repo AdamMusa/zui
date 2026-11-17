@@ -20,7 +20,7 @@ Gem::Specification.new do |spec|
     "Theme/**/*", "Fonts/**/*", "native/*", "runtime/mruby/*.rb*",
     "README.md", "LICENSE", "THIRD_PARTY_NOTICES.md"
   ].reject do |path|
-    path.match?(%r{\Alib/zui/(?:client_(?:builder|packager)|lite_runtime_packager)\.rb\z})
+    path.match?(%r{\Alib/zui/(?:client_(?:builder|packager|payload)|lite_runtime_packager)\.rb\z})
   end
   spec.require_paths = ["lib"]
   spec.bindir = "bin"
