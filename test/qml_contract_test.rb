@@ -240,6 +240,50 @@ class QmlContractTest < Minitest::Test
     assert_includes source("Components/Builtins/KeyboardTextField.qml"), "EnterKeyAction.actionId"
   end
 
+  def test_chart_axes_bind_to_the_slot_their_position_names
+    adapters = {
+      chart_value_axis: "ValueAxis", chart_log_value_axis: "LogValueAxis",
+      chart_category_axis: "CategoryAxis", chart_bar_category_axis: "BarCategoryAxis",
+      chart_date_time_axis: "DateTimeAxis"
+    }
+
+    adapters.each do |component, native|
+      name = component.to_s.split("_").map(&:capitalize).join
+      adapter = source("Components/Builtins/#{name}.qml")
+
+      assert_includes adapter, "import QtCharts"
+      assert_includes adapter, "#{native} {"
+      assert_includes adapter, "readonly property bool zuiAxisHost: true"
+      assert_includes adapter, 'item["zuiSeriesHost"] === true'
+      assert_includes adapter, 'x: "axisX", y: "axisY", x_top: "axisXTop", y_right: "axisYRight"'
+      assert_includes adapter, "host.nativeSeries[property] = root.nativeAxis"
+      assert_includes adapter, "chart_axis_position_unsupported"
+      assert_includes adapter, "chart_axis_without_series"
+      refute_includes adapter, "Canvas {"
+      assert_includes Zui::COMPONENTS.fetch(component).fetch(0), :position
+      assert_includes Zui::COMPONENTS.fetch(component).fetch(1), :error
+    end
+
+    # An unsupported slot must report, never silently assign somewhere else.
+    value_axis = source("Components/Builtins/ChartValueAxis.qml")
+    assert_includes value_axis, "if (host.nativeSeries[property] === undefined) {"
+  end
+
+  def test_chart_category_ranges_are_appended_to_their_category_axis
+    range = source("Components/Builtins/ChartCategoryRange.qml")
+    axis = source("Components/Builtins/ChartCategoryAxis.qml")
+
+    assert_includes range, 'item["zuiAxisHost"] === true'
+    assert_includes range, "host.nativeAxis.append(root.appliedLabel,"
+    assert_includes range, "chart_category_range_without_axis"
+    assert_includes axis, "delegate: renderer.childDelegateComponent"
+    assert_equal true, Zui::COMPONENTS.fetch(:chart_category_axis).fetch(2)
+    assert_equal :chart_value_axis, Zui::Mobile::ComponentCatalog::CHARTS.fetch("QtCharts/ValueAxis")
+    assert_equal :chart_value_axis, Zui::Mobile::ComponentCatalog::CHARTS.fetch("QtCharts/ValuesAxis")
+    assert_equal :chart_category_range,
+                 Zui::Mobile::ComponentCatalog::CHARTS.fetch("QtCharts/CategoryRange")
+  end
+
   def test_chart_candlestick_series_creates_native_qtcharts_objects
     series = source("Components/Builtins/ChartCandlestickSeries.qml")
     candlestick_set = source("Components/Builtins/ChartCandlestickSet.qml")
