@@ -311,6 +311,33 @@ class QmlContractTest < Minitest::Test
     assert_includes Zui::COMPONENTS.fetch(:multi_effect)[1], :geometry
   end
 
+  def test_rectangular_shadow_only_instantiates_types_the_pinned_qt_ships
+    adapter = File.read(File.join(ROOT, "Components", "Builtins", "RectangularShadow.qml"))
+    schema = Zui::COMPONENTS.fetch(:rectangular_shadow)
+
+    # QtQuick.Effects did not gain RectangularShadow until Qt 6.9, so an adapter
+    # that names that type cannot load on the pinned 6.8.3 at all.
+    refute_includes adapter, "import QtQuick.Effects",
+                    "rectangular_shadow imports a module that does not provide its type on Qt 6.8.3"
+    refute_match(/^\s*RectangularShadow \{/, adapter,
+                 "rectangular_shadow instantiates a Qt 6.9 type on a Qt 6.8.3 floor")
+    assert_includes adapter, "import Qt5Compat.GraphicalEffects"
+    assert_includes adapter, "RectangularGlow {"
+    # The Ruby surface has to survive the reimplementation.
+    %i[blur spread radius offset_x offset_y color cached antialiasing].each do |property|
+      assert_includes schema.first, property, "rectangular_shadow lost #{property}"
+      assert_includes adapter, "renderer.prop(\"#{property}\"",
+                      "rectangular_shadow no longer reads #{property}"
+    end
+    assert_includes adapter, "glowRadius: Number(renderer.prop(\"blur\", 20))"
+    assert_includes adapter, "cornerRadius: shadowRoot.shadowCornerRadius"
+    assert_includes adapter, "shadowRoot.shadowSpread * 2"
+    # `antialiasing: false` cannot be honoured by a shader-drawn shadow, so it
+    # reports instead of being accepted and ignored.
+    assert_includes adapter, "antialiasing_unsupported"
+    assert_includes schema[1], :error, "rectangular_shadow does not expose its failures to Ruby"
+  end
+
   def test_graphical_effects_reach_desktop_clients_and_static_mobile_builds
     cmake = File.read(File.join(ROOT, "native", "CMakeLists.txt"))
     audit = File.read(File.join(ROOT, "scripts", "audit_client.rb"))
