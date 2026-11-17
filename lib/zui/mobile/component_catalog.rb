@@ -52,6 +52,8 @@ module Zui
         "MicrophonePermission" => :microphone_permission
       }.freeze
 
+      # QtNetwork's SslSocket and Ssl are isCreatable: false with no QML-constructible path
+      # and no invokable members, so they are not reachable from application QML at all.
       DEVICE_INFORMATION = {
         "SystemInformation" => :system_info,
         "NetworkInformation" => :network_status
