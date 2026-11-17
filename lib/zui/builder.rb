@@ -123,7 +123,8 @@ module Zui
     SCENE_3D_COMPONENTS = %i[
       view_3d node_3d loader_3d repeater_3d
       perspective_camera orthographic_camera frustum_camera custom_camera
-      directional_light point_light spot_light
+      directional_light point_light spot_light principled_material
+      default_material specular_glossy_material custom_material
     ].freeze
     SCENE_3D_COMPONENTS.each do |type|
       define_method(type) { |id: nil, **props, &block| component(type, id:, **props, &block) }
