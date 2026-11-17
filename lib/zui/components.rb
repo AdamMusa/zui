@@ -280,7 +280,7 @@ module Zui
     place_details: [%i[plugin plugin_parameters place_id name latitude longitude altitude attribution visibility command command_revision visible], %i[details status saved removed error], false],
     place_category: [%i[plugin plugin_parameters category_id name visibility command command_revision visible], %i[details status saved removed error], false],
     text_to_speech: [%i[text engine engine_parameters volume rate pitch locale voice voice_gender voice_age command command_revision auto_speak visible], %i[state word voice_change engines error], false],
-    web_view: [%i[url html base_url http_user_agent local_storage javascript allow_file_access local_content_file_access command command_revision script cookie_domain cookie_name cookie_value width height visible], %i[load progress title url_change navigation javascript cookie error], false],
+    web_view: [%i[url html base_url http_user_agent local_storage javascript allow_file_access local_content_file_access command command_revision script cookie_domain cookie_name cookie_value width height visible], %i[load progress title url_change navigation settings javascript cookie error], false],
     web_socket: [%i[url active message command command_revision visible], %i[message binary status active_change error], false],
     web_socket_server: [%i[host port name listen accept visible], %i[client message binary listen_change url_change error], false],
     lottie_animation: [%i[source frame_rate quality auto_play loops direction command command_revision frame marker width height visible], %i[status finished error], false],

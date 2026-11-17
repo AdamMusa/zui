@@ -110,7 +110,12 @@ module Zui
         "VoiceSelector" => :text_to_speech
       }.freeze
 
-      WEB = { "WebView" => :web_view }.freeze
+      # WebViewSettings is the uncreatable grouped "settings" property of WebView, and
+      # WebViewLoadRequest is the uncreatable parameter of its loadingChanged signal.
+      WEB = {
+        "WebView" => :web_view, "WebViewSettings" => :web_view,
+        "WebViewLoadRequest" => :web_view
+      }.freeze
       WEB_SOCKETS = { "WebSocket" => :web_socket, "WebSocketServer" => :web_socket_server }.freeze
       LOTTIE = { "LottieAnimation" => :lottie_animation }.freeze
       PDF = %w[PdfDocument PdfMultiPageView PdfPageView PdfScrollablePageView PdfPageImage
