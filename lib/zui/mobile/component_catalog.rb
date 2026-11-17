@@ -187,7 +187,18 @@ module Zui
         "QtGraphs/GraphsView" => :graphs_view,
         "QtGraphs/GraphsTheme" => :graphs_theme,
         # Value type realized by the theme adapter's grid and axis line groups.
-        "QtGraphs/graphsline" => :graphs_theme
+        "QtGraphs/graphsline" => :graphs_theme,
+        "QtGraphs/LineSeries" => :graph_line_series,
+        "QtGraphs/SplineSeries" => :graph_spline_series,
+        "QtGraphs/ScatterSeries" => :graph_scatter_series,
+        "QtGraphs/AreaSeries" => :graph_area_series,
+        "QtGraphs/BarSeries" => :graph_bar_series,
+        "QtGraphs/BarSet" => :graph_bar_set,
+        "QtGraphs/PieSeries" => :graph_pie_series,
+        "QtGraphs/PieSlice" => :graph_pie_slice,
+        "QtGraphs/XYPoint" => :graph_xy_point,
+        # Abstract base with no QML identity of its own.
+        "QtGraphs/QXYSeries" => :graph_line_series
       }.freeze
 
       TOUCH_INTERACTION = {

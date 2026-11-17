@@ -526,6 +526,37 @@ module Zui
 
     def legend(items = [], id: nil, **props) = component(:legend, id:, items: Array(items), **props)
 
+    # QtGraphs 2D series. A QtGraphs graph owns its axes and accepts a series
+    # through addSeries, so these are declared inside a graphs_view and carry
+    # only their own data and styling.
+    GRAPH_XY_SERIES_COMPONENTS = %i[
+      graph_line_series graph_spline_series graph_scatter_series
+    ].freeze
+    GRAPH_XY_SERIES_COMPONENTS.each do |type|
+      define_method(type) do |points = UNSET, id: nil, **props, &block|
+        props = props.merge(points: Array(points)) unless points.equal?(UNSET)
+        component(type, id:, **props, &block)
+      end
+    end
+
+    def graph_bar_series(id: nil, **props, &block) = component(:graph_bar_series, id:, **props, &block)
+    def graph_pie_series(id: nil, **props, &block) = component(:graph_pie_series, id:, **props, &block)
+
+    def graph_area_series(upper_points = UNSET, id: nil, **props)
+      props = props.merge(upper_points: Array(upper_points)) unless upper_points.equal?(UNSET)
+      component(:graph_area_series, id:, **props)
+    end
+
+    def graph_bar_set(values = [], id: nil, **props)
+      component(:graph_bar_set, id:, values: Array(values), **props)
+    end
+
+    def graph_pie_slice(label = "", value = 0, id: nil, **props)
+      component(:graph_pie_slice, id:, label: label.to_s, value:, **props)
+    end
+
+    def graph_xy_point(x = 0, y = 0, id: nil, **props) = component(:graph_xy_point, id:, x:, y:, **props)
+
     # QtGraphs' 2D graph surface and its theme. QtGraphs is Qt's replacement for
     # QtDataVisualization and is separate from both the chart wrappers above and
     # the QtCharts primitives: its axes belong to the view, not to each series.
