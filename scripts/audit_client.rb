@@ -33,14 +33,28 @@ abort "client archive has no manifest" unless entries.include?("client.json")
 offender = entries.find { |entry| entry.match?(forbidden) }
 abort "client archive contains forbidden payload: #{offender}" if offender
 
-controls_plugin = if File.basename(archive).include?("macos")
-                    "zui-host.app/Contents/Resources/qml/QtQuick/Controls/libqtquickcontrols2plugin.dylib"
-                  elsif File.basename(archive).include?("windows")
-                    "qml/QtQuick/Controls/qtquickcontrols2plugin.dll"
-                  else
-                    "qml/QtQuick/Controls/libqtquickcontrols2plugin.so"
-                  end
-abort "client archive cannot load QtQuick.Controls: #{controls_plugin} is missing" unless entries.include?(controls_plugin)
+# A QML module the framework imports but the client omits fails to load at run
+# time, which is exactly the silent fallback the framework forbids elsewhere.
+# QtCharts and QtGraphs back the real Qt chart and GPU graph components, so the
+# audit treats them like QtQuick.Controls: shippable payload, not optional.
+required_qml_plugins = {
+  "QtQuick/Controls" => %w[libqtquickcontrols2plugin.dylib qtquickcontrols2plugin.dll
+                           libqtquickcontrols2plugin.so],
+  "QtCharts" => %w[libqtchartsqml2plugin.dylib qtchartsqml2plugin.dll libqtchartsqml2plugin.so],
+  "QtGraphs" => %w[libgraphsplugin.dylib graphsplugin.dll libgraphsplugin.so]
+}
+platform_index = if File.basename(archive).include?("macos")
+                   0
+                 elsif File.basename(archive).include?("windows")
+                   1
+                 else
+                   2
+                 end
+qml_prefix = platform_index.zero? ? "zui-host.app/Contents/Resources/qml" : "qml"
+required_qml_plugins.each do |qml_module, plugins|
+  plugin = "#{qml_prefix}/#{qml_module}/#{plugins.fetch(platform_index)}"
+  abort "client archive cannot load #{qml_module.tr('/', '.')}: #{plugin} is missing" unless entries.include?(plugin)
+end
 
 if File.basename(archive).include?("linux")
   %w[libicui18n libicuuc libicudata].each do |library|
