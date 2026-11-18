@@ -116,6 +116,21 @@ module Zui
     def image(source, id: nil, **props) = component(:image, id:, source: source.to_s, **props)
     def vector_image(source, id: nil, **props) = component(:vector_image, id:, source: source.to_s, **props)
     def model_view_3d(source, id: nil, **props) = component(:model_view_3d, id:, source: source.to_s, **props)
+
+    # Qt Quick 3D scene graph. A node declared inside a view_3d becomes a GPU
+    # scene object, and a node that is not a container still accepts the
+    # properties of the Qt type it adapts.
+    SCENE_3D_COMPONENTS = %i[
+      view_3d node_3d loader_3d repeater_3d
+    ].freeze
+    SCENE_3D_COMPONENTS.each do |type|
+      define_method(type) { |id: nil, **props, &block| component(type, id:, **props, &block) }
+    end
+
+    def model_3d(source = UNSET, id: nil, **props, &block)
+      props = props.merge(source: source.to_s) unless source.equal?(UNSET)
+      component(:model_3d, id:, **props, &block)
+    end
     def font_loader(source, id: nil, **props) = component(:font_loader, id:, source: source.to_s, **props)
     def text_metrics(value, id: nil, **props) = component(:text_metrics, id:, text: value.to_s, **props)
     def animated_image(source, id: nil, **props) = component(:animated_image, id:, source: source.to_s, **props)

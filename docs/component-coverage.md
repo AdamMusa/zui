@@ -9,7 +9,7 @@ renderer, reactive property support, applicable events, tests, and reference doc
 ## Scope
 
 This catalog targets public, application-facing types from Qt Quick, Qt Quick Controls, Qt Quick
-Layouts, Qt Quick Dialogs, Qt Quick Effects, Qt Quick Shapes, and Qt Multimedia, plus useful
+Layouts, Qt Quick Dialogs, Qt Quick Effects, Qt Quick Shapes, Qt Quick 3D, and Qt Multimedia, plus useful
 Zui-native controls and charts. Private `impl` types, style implementations, abstract base
 classes, QML compiler infrastructure, compositor protocols, and operating-system service objects
 are not widgets and are intentionally excluded. Framework concepts such as state, timers,
@@ -375,3 +375,15 @@ transitions, and animation groups receive Ruby APIs even though they are not vis
 - [x] web_view
 - [x] web_socket
 - [x] web_socket_server
+
+## GPU 3D scene graph
+
+Qt Quick 3D types. A 3D node is declared inside a `view_3d`, which owns the GPU
+scene. Resources such as materials and geometries may be declared inside the
+node that uses them, or anywhere in the scene and referenced by their Ruby id.
+
+- [x] view_3d
+- [x] node_3d
+- [x] model_3d
+- [x] loader_3d
+- [x] repeater_3d

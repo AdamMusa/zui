@@ -1,0 +1,140 @@
+.pragma library
+
+// Conversions between the JSON values Ruby sends over the protocol and the Qt
+// Quick 3D value types the scene graph expects. Every helper accepts the shapes
+// a Ruby author would naturally write: a number, an array, or a hash.
+
+function number(value, fallback) {
+    var result = Number(value)
+    return isFinite(result) ? result : Number(fallback)
+}
+
+function vector3d(value, fallbackX, fallbackY, fallbackZ) {
+    if (value === undefined || value === null)
+        return Qt.vector3d(Number(fallbackX), Number(fallbackY), Number(fallbackZ))
+    if (typeof value === "number")
+        return Qt.vector3d(value, value, value)
+    if (Array.isArray(value))
+        return Qt.vector3d(number(value[0], fallbackX), number(value[1], fallbackY),
+                           number(value[2], fallbackZ))
+    if (typeof value === "object")
+        return Qt.vector3d(number(value.x, fallbackX), number(value.y, fallbackY),
+                           number(value.z, fallbackZ))
+    return Qt.vector3d(Number(fallbackX), Number(fallbackY), Number(fallbackZ))
+}
+
+function vector2d(value, fallbackX, fallbackY) {
+    if (value === undefined || value === null)
+        return Qt.vector2d(Number(fallbackX), Number(fallbackY))
+    if (typeof value === "number")
+        return Qt.vector2d(value, value)
+    if (Array.isArray(value))
+        return Qt.vector2d(number(value[0], fallbackX), number(value[1], fallbackY))
+    if (typeof value === "object")
+        return Qt.vector2d(number(value.x, fallbackX), number(value.y, fallbackY))
+    return Qt.vector2d(Number(fallbackX), Number(fallbackY))
+}
+
+function vector4d(value, fallbackX, fallbackY, fallbackZ, fallbackW) {
+    if (value === undefined || value === null)
+        return Qt.vector4d(Number(fallbackX), Number(fallbackY), Number(fallbackZ), Number(fallbackW))
+    if (typeof value === "number")
+        return Qt.vector4d(value, value, value, value)
+    if (Array.isArray(value))
+        return Qt.vector4d(number(value[0], fallbackX), number(value[1], fallbackY),
+                           number(value[2], fallbackZ), number(value[3], fallbackW))
+    if (typeof value === "object")
+        return Qt.vector4d(number(value.x, fallbackX), number(value.y, fallbackY),
+                           number(value.z, fallbackZ), number(value.w, fallbackW))
+    return Qt.vector4d(Number(fallbackX), Number(fallbackY), Number(fallbackZ), Number(fallbackW))
+}
+
+// A bare number is read as a rotation in degrees around the Z axis, an array as
+// [scalar, x, y, z], and a hash as either a quaternion or Euler angles.
+function quaternion(value) {
+    if (typeof value === "number")
+        return Qt.quaternion(Math.cos(value * Math.PI / 360), 0, 0, Math.sin(value * Math.PI / 360))
+    if (Array.isArray(value)) {
+        if (value.length === 3)
+            return euler(value[0], value[1], value[2])
+        return Qt.quaternion(number(value[0], 1), number(value[1], 0),
+                             number(value[2], 0), number(value[3], 0))
+    }
+    if (value !== null && typeof value === "object") {
+        if (value.scalar !== undefined || value.w !== undefined) {
+            var scalar = value.scalar === undefined ? value.w : value.scalar
+            return Qt.quaternion(number(scalar, 1), number(value.x, 0),
+                                 number(value.y, 0), number(value.z, 0))
+        }
+        return euler(value.x, value.y, value.z)
+    }
+    return Qt.quaternion(1, 0, 0, 0)
+}
+
+function euler(pitch, yaw, roll) {
+    return Qt.quaternion(1, 0, 0, 0).times(axisAngle(1, 0, 0, number(pitch, 0)))
+        .times(axisAngle(0, 1, 0, number(yaw, 0)))
+        .times(axisAngle(0, 0, 1, number(roll, 0)))
+}
+
+function axisAngle(x, y, z, degrees) {
+    var half = degrees * Math.PI / 360
+    var sine = Math.sin(half)
+    return Qt.quaternion(Math.cos(half), x * sine, y * sine, z * sine)
+}
+
+// Maps a snake_case protocol value onto a Qt enumeration through an explicit
+// table. An unknown name resolves to the fallback so a typo cannot silently
+// select a different rendering path than the one the table documents.
+function enumeration(value, table, fallback) {
+    var key = String(value === undefined || value === null ? "" : value)
+    return table.hasOwnProperty(key) ? table[key] : fallback
+}
+
+function flag(value, fallback) {
+    if (value === undefined || value === null)
+        return fallback === true
+    return value === true
+}
+
+function matrix4x4(value) {
+    if (Array.isArray(value) && value.length === 16)
+        return Qt.matrix4x4(value[0], value[1], value[2], value[3],
+                            value[4], value[5], value[6], value[7],
+                            value[8], value[9], value[10], value[11],
+                            value[12], value[13], value[14], value[15])
+    return Qt.matrix4x4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
+}
+
+function matrixList(value) {
+    if (!Array.isArray(value))
+        return []
+    var matrices = []
+    for (var index = 0; index < value.length; index++)
+        matrices.push(matrix4x4(value[index]))
+    return matrices
+}
+
+// Qt Quick 3D addresses its built-in primitives with a "#Name" mesh source,
+// which is neither a file nor a URL and must reach the renderer untouched.
+function meshSource(renderer, value) {
+    var source = String(value === undefined || value === null ? "" : value)
+    if (source === "")
+        return ""
+    if (source.charAt(0) === "#")
+        return source
+    return renderer.assetUrl(source)
+}
+
+function identifiers(value) {
+    if (value === undefined || value === null || value === "")
+        return []
+    var list = Array.isArray(value) ? value : [value]
+    var names = []
+    for (var index = 0; index < list.length; index++) {
+        var name = String(list[index] === null ? "" : list[index])
+        if (name !== "")
+            names.push(name)
+    }
+    return names
+}

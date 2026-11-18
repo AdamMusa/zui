@@ -45,6 +45,7 @@ class FrameworkBoundaryTest < Minitest::Test
     image: "Image.qml", animated_image: "AnimatedImage.qml", border_image: "BorderImage.qml",
     avatar: "Avatar.qml", font_loader: "FontLoader.qml", video: "Video.qml", audio: "Audio.qml",
     shader_effect: "ShaderEffect.qml", model_view_3d: "ModelView3d.qml",
+    view_3d: "View3d.qml", loader_3d: "Loader3d.qml",
     media_player: "MediaPlayer.qml", sound_effect: "SoundEffect.qml", camera: "Camera.qml",
     capture_session: "CaptureSession.qml", audio_input: "AudioInput.qml",
     audio_output: "AudioOutput.qml", screen_capture: "ScreenCapture.qml",
