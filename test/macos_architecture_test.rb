@@ -40,7 +40,7 @@ class MacOSArchitectureTest < Minitest::Test
 
       assert_operator saved, :>, 0
       assert_equal "\xcf\xfa\xed\xfethin-arm64".b, File.binread(fat)
-      assert_equal "metadata", File.read(plain)
+      assert_equal "metadata", File.read(plain, encoding: "UTF-8")
       assert_equal 0o755, File.stat(fat).mode & 0o777
       assert_equal 2, command.calls.length
       assert_equal ["lipo", "-archs", fat], command.calls.first

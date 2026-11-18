@@ -42,10 +42,10 @@ class LiteRuntimeTest < Minitest::Test
       assert_equal "app.rb", descriptor.program
       assert_equal "", descriptor.load_path
       assert File.file?(File.join(destination, "bin", platform.windows? ? "mruby.exe" : "mruby"))
-      source = File.read(File.join(destination, "app.rb"))
+      source = File.read(File.join(destination, "app.rb"), encoding: "UTF-8")
       assert_includes source, 'title: "Lite"'
       refute_match(/^\s*require\b/, source)
-      manifest = JSON.parse(File.read(File.join(destination, "runtime.json")))
+      manifest = JSON.parse(File.read(File.join(destination, "runtime.json"), encoding: "UTF-8"))
       assert_equal "app.rb", manifest.fetch("program")
       assert_equal "", manifest.fetch("load_path")
     end

@@ -116,7 +116,7 @@ module Zui
       raise ArgumentError, "deployed macOS QML plugins are missing: #{plugin_root}" unless File.directory?(plugin_root)
 
       Dir[File.join(qml_root, "**", "qmldir")].sort.each do |qmldir|
-        plugin_names = File.foreach(qmldir).filter_map do |line|
+        plugin_names = File.foreach(qmldir, encoding: "UTF-8").filter_map do |line|
           line[/\A\s*(?:optional\s+)?plugin\s+([A-Za-z0-9._+-]+)/, 1]
         end
         plugin_names.uniq.each do |plugin_name|

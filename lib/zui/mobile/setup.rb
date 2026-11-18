@@ -140,7 +140,7 @@ module Zui
       def read_config
         return {} unless File.file?(@config_path)
 
-        JSON.parse(File.read(@config_path))
+        JSON.parse(File.read(@config_path, encoding: "UTF-8"))
       rescue JSON::ParserError => error
         raise ArgumentError, "invalid mobile setup file #{@config_path}: #{error.message}"
       end
