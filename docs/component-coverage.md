@@ -9,11 +9,15 @@ renderer, reactive property support, applicable events, tests, and reference doc
 ## Scope
 
 This catalog targets public, application-facing types from Qt Quick, Qt Quick Controls, Qt Quick
-Layouts, Qt Quick Dialogs, Qt Quick Effects, Qt Quick Shapes, and Qt Multimedia, plus useful
+Layouts, Qt Quick Dialogs, Qt Quick Effects, Qt Quick Shapes, Qt Quick Timeline, and Qt Multimedia, plus useful
 Zui-native controls and charts. Private `impl` types, style implementations, abstract base
 classes, QML compiler infrastructure, compositor protocols, and operating-system service objects
 are not widgets and are intentionally excluded. Framework concepts such as state, timers,
 transitions, and animation groups receive Ruby APIs even though they are not visual widgets.
+
+Qt types declared `isCreatable: false` cannot be instantiated from application QML, so they get no
+component rather than a renderer that quietly substitutes a concrete subclass. In
+`QtQuick.Timeline.BlendTrees` that excludes `BlendTreeNode`.
 
 ## Foundation and layout
 
@@ -256,6 +260,12 @@ transitions, and animation groups receive Ruby APIs even though they are not vis
 - [x] y_animator
 - [x] uniform_animator
 - [x] frame_animation
+- [x] timeline
+- [x] keyframe
+- [x] keyframe_group
+- [x] timeline_animation
+- [x] timeline_animation_node
+- [x] blend_animation_node
 - [x] animation_controller
 - [x] behavior
 - [x] transition

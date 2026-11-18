@@ -90,6 +90,49 @@ class QmlContractTest < Minitest::Test
     end
   end
 
+  def test_timeline_adapters_use_the_native_timeline_types
+    expected = {
+      "Timeline" => ["import QtQuick.Timeline", "Timeline {"],
+      "Keyframe" => ["import QtQuick.Timeline", "Keyframe {"],
+      "KeyframeGroup" => ["import QtQuick.Timeline", "KeyframeGroup {}"],
+      "TimelineAnimation" => ["import QtQuick.Timeline", "TimelineAnimation {"],
+      "TimelineAnimationNode" => ["import QtQuick.Timeline.BlendTrees", "TimelineAnimationNode {"],
+      "BlendAnimationNode" => ["import QtQuick.Timeline.BlendTrees", "BlendAnimationNode {"]
+    }
+
+    expected.each do |adapter, fragments|
+      qml = File.read(File.join(ROOT, "Components", "Builtins", "#{adapter}.qml"))
+
+      fragments.each { |fragment| assert_includes qml, fragment }
+      refute_includes qml, "NumberAnimation {"
+    end
+  end
+
+  def test_timeline_rebuilds_its_read_only_lists_instead_of_appending_to_stale_ones
+    timeline = File.read(File.join(ROOT, "Components", "Builtins", "Timeline.qml"))
+    group = File.read(File.join(ROOT, "Components", "Builtins", "KeyframeGroup.qml"))
+
+    assert_includes timeline, "created.keyframeGroups.push(groups[group])"
+    assert_includes timeline, "created.animations.push(animations[animation])"
+    assert_includes timeline, "if (previous) previous.destroy()"
+    assert_includes group, "created.keyframes.push(resolved[slot])"
+    assert_includes group, "if (previous) previous.destroy()"
+    # The frame range survives a rebuild because it is applied by Binding.
+    assert_includes timeline, 'property: "currentFrame"'
+    assert_includes timeline, 'property: "startFrame"'
+  end
+
+  def test_timeline_modules_are_linked_and_shipped_whenever_their_adapters_survive
+    cmake = File.read(File.join(ROOT, "native", "CMakeLists.txt"))
+
+    assert_includes cmake, "function(zui_framework_imports_qml_module"
+    assert_includes cmake, 'zui_framework_imports_qml_module("QtQuick\\\\.Timeline" ZUI_USES_TIMELINE)'
+    assert_includes cmake, 'zui_framework_imports_qml_module("QtQuick\\\\.Timeline\\\\.BlendTrees" ZUI_USES_TIMELINE_BLEND_TREES)'
+    assert_includes cmake, "target_link_libraries(zui-host PRIVATE Qt6::QuickTimeline)"
+    assert_includes cmake, "target_link_libraries(zui-host PRIVATE Qt6::QuickTimelineBlendTrees)"
+    refute_includes Zui::ClientBuilder::LINUX_QML_EXCLUSIONS, "QtQuick/Timeline"
+  end
+
   def test_component_coverage_catalog_has_no_unimplemented_entries
     coverage = File.read(File.join(ROOT, "docs", "component-coverage.md"))
 
