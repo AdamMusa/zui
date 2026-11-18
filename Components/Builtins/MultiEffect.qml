@@ -1,5 +1,5 @@
 import QtQuick
-import QtQuick.Effects
+import QtQuick.Effects as Effects
 
 Item {
   id: effectRoot
@@ -14,7 +14,7 @@ Item {
   }
   ShaderEffectSource { id: sourceTexture; anchors.fill: parent; sourceItem: sourceHost; hideSource: true; visible: false }
 
-  MultiEffect {
+  Effects.MultiEffect {
     id: nativeEffect
     anchors.fill: parent
     source: sourceTexture

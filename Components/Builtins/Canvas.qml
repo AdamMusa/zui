@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick as Quick
 import "../../Theme"
 
 Item {
@@ -104,19 +105,19 @@ Item {
     color: renderer.prop("background", "transparent")
   }
 
-  Canvas {
+  Quick.Canvas {
     id: nativeCanvas
     anchors.fill: parent
     antialiasing: renderer.prop("antialiasing", true) !== false
     smooth: renderer.prop("smooth", true) !== false
     canvasSize: Qt.size(Number(renderer.prop("canvas_width", width)), Number(renderer.prop("canvas_height", height)))
     tileSize: Qt.size(Number(renderer.prop("tile_width", 0)), Number(renderer.prop("tile_height", 0)))
-    renderTarget: String(renderer.prop("render_target", "image")) === "framebuffer" ? Canvas.FramebufferObject : Canvas.Image
+    renderTarget: String(renderer.prop("render_target", "image")) === "framebuffer" ? Quick.Canvas.FramebufferObject : Quick.Canvas.Image
     renderStrategy: {
       var strategy = String(renderer.prop("render_strategy", "immediate"))
-      if (strategy === "threaded") return Canvas.Threaded
-      if (strategy === "cooperative") return Canvas.Cooperative
-      return Canvas.Immediate
+      if (strategy === "threaded") return Quick.Canvas.Threaded
+      if (strategy === "cooperative") return Quick.Canvas.Cooperative
+      return Quick.Canvas.Immediate
     }
     onPaint: {
       var context = getContext("2d")

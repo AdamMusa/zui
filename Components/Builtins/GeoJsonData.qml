@@ -1,5 +1,5 @@
 import QtQuick
-import QtLocation
+import QtLocation as Location
 
 Item {
   id: root
@@ -27,7 +27,7 @@ Item {
     }
   }
 
-  GeoJsonData {
+  Location.GeoJsonData {
     id: nativeData
     model: root.renderer.prop("model", null)
     onModelChanged: root.renderer.bridge.sendEvent(root.renderer.surfaceName, root.renderer.controlId,

@@ -1,7 +1,7 @@
 import QtQuick
-import QtMultimedia
+import QtMultimedia as Multimedia
 
-VideoOutput {
+Multimedia.VideoOutput {
   id: videoRoot
   property var renderer: null
   readonly property var sourceItem: renderer ? renderer.findRenderedItem(renderer.prop("source", "")) : null
@@ -15,7 +15,7 @@ VideoOutput {
 
     var policy = String(renderer ? renderer.prop("end_of_stream_policy", "clear") : "clear")
     if (videoRoot["endOfStreamPolicy"] !== undefined)
-      videoRoot["endOfStreamPolicy"] = policy === "keep" ? VideoOutput.KeepLastFrame : VideoOutput.ClearOutput
+      videoRoot["endOfStreamPolicy"] = policy === "keep" ? Multimedia.VideoOutput.KeepLastFrame : Multimedia.VideoOutput.ClearOutput
     else if (policy === "keep")
       renderer.componentError("video_end_policy_unsupported",
         "The installed Qt version does not support keeping the final video frame", {})
@@ -24,9 +24,9 @@ VideoOutput {
   implicitHeight: Number(renderer ? renderer.prop("height", 360) : 360)
   fillMode: {
     var mode = String(renderer ? renderer.prop("fill_mode", "contain") : "contain")
-    if (mode === "cover") return VideoOutput.PreserveAspectCrop
-    if (mode === "stretch") return VideoOutput.Stretch
-    return VideoOutput.PreserveAspectFit
+    if (mode === "cover") return Multimedia.VideoOutput.PreserveAspectCrop
+    if (mode === "stretch") return Multimedia.VideoOutput.Stretch
+    return Multimedia.VideoOutput.PreserveAspectFit
   }
   orientation: Number(renderer ? renderer.prop("orientation", 0) : 0)
   function connectSource() {

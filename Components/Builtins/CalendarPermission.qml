@@ -1,5 +1,5 @@
 import QtQuick
-import QtCore
+import QtCore as Core
 import "Support" as Support
 
 Item {
@@ -14,12 +14,12 @@ Item {
     if (desired === appliedAccessMode) return
     appliedAccessMode = desired
     nativePermission.accessMode = desired === "read_only"
-      ? CalendarPermission.ReadOnly : CalendarPermission.ReadWrite
+      ? Core.CalendarPermission.ReadOnly : Core.CalendarPermission.ReadWrite
   }
 
-  CalendarPermission {
+  Core.CalendarPermission {
     id: nativePermission
-    accessMode: CalendarPermission.ReadWrite
+    accessMode: Core.CalendarPermission.ReadWrite
   }
   Support.PermissionBridge { renderer: root.renderer; permission: nativePermission }
   Component.onCompleted: synchronizeAccessMode()

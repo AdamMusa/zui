@@ -23,6 +23,12 @@ class QmlContractTest < Minitest::Test
     ([contents] + extracted).join("\n")
   end
 
+  def adapter_sources
+    Dir[File.join(ROOT, "Components", "Builtins", "**", "*.qml")].sort.to_h do |path|
+      [path.delete_prefix("#{ROOT}/"), File.read(path)]
+    end
+  end
+
   def assert_dynamic_component_route(renderer, component)
     assert_equal true, Zui::DEFAULT_COMPONENTS.protocol_schema.dig(component, "built_in")
     assert_includes renderer, "nativeSchema.builtIn === true"
@@ -139,6 +145,46 @@ class QmlContractTest < Minitest::Test
 
     assert_includes proxy, "ListModel { id: rows }"
     refute_includes proxy, "import QtQml.Models"
+  end
+
+  # A QML file resolves a type name against its own directory as well as its
+  # imports, and an adapter is named after the type it adapts. While the
+  # imported module really provides that type, nothing goes wrong. When it does
+  # not — a type Qt added in a later release, or an optional module the client
+  # was not built with — the name resolves to the adapter file itself and the
+  # adapter instantiates itself without end. RectangularShadow did exactly that
+  # on every Qt before 6.9: the window stopped answering, the process pinned a
+  # core, and the only trace was one line of QML warning.
+  #
+  # Forty-eight more adapters were one Qt version away from the same hang. They
+  # now name the module they mean, so a type that is not there is a load error
+  # the client reports against the node, which is what every other missing
+  # adapter already does.
+  def test_no_builtin_adapter_can_resolve_its_own_file_as_a_type
+    offenders = adapter_sources.filter_map do |path, qml|
+      own = File.basename(path, ".qml")
+      next unless qml.match?(/(?<![\w.])#{Regexp.escape(own)}(?=\s*\{|\.)/)
+
+      "#{path} refers to #{own} as a type, which resolves to itself"
+    end
+
+    assert_empty offenders, offenders.join("\n")
+  end
+
+  # Qualifying only helps while the alias really points at the module that owns
+  # the type, so every adapter that names itself through an alias has to import
+  # that alias.
+  def test_qualified_adapters_import_the_alias_they_qualify_with
+    missing = adapter_sources.filter_map do |path, qml|
+      own = File.basename(path, ".qml")
+      alias_used = qml[/(?<![\w.])([A-Z]\w*)\.#{Regexp.escape(own)}\s*\{/, 1]
+      next if alias_used.nil?
+      next if qml.match?(/^import\s+(?:"[^"]+"|[A-Za-z0-9_.]+)\s+as\s+#{Regexp.escape(alias_used)}\s*$/m)
+
+      "#{path} qualifies with #{alias_used}, which it never imports"
+    end
+
+    assert_empty missing, missing.join("\n")
   end
 
   def test_gpu_adapters_ship_native_effects_particles_and_precompiled_shaders
