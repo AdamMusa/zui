@@ -235,10 +235,23 @@ Item {
     if (message.op === "replace_children") {
       if (!componentDefinitions[node.type].container || !Array.isArray(message.children))
         return reject("children patch rejected")
+      // What this replacement removes has to be read from the live index, not
+      // from the container's own children array. That array is a snapshot
+      // taken the last time this container was replaced, and it goes stale the
+      // moment a nested container is patched on its own — which is exactly
+      // what a nested `dynamic` does. Walking the snapshot then marks the
+      // nodes that *used* to be there, leaves the ones that really are there
+      // live, and the replacement is refused with "node id already live".
+      //
+      // Ruby has advanced its own last_children by then and never resends, so
+      // that part of the interface silently stops updating for good.
       var removed = ({})
       function markRemoved(child) {
+        if (!child || removed[child.id] !== undefined) return
         removed[child.id] = true
-        var nested = Array.isArray(child.children) ? child.children : []
+        var live = nodeIndex[child.id]
+        var nested = live && Array.isArray(live.children) ? live.children
+          : (Array.isArray(child.children) ? child.children : [])
         for (var r = 0; r < nested.length; r++) markRemoved(nested[r])
       }
       var oldChildren = Array.isArray(node.children) ? node.children : []
