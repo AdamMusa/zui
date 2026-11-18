@@ -5,6 +5,11 @@ Item {
   id: particleRoot
   required property var renderer
   property int handledBurstRevision: -1
+  property int handledRestartRevision: -1
+  property int handledResetRevision: -1
+  // Emitters, painters and affectors declared outside this wrapper join the
+  // system through this handle, resolved by control id.
+  readonly property var nativeParticleSystem: nativeSystem
   readonly property real turbulenceWidth: Math.max(0, Number(renderer.prop("turbulence_width", width)))
   readonly property real turbulenceHeight: Math.max(0, Number(renderer.prop("turbulence_height", height)))
   readonly property real turbulenceGridLimit: Number(renderer.prop("turbulence_grid_size", 256))
@@ -29,6 +34,22 @@ Item {
     send("burst", { count: count, revision: revision })
   }
 
+  function handleRestart() {
+    var revision = Number(renderer.prop("restart_revision", 0))
+    if (revision === handledRestartRevision || revision <= 0) return
+    handledRestartRevision = revision
+    nativeSystem.restart()
+    send("restart", { revision: revision })
+  }
+
+  function handleReset() {
+    var revision = Number(renderer.prop("reset_revision", 0))
+    if (revision === handledResetRevision || revision <= 0) return
+    handledResetRevision = revision
+    nativeSystem.reset()
+    send("reset", { revision: revision })
+  }
+
   ParticleSystem {
     id: nativeSystem
     anchors.fill: parent
@@ -37,6 +58,7 @@ Item {
     onRunningChanged: particleRoot.send(running ? "start" : "stop", {})
     onPausedChanged: particleRoot.send(paused ? "pause" : "resume", {})
     onEmptyChanged: if (empty) particleRoot.send("empty", {})
+    onSystemInitialized: particleRoot.send("initialize", {})
 
     Emitter {
       id: particleEmitter
@@ -94,6 +116,9 @@ Item {
     }
   }
 
-  Connections { target: renderer; function onNodeChanged() { particleRoot.handleBurst() } }
-  Component.onCompleted: handleBurst()
+  Connections {
+    target: renderer
+    function onNodeChanged() { particleRoot.handleBurst(); particleRoot.handleRestart(); particleRoot.handleReset() }
+  }
+  Component.onCompleted: { handleBurst(); handleRestart(); handleReset() }
 }
