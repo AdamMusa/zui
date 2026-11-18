@@ -12,10 +12,25 @@ QQC.ItemDelegate {
   function eventPayload() {
     return {
       text: text,
-      value: renderer.prop("value", text),
+      value: renderer ? renderer.prop("value", text) : text,
       checked: checked,
       selected: selected
     }
+  }
+
+  // A delegate's signals fire while it is being torn down: replacing a page
+  // hides every delegate on the way out, drops the hover and takes the focus
+  // away, and the handler then runs against a renderer whose ControlNode has
+  // already gone. That is what reported "Cannot read property 'bridge' of
+  // undefined" from here, over and over, on every page switch.
+  //
+  // Asking the renderer what it is subscribed to before building a payload
+  // also stops the client posting show, hide, hover, focus and blur traffic
+  // for delegates nobody is listening to, which on a page of several hundred
+  // nodes is nearly all of them.
+  function postEvent(eventName, payload) {
+    if (!renderer || !renderer.bridge || !renderer.subscribed(eventName)) return
+    renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, eventName, payload)
   }
 
   text: String(renderer.prop("text", ""))
@@ -131,22 +146,17 @@ QQC.ItemDelegate {
 
   onClicked: {
     var payload = eventPayload()
-    renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "click", payload)
-    renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "activate", payload)
+    postEvent("click", payload)
+    postEvent("activate", payload)
   }
   onToggled: {
     var payload = eventPayload()
-    if (renderer.subscribed("toggle"))
-      renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "toggle", payload)
-    if (renderer.subscribed("change"))
-      renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "change", payload)
+    postEvent("toggle", payload)
+    postEvent("change", payload)
   }
-  onPressed: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "press", eventPayload())
-  onReleased: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "release", eventPayload())
-  onHoveredChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
-    "hover", { value: hovered })
-  onActiveFocusChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
-    activeFocus ? "focus" : "blur", {})
-  onVisibleChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
-    visible ? "show" : "hide", {})
+  onPressed: postEvent("press", eventPayload())
+  onReleased: postEvent("release", eventPayload())
+  onHoveredChanged: postEvent("hover", { value: hovered })
+  onActiveFocusChanged: postEvent(activeFocus ? "focus" : "blur", {})
+  onVisibleChanged: postEvent(visible ? "show" : "hide", {})
 }
