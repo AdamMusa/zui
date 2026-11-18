@@ -393,6 +393,17 @@ module Zui
       component(:particle_system, id:, **props)
     end
 
+    PARTICLE_AFFECTOR_COMPONENTS = %i[
+      affector age attractor friction gravity group_goal sprite_goal turbulence wander
+    ].freeze
+    PARTICLE_AFFECTOR_REFERENCES = %i[system shape position velocity acceleration].freeze
+    PARTICLE_AFFECTOR_COMPONENTS.each do |type|
+      define_method(type) do |system = nil, id: nil, **props|
+        props = props.merge(system:) unless system.nil?
+        component(type, id:, **normalize_particle_affector_references(props))
+      end
+    end
+
     def selection_rectangle(target, id: nil, **props) = component(:selection_rectangle, id:, target: node_id(target), **props)
     def scroll_bar(target = nil, id: nil, **props)
       props = props.merge(target: node_id(target)) unless target.nil?
@@ -819,6 +830,15 @@ module Zui
 
     def node_id(value)
       value.is_a?(Node) ? value.id : value.to_s
+    end
+
+    # Particle affectors reference the system they act on, the shape that bounds
+    # them and their direction vectors by control id, so nodes passed for those
+    # properties become ids.
+    def normalize_particle_affector_references(props)
+      props.each_with_object({}) do |(key, value), normalized|
+        normalized[key] = PARTICLE_AFFECTOR_REFERENCES.include?(key) ? node_id(value) : value
+      end
     end
 
     def normalize_animation_specs(animations)

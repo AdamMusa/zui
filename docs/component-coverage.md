@@ -15,6 +15,11 @@ classes, QML compiler infrastructure, compositor protocols, and operating-system
 are not widgets and are intentionally excluded. Framework concepts such as state, timers,
 transitions, and animation groups receive Ruby APIs even though they are not visual widgets.
 
+Qt types declared `isCreatable: false` cannot be instantiated from application QML, so they get no
+component rather than a renderer that quietly substitutes a concrete subclass. In
+`QtQuick.Particles` that excludes `ParticleAffector`, `ParticlePainter`, `ParticleExtruder` and
+`NullVector`.
+
 ## Foundation and layout
 
 - [x] control
@@ -218,6 +223,15 @@ transitions, and animation groups receive Ruby APIs even though they are not vis
 - [x] shader_effect
 - [x] shader_effect_source
 - [x] particle_system
+- [x] affector
+- [x] age
+- [x] attractor
+- [x] friction
+- [x] gravity
+- [x] group_goal
+- [x] sprite_goal
+- [x] turbulence
+- [x] wander
 - [x] drag_area
 - [x] drop_area
 - [x] pinch_area

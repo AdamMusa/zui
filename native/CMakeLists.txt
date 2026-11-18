@@ -59,6 +59,32 @@ if(ZUI_EMBEDDED_RUNTIME AND EXISTS "${ZUI_FRAMEWORK_ROOT}/Components/Builtins/Vi
   set(ZUI_USES_VIRTUAL_KEYBOARD ON)
 endif()
 
+# QML-only Qt modules are reached through imports rather than C++ includes, so
+# tree-shaking decides whether they survive. `qt_import_qml_plugins` links their
+# QML plugins from the scanned resources; a static iOS or Android link also needs
+# the backing module library, so detect the import and keep it.
+function(zui_framework_imports_qml_module module_pattern result)
+  set(zui_module_used OFF)
+  file(GLOB zui_adapter_sources "${ZUI_FRAMEWORK_ROOT}/Components/Builtins/*.qml")
+  file(GLOB_RECURSE zui_support_sources "${ZUI_FRAMEWORK_ROOT}/Components/Builtins/Support/*.qml")
+  foreach(zui_adapter IN LISTS zui_adapter_sources zui_support_sources)
+    file(STRINGS "${zui_adapter}" zui_module_import REGEX "^[ \t]*import[ \t]+${module_pattern}[ \t]*$")
+    if(zui_module_import)
+      set(zui_module_used ON)
+      break()
+    endif()
+  endforeach()
+  set(${result} ${zui_module_used} PARENT_SCOPE)
+endfunction()
+
+set(ZUI_USES_PARTICLES OFF)
+if(ZUI_EMBEDDED_RUNTIME)
+  zui_framework_imports_qml_module("QtQuick\\.Particles" ZUI_USES_PARTICLES)
+  if(ZUI_USES_PARTICLES)
+    find_package(Qt6 6.8 QUIET COMPONENTS QuickParticlesPrivate)
+  endif()
+endif()
+
 set(zui_host_sources
   main.cpp
   ZuiClipboard.cpp
@@ -171,6 +197,11 @@ endif()
 if(ZUI_USES_VIRTUAL_KEYBOARD)
   target_link_libraries(zui-host PRIVATE Qt6::VirtualKeyboard)
   target_compile_definitions(zui-host PRIVATE ZUI_USES_VIRTUAL_KEYBOARD=1)
+endif()
+
+if(ZUI_USES_PARTICLES AND TARGET Qt6::QuickParticlesPrivate)
+  target_link_libraries(zui-host PRIVATE Qt6::QuickParticlesPrivate)
+  target_compile_definitions(zui-host PRIVATE ZUI_USES_PARTICLES=1)
 endif()
 
 if(ZUI_EMBEDDED_RUNTIME)
