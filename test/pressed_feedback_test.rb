@@ -23,14 +23,23 @@ class PressedFeedbackTest < Minitest::Test
     "QT_QUICK_CONTROLS_STYLE" => "Fusion"
   }.freeze
 
+  # Kept in step with test/service_protocol_qml_test.rb, which looks the runner
+  # up the same way. ZUI_QT_ROOT and tmp/Qt hold a tree of versions and host
+  # platforms (lib/zui/mobile/setup.rb resolves them the same way), so they are
+  # globbed; QT_ROOT_DIR from install-qt-action and QT_HOST_PATH are already a
+  # single Qt prefix.
   def runner
     explicit = ENV["ZUI_QMLTESTRUNNER"].to_s
     return explicit if File.executable?(explicit)
 
-    candidates = Dir[File.join(ROOT, "tmp", "Qt", "*", "*", "bin", "qmltestrunner")]
-    candidates += [File.join(ENV["QT_ROOT_DIR"].to_s, "bin", "qmltestrunner")]
-    candidates += ENV["PATH"].to_s.split(File::PATH_SEPARATOR).map { |dir| File.join(dir, "qmltestrunner") }
-    candidates.find { |path| File.executable?(path) }
+    trees = [ENV["ZUI_QT_ROOT"].to_s, File.join(ROOT, "tmp", "Qt")].reject(&:empty?)
+    prefixes = [ENV["ZUI_QT_HOST"].to_s, ENV["QT_ROOT_DIR"].to_s, ENV["QT_HOST_PATH"].to_s].reject(&:empty?)
+
+    candidates = trees.flat_map { |tree| Dir[File.join(tree, "*", "*", "bin", "qmltestrunner")].sort }
+    candidates += prefixes.map { |prefix| File.join(prefix, "bin", "qmltestrunner") }
+    candidates += ENV["PATH"].to_s.split(File::PATH_SEPARATOR).reject(&:empty?)
+                              .map { |dir| File.join(dir, "qmltestrunner") }
+    candidates.find { |candidate| File.executable?(candidate) }
   end
 
   def test_the_pressed_adapters_repaint_while_they_are_held_down
