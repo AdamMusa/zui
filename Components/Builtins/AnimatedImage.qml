@@ -1,10 +1,11 @@
 import QtQuick
+import QtQuick as Quick
 import QtQuick.Controls as QQC
 import QtQuick.Layouts
 import "../../Theme"
 import "../../Controls" as ZuiControls
 
-AnimatedImage {
+Quick.AnimatedImage {
   required property var renderer
       source: renderer.assetUrl(renderer.prop("source", ""))
       width: Number(renderer.prop("width", sourceSize.width > 0 ? sourceSize.width : 120))
@@ -31,7 +32,7 @@ AnimatedImage {
       }
       onStatusChanged: {
         if (renderer.subscribed("status")) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "status", { value: status })
-        if (status === AnimatedImage.Ready && renderer.subscribed("loaded")) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "loaded", { width: sourceSize.width, height: sourceSize.height, frames: frameCount })
-        if (status === AnimatedImage.Error) renderer.componentError("animated_image_load_failed", "Unable to load the declared animated image", { source: String(source) })
+        if (status === Quick.AnimatedImage.Ready && renderer.subscribed("loaded")) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "loaded", { width: sourceSize.width, height: sourceSize.height, frames: frameCount })
+        if (status === Quick.AnimatedImage.Error) renderer.componentError("animated_image_load_failed", "Unable to load the declared animated image", { source: String(source) })
       }
     }

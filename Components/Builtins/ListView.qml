@@ -1,10 +1,11 @@
 import QtQuick
+import QtQuick as Quick
 import QtQuick.Controls as QQC
 import QtQuick.Layouts
 import "../../Theme"
 import "../../Controls" as ZuiControls
 
-ListView {
+Quick.ListView {
   required property var renderer
       id: listControl
       readonly property var sourceItems: renderer.prop("items", [])
@@ -13,7 +14,7 @@ ListView {
       readonly property string descriptionField: String(renderer.prop("description_field", "description"))
       readonly property string iconField: String(renderer.prop("icon_field", "icon"))
       implicitWidth: Number(renderer.prop("width", 280)); implicitHeight: Number(renderer.prop("height", 240))
-      orientation: String(renderer.prop("orientation", "vertical")) === "horizontal" ? ListView.Horizontal : ListView.Vertical
+      orientation: String(renderer.prop("orientation", "vertical")) === "horizontal" ? Quick.ListView.Horizontal : Quick.ListView.Vertical
       spacing: Number(renderer.prop("spacing", Style.spacing.labelGap)); clip: true; model: sourceItems
       currentIndex: {
         var selected = renderer.prop("selected", null)
@@ -31,7 +32,7 @@ ListView {
         required property var modelData
         required property int index
         readonly property var value: typeof modelData === "object" ? modelData[listControl.keyField] : modelData
-        width: listControl.orientation === ListView.Vertical ? listControl.width : implicitWidth
+        width: listControl.orientation === Quick.ListView.Vertical ? listControl.width : implicitWidth
         implicitWidth: rowContent.implicitWidth + Style.spacing.rowPaddingX * 2
         implicitHeight: Math.max(Style.spacing.controlHeight, rowContent.implicitHeight + Style.spacing.controlPaddingY * 2)
         current: index === listControl.currentIndex

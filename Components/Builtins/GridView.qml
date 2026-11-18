@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick as Quick
 import "../../Theme"
 
 Rectangle {
@@ -48,9 +49,9 @@ Rectangle {
 
   function snapModeValue(value) {
     var name = String(value || "none")
-    if (name === "row" || name === "snap_to_row") return GridView.SnapToRow
-    if (name === "one_row" || name === "snap_one_row") return GridView.SnapOneRow
-    return GridView.NoSnap
+    if (name === "row" || name === "snap_to_row") return Quick.GridView.SnapToRow
+    if (name === "one_row" || name === "snap_one_row") return Quick.GridView.SnapOneRow
+    return Quick.GridView.NoSnap
   }
 
   function boundsBehaviorValue(value) {
@@ -85,7 +86,7 @@ Rectangle {
   Accessible.name: String(renderer.prop("accessible_name", "Grid"))
   Accessible.role: Accessible.List
 
-  GridView {
+  Quick.GridView {
     id: gridControl
     anchors.fill: parent
     anchors.margins: gridRoot.gridPadding
@@ -93,7 +94,7 @@ Rectangle {
     cellWidth: Number(renderer.prop("cell_width", 160))
     cellHeight: Number(renderer.prop("cell_height", 120))
     flow: String(renderer.prop("flow", "left_to_right")) === "top_to_bottom"
-      ? GridView.FlowTopToBottom : GridView.FlowLeftToRight
+      ? Quick.GridView.FlowTopToBottom : Quick.GridView.FlowLeftToRight
     layoutDirection: String(renderer.prop("layout_direction", "left_to_right")) === "right_to_left"
       ? Qt.RightToLeft : Qt.LeftToRight
     currentIndex: gridRoot.selectedIndex()

@@ -1,5 +1,5 @@
 import QtQuick
-import QtCore
+import QtCore as Core
 import "Support" as Support
 
 Item {
@@ -8,13 +8,13 @@ Item {
   visible: false
   function modes() {
     var values = Array.isArray(renderer.prop("communication_modes", [])) ? renderer.prop("communication_modes", []) : [renderer.prop("communication_modes", "default")]
-    var result = BluetoothPermission.Default
+    var result = Core.BluetoothPermission.Default
     for (var index = 0; index < values.length; index++) {
-      if (String(values[index]) === "access") result |= BluetoothPermission.Access
-      else if (String(values[index]) === "advertise") result |= BluetoothPermission.Advertise
+      if (String(values[index]) === "access") result |= Core.BluetoothPermission.Access
+      else if (String(values[index]) === "advertise") result |= Core.BluetoothPermission.Advertise
     }
     return result
   }
-  BluetoothPermission { id: nativePermission; communicationModes: root.modes() }
+  Core.BluetoothPermission { id: nativePermission; communicationModes: root.modes() }
   Support.PermissionBridge { renderer: root.renderer; permission: nativePermission }
 }

@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Shapes
+import QtQuick.Shapes as Shapes
 
 Item {
   id: shapeRoot
@@ -21,13 +22,13 @@ Item {
     return ShapePath.MiterJoin
   }
 
-  Shape {
+  Shapes.Shape {
     id: nativeShape
     anchors.fill: parent
     antialiasing: renderer.prop("antialiasing", true) !== false
     asynchronous: renderer.prop("asynchronous", false) === true
-    preferredRendererType: String(renderer.prop("preferred_renderer", "geometry")) === "curve" ? Shape.CurveRenderer : Shape.GeometryRenderer
-    containsMode: String(renderer.prop("contains_mode", "bounding_rect")) === "fill" ? Shape.FillContains : Shape.BoundingRectContains
+    preferredRendererType: String(renderer.prop("preferred_renderer", "geometry")) === "curve" ? Shapes.Shape.CurveRenderer : Shapes.Shape.GeometryRenderer
+    containsMode: String(renderer.prop("contains_mode", "bounding_rect")) === "fill" ? Shapes.Shape.FillContains : Shapes.Shape.BoundingRectContains
     transform: Scale { xScale: Number(renderer.prop("scale", 1)); yScale: Number(renderer.prop("scale", 1)) }
     ShapePath {
       strokeColor: renderer.prop("stroke", "transparent")

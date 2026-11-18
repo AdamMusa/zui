@@ -1,11 +1,12 @@
 import QtQuick
 import QtMultimedia
+import QtMultimedia as Multimedia
 import QtQuick.Controls as QQC
 import QtQuick.Layouts
 import "../../Theme"
 import "../../Controls" as ZuiControls
 
-Video {
+Multimedia.Video {
   id: videoRoot
   required property var renderer
 

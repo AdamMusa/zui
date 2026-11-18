@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick as Quick
 import QtQuick.Controls as QQC
 import QtQml.Models
 import "../../Theme"
@@ -194,30 +195,30 @@ Rectangle {
 
   function selectionBehaviorValue(value) {
     var name = String(value || "rows")
-    if (name === "none" || name === "disabled") return TreeView.SelectionDisabled
-    if (name === "cells") return TreeView.SelectCells
-    if (name === "columns") return TreeView.SelectColumns
-    return TreeView.SelectRows
+    if (name === "none" || name === "disabled") return Quick.TreeView.SelectionDisabled
+    if (name === "cells") return Quick.TreeView.SelectCells
+    if (name === "columns") return Quick.TreeView.SelectColumns
+    return Quick.TreeView.SelectRows
   }
 
   function selectionModeValue(value) {
     var name = String(value || "single")
-    if (name === "contiguous") return TreeView.ContiguousSelection
-    if (name === "extended" || name === "multiple") return TreeView.ExtendedSelection
-    return TreeView.SingleSelection
+    if (name === "contiguous") return Quick.TreeView.ContiguousSelection
+    if (name === "extended" || name === "multiple") return Quick.TreeView.ExtendedSelection
+    return Quick.TreeView.SingleSelection
   }
 
   function editTriggersValue(value) {
-    if (renderer.prop("editable", false) !== true) return TreeView.NoEditTriggers
+    if (renderer.prop("editable", false) !== true) return Quick.TreeView.NoEditTriggers
     var names = Array.isArray(value) ? value : [value || "edit_key"]
-    var result = TreeView.NoEditTriggers
+    var result = Quick.TreeView.NoEditTriggers
     for (var index = 0; index < names.length; index++) {
       var name = String(names[index])
-      if (name === "single_tap") result |= TreeView.SingleTapped
-      if (name === "double_tap") result |= TreeView.DoubleTapped
-      if (name === "selected_tap") result |= TreeView.SelectedTapped
-      if (name === "edit_key") result |= TreeView.EditKeyPressed
-      if (name === "any_key") result |= TreeView.AnyKeyPressed
+      if (name === "single_tap") result |= Quick.TreeView.SingleTapped
+      if (name === "double_tap") result |= Quick.TreeView.DoubleTapped
+      if (name === "selected_tap") result |= Quick.TreeView.SelectedTapped
+      if (name === "edit_key") result |= Quick.TreeView.EditKeyPressed
+      if (name === "any_key") result |= Quick.TreeView.AnyKeyPressed
     }
     return result
   }
@@ -276,7 +277,7 @@ Rectangle {
     }
   }
 
-  TreeView {
+  Quick.TreeView {
     id: treeControl
     x: treeRoot.treePadding
     y: treeRoot.treePadding + headerClip.height

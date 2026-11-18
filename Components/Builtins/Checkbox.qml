@@ -23,7 +23,8 @@ QQC.CheckBox {
     })
 
     HoverHandler {
-        cursorShape: renderer.cursorShape(renderer.prop("cursor", "pointing_hand"))
+        cursorShape: renderer ? renderer.cursorShape(renderer.prop("cursor", "pointing_hand"))
+          : Qt.PointingHandCursor
     }
 
     indicator: Rectangle {

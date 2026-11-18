@@ -1,10 +1,11 @@
 import QtQuick
+import QtQuick as Quick
 import QtQuick.Controls as QQC
 import QtQuick.Layouts
 import "../../Theme"
 import "../../Controls" as ZuiControls
 
-BorderImage {
+Quick.BorderImage {
   required property var renderer
       id: nativeBorderImage
       source: renderer.assetUrl(renderer.prop("source", ""))
@@ -22,8 +23,8 @@ BorderImage {
       smooth: renderer.prop("smooth", true) !== false
       onStatusChanged: {
         if (renderer.subscribed("status")) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "status", { value: status })
-        if (status === BorderImage.Ready && renderer.subscribed("loaded")) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "loaded", { width: sourceSize.width, height: sourceSize.height })
-        if (status === BorderImage.Error) renderer.componentError("border_image_load_failed", "Unable to load the declared border image", { source: String(source) })
+        if (status === Quick.BorderImage.Ready && renderer.subscribed("loaded")) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "loaded", { width: sourceSize.width, height: sourceSize.height })
+        if (status === Quick.BorderImage.Error) renderer.componentError("border_image_load_failed", "Unable to load the declared border image", { source: String(source) })
       }
       Item {
         anchors.fill: parent

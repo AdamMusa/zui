@@ -168,6 +168,37 @@ Loader {
     face.fontFamily = fontFamily
   }
 
+  // Three adapters wanted the protocol's cursor name turned into a Qt cursor
+  // shape, two of them carried their own copy of the mapping, and the third —
+  // Checkbox — called `renderer.cursorShape()`, which ControlNode had never
+  // defined. Every checkbox on the page threw "Property 'cursorShape' of
+  // object ControlNode is not a function" and got no cursor at all. Shared
+  // name-to-enum translation belongs here, beside easingType and
+  // layoutAlignment, and the two private copies disagreed about which names
+  // existed anyway.
+  function cursorShape(name, fallback) {
+    var shapes = {
+      arrow: Qt.ArrowCursor,
+      pointing_hand: Qt.PointingHandCursor,
+      open_hand: Qt.OpenHandCursor,
+      closed_hand: Qt.ClosedHandCursor,
+      cross: Qt.CrossCursor,
+      text: Qt.IBeamCursor,
+      horizontal: Qt.SizeHorCursor,
+      vertical: Qt.SizeVerCursor,
+      size_all: Qt.SizeAllCursor,
+      busy: Qt.BusyCursor,
+      wait: Qt.WaitCursor,
+      forbidden: Qt.ForbiddenCursor,
+      help: Qt.WhatsThisCursor,
+      blank: Qt.BlankCursor
+    }
+    var requested = shapes[String(name || "")]
+    if (requested !== undefined) return requested
+    var defaulted = shapes[String(fallback || "")]
+    return defaulted === undefined ? Qt.ArrowCursor : defaulted
+  }
+
   function borderImageTileMode(value) {
     var mode = String(value || "stretch")
     if (mode === "repeat") return BorderImage.Repeat

@@ -1,8 +1,9 @@
 import QtQuick
 import QtLocation
+import QtLocation as Location
 import QtPositioning
 
-MapItemView {
+Location.MapItemView {
   id: root
   required property var renderer
   function parentMap() { var item=root.parent;while(item){if(typeof item["addMapItemView"]==="function")return item;item=item.parent}return null }

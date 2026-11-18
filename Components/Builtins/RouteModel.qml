@@ -1,5 +1,6 @@
 import QtQuick
 import QtLocation
+import QtLocation as Location
 import QtPositioning
 
 Item {
@@ -26,7 +27,7 @@ Item {
     numberAlternativeRoutes: Number(root.renderer.prop("alternatives", 0))
     departureTime: String(root.renderer.prop("departure_time", ""))
   }
-  RouteModel {
+  Location.RouteModel {
     id: nativeModel
     plugin: nativePlugin
     query: nativeQuery

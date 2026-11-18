@@ -1,8 +1,9 @@
 import QtQuick
 import QtLocation
+import QtLocation as Location
 import QtPositioning
 
-Map {
+Location.Map {
   id: root
   required property var renderer
   property var parameterObjects: []

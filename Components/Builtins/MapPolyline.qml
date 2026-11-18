@@ -1,8 +1,8 @@
 import QtQuick
-import QtLocation
+import QtLocation as Location
 import QtPositioning
 
-MapPolyline {
+Location.MapPolyline {
   id: root
   required property var renderer
   function parentMap() { var item=root.parent;while(item){if(typeof item["addMapItem"]==="function")return item;item=item.parent}return null }
