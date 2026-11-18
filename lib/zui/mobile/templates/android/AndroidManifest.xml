@@ -12,6 +12,17 @@
     <uses-permission android:name="android.permission.CAMERA" />
     -->
 
+    <!-- camera, capture_session and image_capture need CAMERA; media_recorder and
+         audio_input also need RECORD_AUDIO. camera_permission and microphone_permission
+         request them at runtime on Android 6 and newer:
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    -->
+    <!-- Declare the hardware the capture components depend on:
+    <uses-feature android:name="android.hardware.camera.any" android:required="false" />
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
+    -->
+
     <supports-screens
         android:anyDensity="true"
         android:largeScreens="true"

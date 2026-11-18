@@ -46,5 +46,13 @@
     <key>NSCameraUsageDescription</key>
     <string>Explain why this app needs camera access.</string>
     -->
+
+    <!-- camera, capture_session and image_capture require a camera usage description;
+         media_recorder and audio_input require a microphone one:
+    <key>NSCameraUsageDescription</key>
+    <string>Explain why this app needs camera access.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Explain why this app needs microphone access.</string>
+    -->
 </dict>
 </plist>
