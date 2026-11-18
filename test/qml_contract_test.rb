@@ -93,6 +93,21 @@ class QmlContractTest < Minitest::Test
     end
   end
 
+  # The shell insets the root control by a margin the application pays for in
+  # layout space. It could be read from the surface options but never set, so
+  # every desktop window silently lost forty points in each axis.
+  def test_an_application_can_set_the_inset_the_shell_leaves_around_it
+    assert_includes Zui::Builder::APP_OPTIONS, :padding
+
+    shell = File.read(File.join(ROOT, "Desktop.qml"))
+
+    assert_includes shell, 'window.option("padding", 20)'
+
+    application = Zui::Application.new { app(:main, padding: 0) { text "fits" } }
+
+    assert_equal 0, application.surface_options.fetch("main").fetch("padding")
+  end
+
   def test_gpu_adapters_ship_native_effects_particles_and_precompiled_shaders
     shader = source("Components/Builtins/ShaderEffect.qml")
     effect = source("Components/Builtins/MultiEffect.qml")
