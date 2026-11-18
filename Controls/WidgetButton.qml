@@ -24,12 +24,14 @@ Item {
   property bool maintainIndicatorReveal: false
   property bool labelVisible: true
   property bool hasVisualContent: text !== ""
+  property color pressedBackground: Style.pressedTintFor(Color.accent)
   signal pressed(int button)
   signal wheelMoved(real delta)
   implicitWidth: fixedWidth >= 0 ? fixedWidth : label.implicitWidth + horizontalMargin * 2
   implicitHeight: fixedHeight >= 0 ? fixedHeight : label.implicitHeight + verticalPadding * 2
   opacity: concealed ? 0 : (dimmed ? 0.45 : 1)
   visible: !concealed || keepSpace
+  Rectangle { anchors.fill: parent; radius: Style.cornerRadius; visible: pointer.pressed; color: root.pressedBackground }
   Text { id: label; anchors.centerIn: parent; visible: root.labelVisible; text: root.text; color: root.active && root.useActiveColor ? root.activeColor : root.foreground; font.family: root.fontFamily; font.pixelSize: root.fontSize; rotation: root.textRotation }
-  MouseArea { anchors.fill: parent; enabled: root.interactive && root.pressable; acceptedButtons: Qt.AllButtons; onClicked: function(event) { root.pressed(event.button) }; onWheel: function(event) { root.wheelMoved(event.angleDelta.y) } }
+  MouseArea { id: pointer; anchors.fill: parent; enabled: root.interactive && root.pressable; acceptedButtons: Qt.AllButtons; onClicked: function(event) { root.pressed(event.button) }; onWheel: function(event) { root.wheelMoved(event.angleDelta.y) } }
 }

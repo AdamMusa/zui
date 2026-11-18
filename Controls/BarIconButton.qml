@@ -17,11 +17,13 @@ Item {
   property bool dimmed: false
   property bool concealed: false
   property bool interactive: true
+  property color pressedBackground: Style.pressedTintFor(Color.accent)
   signal pressed(int button)
   signal wheelMoved(real delta)
   implicitWidth: concealed && !keepSpace ? 0 : slotSize
   implicitHeight: slotSize
   opacity: concealed ? 0 : (dimmed ? 0.45 : 1)
+  Rectangle { anchors.centerIn: parent; width: root.slotSize; height: root.slotSize; radius: Style.cornerRadius; visible: pointer.pressed; color: root.pressedBackground }
   Text { anchors.centerIn: parent; text: root.text; color: root.active ? root.activeColor : root.foreground; font.family: root.fontFamily; font.pixelSize: root.fontSize; rotation: root.textRotation }
-  MouseArea { anchors.fill: parent; enabled: root.interactive; acceptedButtons: Qt.AllButtons; onClicked: function(event) { root.pressed(event.button) }; onWheel: function(event) { root.wheelMoved(event.angleDelta.y) } }
+  MouseArea { id: pointer; anchors.fill: parent; enabled: root.interactive; acceptedButtons: Qt.AllButtons; onClicked: function(event) { root.pressed(event.button) }; onWheel: function(event) { root.wheelMoved(event.angleDelta.y) } }
 }

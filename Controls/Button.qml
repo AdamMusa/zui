@@ -14,6 +14,10 @@ Item {
   property color foreground: Color.foreground
   property color background: "transparent"
   property color accent: Color.accent
+  // A press has to paint without waiting for anything, so both have a derived
+  // default and an adapter overrides them from the protocol.
+  property color pressedBackground: Style.pressedFillFor(selected || active ? accent : background, accent)
+  property color pressedForeground: selected || active ? Color.background : foreground
   property string fontFamily: Style.font.family
   property string iconFontFamily: Fonts.iconFamily
   property real fontSize: Style.font.body
@@ -35,12 +39,13 @@ Item {
   implicitHeight: Math.max(Style.spacing.controlHeight, content.implicitHeight + verticalPadding * 2)
 
   Rectangle {
+    readonly property color restingColor: root.selected || root.active ? root.accent : root.background
     anchors.fill: parent
     radius: Style.cornerRadius
-    color: root.selected || root.active ? root.accent : root.background
+    color: mouse.pressed ? root.pressedBackground : restingColor
     border.width: root.bordered ? Style.normalBorderWidth : 0
     border.color: root.active || root.selected ? root.accent : Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.3)
-    opacity: mouse.pressed ? 0.78 : (mouse.containsMouse ? 0.9 : 1)
+    opacity: mouse.containsMouse ? 0.9 : 1
   }
 
   Row {
@@ -51,17 +56,19 @@ Item {
     anchors.horizontalCenter: root.leftAlign ? undefined : parent.horizontalCenter
     spacing: root.iconText !== "" && root.text !== "" ? Style.spacing.controlGap : 0
     Text {
+      readonly property color restingColor: root.selected || root.active ? Color.background : root.foreground
       visible: root.iconText !== ""
       text: root.iconText
-      color: root.selected || root.active ? Color.background : root.foreground
+      color: mouse.pressed ? root.pressedForeground : restingColor
       font.family: root.iconFontFamily
       font.pixelSize: root.iconSize
       rotation: root.iconRotation
     }
     Text {
+      readonly property color restingColor: root.selected || root.active ? Color.background : root.foreground
       visible: root.text !== ""
       text: root.text
-      color: root.selected || root.active ? Color.background : root.foreground
+      color: mouse.pressed ? root.pressedForeground : restingColor
       font.family: root.fontFamily
       font.pixelSize: root.fontSize
     }

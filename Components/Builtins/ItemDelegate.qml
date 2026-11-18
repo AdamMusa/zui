@@ -50,11 +50,12 @@ QQC.ItemDelegate {
   Accessible.role: Accessible.ListItem
 
   background: Rectangle {
-    color: delegateRoot.highlighted
+    readonly property color restingColor: delegateRoot.highlighted
       ? renderer.prop("highlighted_background", renderer.prop("selected_background", Color.popups.background))
       : (delegateRoot.selected
         ? renderer.prop("selected_background", Color.popups.background)
         : renderer.prop("background", "transparent"))
+    color: delegateRoot.down ? renderer.pressedBackground(restingColor) : restingColor
     radius: Number(renderer.prop("radius", Style.cornerRadius))
     border.width: Number(renderer.prop("border_width",
       String(renderer.prop("border_color", "")).length > 0 ? Style.normalBorderWidth : 0))
@@ -101,11 +102,12 @@ QQC.ItemDelegate {
 
       Text {
         Layout.fillWidth: true
-        text: delegateRoot.text
-        textFormat: Text.PlainText
-        color: delegateRoot.selected
+        readonly property color restingColor: delegateRoot.selected
           ? renderer.prop("selected_foreground", renderer.prop("foreground", renderer.foreground))
           : renderer.prop("foreground", renderer.foreground)
+        text: delegateRoot.text
+        textFormat: Text.PlainText
+        color: delegateRoot.down ? renderer.pressedForeground(restingColor) : restingColor
         font: delegateRoot.font
         elide: Text.ElideRight
       }
