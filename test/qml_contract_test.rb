@@ -301,6 +301,37 @@ class QmlContractTest < Minitest::Test
     refute_match(/return "file:\/\/" \+ source/, router)
   end
 
+  # Vector3dAnimation's from and to are QVector3D, so the driver's coercion has
+  # to hand back a vector for every shape an application might send. It used to
+  # pass anything that was not an array straight through, and QML reported
+  # "Unable to assign double to QVector3D" and "Could not find any constructor
+  # for value type QQuickVector3DValueType" — after which the animation
+  # silently did nothing.
+  #
+  # A double arrives because the driver declares every animation type and picks
+  # between them only in currentAnimation(), so a number_animation node's
+  # from: 0.35 evaluates the vector animation's bindings too.
+  def test_the_animation_driver_always_coerces_a_vector
+    qml = File.read(File.join(ROOT, "Components", "Builtins", "Support", "AnimationDriver.qml"),
+                    encoding: "UTF-8")
+    coercion = qml[/function vectorValue\(.*?\n  \}/m]
+
+    refute_nil coercion, "AnimationDriver no longer has a vectorValue function"
+    assert_includes coercion, "function vectorValue(value, fallback)",
+                    "the coercion cannot fall back without being told what to"
+
+    returns = coercion.scan(/\breturn\s+(.+)$/).flatten
+
+    refute_empty returns
+    returns.each do |returned|
+      assert_match(/\AQt\.vector3d\(/, returned.strip,
+                   "vectorValue returns #{returned.strip}, which is not a vector")
+    end
+
+    assert_match(/from: driver\.vectorValue\([^)]*\), 0\)/, qml)
+    assert_match(/to: driver\.vectorValue\([^)]*\), 1\)/, qml)
+  end
+
   def test_gpu_adapters_ship_native_effects_particles_and_precompiled_shaders
     shader = source("Components/Builtins/ShaderEffect.qml")
     effect = source("Components/Builtins/MultiEffect.qml")
