@@ -1,11 +1,11 @@
 import QtQuick
-import QtCore
+import QtCore as Core
 import "Support" as Support
 
 Item {
   id: root
   required property var renderer
   visible: false
-  CameraPermission { id: nativePermission }
+  Core.CameraPermission { id: nativePermission }
   Support.PermissionBridge { renderer: root.renderer; permission: nativePermission }
 }

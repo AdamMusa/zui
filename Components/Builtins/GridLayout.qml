@@ -1,10 +1,10 @@
 import QtQuick
 import QtQuick.Controls as QQC
-import QtQuick.Layouts
+import QtQuick.Layouts as Layouts
 import "../../Theme"
 import "../../Controls" as ZuiControls
 
-GridLayout {
+Layouts.GridLayout {
   required property var renderer
       columns: Number(renderer.prop("columns", 2))
       rows: Number(renderer.prop("rows", -1))

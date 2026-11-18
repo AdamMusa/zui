@@ -8,6 +8,14 @@ TextEdit {
   id: root
   required property var renderer
       function synchronizeWidth() {
+        // Qt.callLater owns nothing. Replacing a page queues a width sync for
+        // every text node on it and then destroys them, and the callbacks
+        // still run — against a renderer whose functions have already gone,
+        // reporting "Property 'hasProp' of object ControlNode is not a
+        // function" during delayed function evaluation. The node being
+        // measured is the only reason to measure, so with it gone there is
+        // nothing left to do.
+        if (!renderer || typeof renderer.hasProp !== "function") return
         var resolved = renderer.hasProp("width") ? Number(renderer.prop("width", 0)) : implicitWidth
         if (!isNaN(resolved) && width !== resolved) width = resolved
       }

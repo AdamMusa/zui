@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick as Quick
 
 Item {
   id: shaderRoot
@@ -59,7 +60,7 @@ Item {
     hideSource: true
   }
 
-  ShaderEffect {
+  Quick.ShaderEffect {
     id: nativeShader
     anchors.fill: parent
     property var source: sourceTexture
@@ -85,13 +86,13 @@ Item {
     mesh: Qt.size(Math.max(1, Number(renderer.prop("mesh_width", 1))), Math.max(1, Number(renderer.prop("mesh_height", 1))))
     cullMode: {
       var value = String(renderer.prop("cull_mode", "none"))
-      if (value === "back") return ShaderEffect.BackFaceCulling
-      if (value === "front") return ShaderEffect.FrontFaceCulling
-      return ShaderEffect.NoCulling
+      if (value === "back") return Quick.ShaderEffect.BackFaceCulling
+      if (value === "front") return Quick.ShaderEffect.FrontFaceCulling
+      return Quick.ShaderEffect.NoCulling
     }
     onStatusChanged: {
       if (renderer.subscribed("status")) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "status", { value: status, log: log })
-      if (status === ShaderEffect.Error) renderer.componentError("shader_load_failed", log, { fragment_shader: String(fragmentShader), vertex_shader: String(vertexShader) })
+      if (status === Quick.ShaderEffect.Error) renderer.componentError("shader_load_failed", log, { fragment_shader: String(fragmentShader), vertex_shader: String(vertexShader) })
     }
   }
 

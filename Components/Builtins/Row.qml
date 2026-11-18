@@ -1,10 +1,11 @@
 import QtQuick
+import QtQuick as Quick
 import QtQuick.Controls as QQC
 import QtQuick.Layouts
 import "../../Theme"
 import "../../Controls" as ZuiControls
 
-Row {
+Quick.Row {
   required property var renderer
       spacing: Number(renderer.prop("spacing", Style.spacing.controlGap))
 

@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "minitest/autorun"
+require "set"
 require_relative "../lib/zui"
 
 class QmlContractTest < Minitest::Test
@@ -21,6 +22,12 @@ class QmlContractTest < Minitest::Test
         .gsub('../../ControlNode.qml', 'ControlNode.qml')
     end
     ([contents] + extracted).join("\n")
+  end
+
+  def adapter_sources
+    Dir[File.join(ROOT, "Components", "Builtins", "**", "*.qml")].sort.to_h do |path|
+      [path.delete_prefix("#{ROOT}/"), File.read(path)]
+    end
   end
 
   def assert_dynamic_component_route(renderer, component)
@@ -139,6 +146,159 @@ class QmlContractTest < Minitest::Test
 
     assert_includes proxy, "ListModel { id: rows }"
     refute_includes proxy, "import QtQml.Models"
+  end
+
+  # An adapter reaches its node through `renderer`, which is a ControlNode. A
+  # call to something ControlNode does not define fails only when the adapter
+  # is actually on screen, and then only as one line of QML warning: every
+  # checkbox in the showcase reported "Property 'cursorShape' of object
+  # ControlNode is not a function" and silently got no cursor. The contract is
+  # checkable without a display, so it is checked here.
+  def test_adapters_only_call_functions_control_node_defines
+    router = File.read(File.join(ROOT, "ControlNode.qml"))
+    defined = router.scan(/function\s+([A-Za-z_]\w*)\s*\(/).flatten.to_set
+
+    offenders = adapter_sources.each_with_object({}) do |(name, qml), found|
+      called = qml.scan(/renderer\.([A-Za-z_]\w*)\s*\(/).flatten.uniq
+      unknown = called.reject { |function| defined.include?(function) }
+      found[name] = unknown unless unknown.empty?
+    end
+
+    assert_empty offenders,
+                 "these adapters call ControlNode functions that do not exist: #{offenders.inspect}"
+  end
+
+  # A deferred callback owns nothing. When a page is replaced, the width syncs
+  # queued for the text nodes that went away still run, against a renderer
+  # whose functions are already gone. #103 fixed one instance of this class of
+  # bug in ControlNode itself, where it made cards fail to render at all.
+  DEFERRED_WIDTH_ADAPTERS = %w[Text Label RichText Markdown SelectableText].freeze
+
+  def test_deferred_width_sync_gives_up_when_its_node_is_gone
+    DEFERRED_WIDTH_ADAPTERS.each do |adapter|
+      qml = File.read(File.join(ROOT, "Components", "Builtins", "#{adapter}.qml"))
+
+      assert_includes qml, "Qt.callLater(root.synchronizeWidth)",
+                      "#{adapter}.qml no longer defers its width sync; drop it from this list"
+      assert_match(/function synchronizeWidth\(\) \{.*?if \(!renderer \|\| typeof renderer\.hasProp !== "function"\) return/m,
+                   qml, "#{adapter}.qml runs its deferred width sync against a destroyed node")
+    end
+  end
+
+  # Replacing a page hides every delegate on the way out, drops the hover and
+  # takes the focus away, so these handlers run while the node behind them is
+  # being torn down.
+  def test_item_delegate_events_check_their_node_before_posting
+    qml = File.read(File.join(ROOT, "Components", "Builtins", "ItemDelegate.qml"))
+
+    assert_match(/function postEvent\(eventName, payload\) \{\s*if \(!renderer \|\| !renderer\.bridge \|\| !renderer\.subscribed\(eventName\)\) return/m,
+                 qml)
+    refute_match(/^\s*on[A-Z]\w*(?:Changed)?: renderer\.bridge\.sendEvent/, qml,
+                 "an ItemDelegate handler still calls the bridge without checking its node")
+  end
+
+  # A Popup reparents its contentItem and its background onto its own internal
+  # item, so `parent` inside them is not the tooltip. Every themed property
+  # resolved to undefined and the tooltip drew with Qt's defaults.
+  def test_the_panel_tooltip_theme_reaches_its_content_and_background
+    qml = File.read(File.join(ROOT, "Controls", "PanelToolTip.qml"))
+
+    refute_match(/parent\.panel(Foreground|Background|Border)/, qml)
+    refute_match(/parent\.font(Family|Size)/, qml)
+    assert_match(/id: panel\b/, qml)
+    assert_includes qml, "color: panel.panelForeground"
+    assert_includes qml, "color: panel.panelBackground"
+  end
+
+  # A QML file resolves a type name against its own directory as well as its
+  # imports, and an adapter is named after the type it adapts. While the
+  # imported module really provides that type, nothing goes wrong. When it does
+  # not — a type Qt added in a later release, or an optional module the client
+  # was not built with — the name resolves to the adapter file itself and the
+  # adapter instantiates itself without end. RectangularShadow did exactly that
+  # on every Qt before 6.9: the window stopped answering, the process pinned a
+  # core, and the only trace was one line of QML warning.
+  #
+  # Forty-eight more adapters were one Qt version away from the same hang. They
+  # now name the module they mean, so a type that is not there is a load error
+  # the client reports against the node, which is what every other missing
+  # adapter already does.
+  def test_no_builtin_adapter_can_resolve_its_own_file_as_a_type
+    offenders = adapter_sources.filter_map do |path, qml|
+      own = File.basename(path, ".qml")
+      next unless qml.match?(/(?<![\w.])#{Regexp.escape(own)}(?=\s*\{|\.)/)
+
+      "#{path} refers to #{own} as a type, which resolves to itself"
+    end
+
+    assert_empty offenders, offenders.join("\n")
+  end
+
+  # Qualifying only helps while the alias really points at the module that owns
+  # the type, so every adapter that names itself through an alias has to import
+  # that alias.
+  def test_qualified_adapters_import_the_alias_they_qualify_with
+    missing = adapter_sources.filter_map do |path, qml|
+      own = File.basename(path, ".qml")
+      alias_used = qml[/(?<![\w.])([A-Z]\w*)\.#{Regexp.escape(own)}\s*\{/, 1]
+      next if alias_used.nil?
+      next if qml.match?(/^import\s+(?:"[^"]+"|[A-Za-z0-9_.]+)\s+as\s+#{Regexp.escape(alias_used)}\s*$/m)
+
+      "#{path} qualifies with #{alias_used}, which it never imports"
+    end
+
+    assert_empty missing, missing.join("\n")
+  end
+
+  # A relative asset path is relative to the directory holding the
+  # application's main.rb, because that is the only directory the author of the
+  # application knows about. ControlNode.assetUrl is where that is done. An
+  # adapter that hands a path straight to QML instead gets it resolved against
+  # the adapter's own directory inside the framework checkout, and asks for a
+  # file that was never there:
+  #
+  #   AnimatedImage.qml: Error Reading Animated Image File
+  #     file://<framework>/Components/Builtins/demos/nova_pour/assets/future-pour-bar.webp
+  #
+  # A URL property whose value is not an asset — a WebSocket endpoint, say —
+  # may be read raw, and is listed here so the exemption has to be deliberate.
+  URL_PROPERTIES = %w[source icon_source base_url folder output_location fragment_shader].freeze
+  RAW_URL_EXEMPTIONS = {
+    "Components/Builtins/WebSocket.qml" => %w[url],
+    "Components/Builtins/WebSocketServer.qml" => %w[url]
+  }.freeze
+
+  def test_every_adapter_resolves_an_asset_path_against_the_application
+    offenders = adapter_sources.flat_map do |path, qml|
+      exempt = RAW_URL_EXEMPTIONS.fetch(path, [])
+      (URL_PROPERTIES - exempt).flat_map do |property|
+        qml.scan(/^.*\brenderer\.prop\("#{property}",[^\n]*$/).filter_map do |line|
+          next unless line.match?(/(?:^|[\s.])(?:source|url|baseUrl|folder|outputLocation|fragmentShader)\s*:/)
+          next if line.include?("assetUrl") || line.include?("shaderUrl")
+
+          "#{path}: #{line.strip}"
+        end
+      end
+    end
+
+    assert_empty offenders,
+                 "these resolve an asset path against the framework, not the application:\n#{offenders.join("\n")}"
+  end
+
+  # Two corrections the move to assetUrl also had to make: a bare absolute path
+  # used to come back as a URL with no scheme, which QML resolved against the
+  # adapter's base URL and only happened to come out right on Unix; and a
+  # Windows drive letter was taken for a URL scheme, so "C:/..." was passed
+  # through as a "c:" URL and never opened.
+  def test_asset_resolution_emits_a_file_url_and_knows_a_drive_letter
+    router = File.read(File.join(ROOT, "ControlNode.qml"))
+
+    assert_includes router, "function assetUrl(value)"
+    assert_includes router, "function fileUrl(value)"
+    assert_includes router, "function windowsPath(value)"
+    assert_match(/windowsPath\(source\)\) return fileUrl\(source\)/, router)
+    assert_match(/\^\[a-zA-Z\]:\\\//, router)
+    refute_match(/return "file:\/\/" \+ source/, router)
   end
 
   def test_gpu_adapters_ship_native_effects_particles_and_precompiled_shaders
@@ -734,7 +894,7 @@ class QmlContractTest < Minitest::Test
 
     assert_dynamic_component_route(renderer, "markdown")
     assert_includes renderer, "textFormat: Text.MarkdownText"
-    assert_includes renderer, 'baseUrl: String(root.prop("base_url", ""))'
+    assert_includes renderer, 'baseUrl: root.assetUrl(root.prop("base_url", ""))'
   end
 
   def test_selectable_text_has_a_specific_native_selection_renderer

@@ -1,5 +1,6 @@
 import QtQuick
 import QtMultimedia
+import QtMultimedia as Multimedia
 
 Item {
   id: playerRoot
@@ -13,9 +14,9 @@ Item {
   function command(){if(!renderer)return;var revision=Number(renderer.prop("command_revision",0));if(revision===handledCommandRevision)return;handledCommandRevision=revision;var value=String(renderer.prop("command",renderer.prop("playback","")));if(value==="play")nativePlayer.play();else if(value==="pause")nativePlayer.pause();else if(value==="stop")nativePlayer.stop()}
   MediaDevices{id:mediaDevices}
   AudioOutput { id:nativeAudioOutput;device:playerRoot.audioDevice();volume:playerRoot.audioDeviceValid()?Math.max(0,Math.min(1,Number(renderer?renderer.prop("volume",1):1))):0;muted:!playerRoot.audioDeviceValid()||(renderer&&renderer.prop("muted",false)===true) }
-  MediaPlayer {
+  Multimedia.MediaPlayer {
     id:nativePlayer;source:renderer?renderer.assetUrl(renderer.prop("source","")):"";autoPlay:renderer&&renderer.prop("auto_play",false)===true;loops:Number(renderer?renderer.prop("loops",1):1);playbackRate:Number(renderer?renderer.prop("playback_rate",1):1);position:Number(renderer?renderer.prop("position",0):0);audioOutput:nativeAudioOutput
-    onPlaybackStateChanged:{var name=playbackState===MediaPlayer.PlayingState?"play":(playbackState===MediaPlayer.PausedState?"pause":"stop");playerRoot.send(name,{})}
+    onPlaybackStateChanged:{var name=playbackState===Multimedia.MediaPlayer.PlayingState?"play":(playbackState===Multimedia.MediaPlayer.PausedState?"pause":"stop");playerRoot.send(name,{})}
     onMediaStatusChanged:playerRoot.send("media_status",{value:mediaStatus})
     onErrorOccurred:function(error,message){renderer.componentError("media_playback_failed",message,{native_code:error,source:String(source)})}
     onPositionChanged:playerRoot.send("position",{value:position,duration:duration})

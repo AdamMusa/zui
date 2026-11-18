@@ -1,9 +1,10 @@
 import QtQuick
+import QtQuick as Quick
 
 Item {
   id: frameRoot
   property var renderer: null
-  FrameAnimation {
+  Quick.FrameAnimation {
     id: nativeFrame
     running: renderer && renderer.prop("running", true) !== false
     paused: renderer && renderer.prop("paused", false) === true

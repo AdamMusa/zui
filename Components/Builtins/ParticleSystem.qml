@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Particles
+import QtQuick.Particles as Particles
 
 Item {
   id: particleRoot
@@ -29,7 +30,7 @@ Item {
     send("burst", { count: count, revision: revision })
   }
 
-  ParticleSystem {
+  Particles.ParticleSystem {
     id: nativeSystem
     anchors.fill: parent
     running: renderer.prop("running", true) !== false

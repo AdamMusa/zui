@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick as Quick
 
 Item {
   id: dropRoot
@@ -6,7 +7,7 @@ Item {
   implicitWidth: Number(renderer ? renderer.prop("width", contentHost.childrenRect.width) : 160)
   implicitHeight: Number(renderer ? renderer.prop("height", contentHost.childrenRect.height) : 100)
   Item { id: contentHost; anchors.fill: parent; Repeater { model: renderer ? (renderer.node.children || []) : []; delegate: renderer.childDelegateComponent } }
-  DropArea {
+  Quick.DropArea {
     anchors.fill: parent
     enabled: renderer && renderer.prop("enabled", true) !== false
     keys: renderer ? renderer.prop("keys", []) : []

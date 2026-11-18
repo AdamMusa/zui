@@ -8,11 +8,10 @@ QQC.Button {
 
   required property var renderer
 
+  // A path the application gave is relative to the application, not to the
+  // filesystem root. This used to turn "exports" into "file:///exports".
   function folderUrl(path) {
-    var value = String(path || "")
-    if (!value.length) return ""
-    if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(value)) return value
-    return "file://" + encodeURI(value.charAt(0) === "/" ? value : "/" + value)
+    return renderer ? renderer.assetUrl(path) : ""
   }
 
   function localPath(url) {

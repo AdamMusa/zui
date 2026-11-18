@@ -1,5 +1,5 @@
 import QtQuick
-import QtPositioning
+import QtPositioning as Positioning
 
 Item {
   id: root
@@ -8,9 +8,9 @@ Item {
   visible: false
   function preferredMethods() {
     var value = String(renderer.prop("preferred_methods", "all"))
-    if (value === "satellite") return PositionSource.SatellitePositioningMethods
-    if (value === "non_satellite") return PositionSource.NonSatellitePositioningMethods
-    return PositionSource.AllPositioningMethods
+    if (value === "satellite") return Positioning.PositionSource.SatellitePositioningMethods
+    if (value === "non_satellite") return Positioning.PositionSource.NonSatellitePositioningMethods
+    return Positioning.PositionSource.AllPositioningMethods
   }
   function coordinatePayload(coordinate) {
     return { latitude: coordinate.latitude, longitude: coordinate.longitude,
@@ -40,7 +40,7 @@ Item {
     handledRefreshRevision = revision
     publish()
   }
-  PositionSource {
+  Positioning.PositionSource {
     id: nativeSource
     active: renderer.prop("active", false) === true
     updateInterval: Number(renderer.prop("update_interval", 1000))
@@ -49,7 +49,7 @@ Item {
     onPositionChanged: root.publish()
     onActiveChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "active_change", { value: active })
     onSupportedPositioningMethodsChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "methods_change", { value: Number(supportedPositioningMethods) })
-    onSourceErrorChanged: if (sourceError !== PositionSource.NoError) renderer.componentError("position_source_failed", "The native positioning backend reported an error", { native_code: Number(sourceError) })
+    onSourceErrorChanged: if (sourceError !== Positioning.PositionSource.NoError) renderer.componentError("position_source_failed", "The native positioning backend reported an error", { native_code: Number(sourceError) })
   }
   Connections { target: renderer; function onNodeChanged() { root.refresh() } }
   Component.onCompleted: refresh()

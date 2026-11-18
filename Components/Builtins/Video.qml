@@ -1,11 +1,12 @@
 import QtQuick
 import QtMultimedia
+import QtMultimedia as Multimedia
 import QtQuick.Controls as QQC
 import QtQuick.Layouts
 import "../../Theme"
 import "../../Controls" as ZuiControls
 
-Video {
+Multimedia.Video {
   id: videoRoot
   required property var renderer
 
@@ -18,7 +19,7 @@ Video {
         "The installed Qt version does not support mirrored video output", {})
   }
 
-  source: String(renderer.prop("source", ""))
+  source: renderer.assetUrl(renderer.prop("source", ""))
   implicitWidth: Number(renderer.prop("width", 640))
   implicitHeight: Number(renderer.prop("height", 360))
   autoPlay: renderer.prop("auto_play", false) === true
