@@ -6,6 +6,8 @@ require_relative "../lib/zui"
 require_relative "../lib/zui/client_builder"
 
 class ClientBuilderTest < Minitest::Test
+  ROOT = File.expand_path("..", __dir__)
+
   def test_macos_qml_plugins_have_one_canonical_runtime_copy
     Dir.mktmpdir do |stage|
       contents = File.join(stage, "zui-host.app", "Contents")
@@ -111,9 +113,30 @@ class ClientBuilderTest < Minitest::Test
     end
   end
 
+  # A client build takes minutes and used to say nothing about where they went,
+  # so nobody waiting on one could tell a slow compile from a slow deployment.
+  # Measured on macOS arm64 with Qt 6.8.3 the answer is not close: 322.2s of
+  # 350.6s is `cmake --install`, which is macdeployqt copying Qt, against 2.4s
+  # of actual compiling.
+  PHASES = ["install qml", "cmake configure", "cmake build", "cmake install",
+            "catalog runtime", "package"].freeze
+
+  def test_the_build_reports_how_long_each_phase_took
+    source = File.read(File.join(ROOT, "lib", "zui", "client_builder.rb"), encoding: "UTF-8")
+
+    assert_includes source, "def phase(name)"
+    assert_includes source, "Process.clock_gettime(Process::CLOCK_MONOTONIC)"
+    assert_includes source, 'warn format("zui client: '
+
+    PHASES.each do |name|
+      assert_includes source, %(phase("#{name}")), "the build does not time the #{name} phase"
+    end
+  end
+
   private
 
   def builder
     @builder ||= Zui::ClientBuilder.new(platform: Zui::Platform.new(os: :linux, arch: :x86_64))
   end
+
 end
