@@ -22,6 +22,7 @@ module Zui
   autoload :Client, lazy["client"]
   autoload :Command, lazy["command"]
   autoload :CommandOutputLimit, lazy["command"]
+  autoload :CommandResult, lazy["command"]
   autoload :CommandTimeout, lazy["command"]
   autoload :Dist, lazy["dist_config"]
   autoload :DistPackager, lazy["dist_packager"]

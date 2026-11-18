@@ -107,15 +107,17 @@ module Zui
     # the client is sent on every launch.
     def dup
       copy = self.class.new
-      copy.replace_components(@components)
+      # Reached through send because mruby, which the lite runtime uses, does
+      # not let one instance call another's protected method.
+      copy.send(:adopt_components, @components)
       copy
     end
 
+    private
+
     # Only ComponentRegistry#dup has any business handing a registry its index.
-    def replace_components(components)
+    def adopt_components(components)
       @components = components.dup
-      self
     end
-    protected :replace_components
   end
 end

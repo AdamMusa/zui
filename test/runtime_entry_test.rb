@@ -48,12 +48,32 @@ class RuntimeEntryTest < Minitest::Test
     assert_equal "lean\n", output
   end
 
-  # Deferring those files is only safe while every constant they used to define
-  # still answers to its name, so the command keeps working unchanged.
+  # Deferring a file is only safe while every constant it defines still answers
+  # to its name. A list written by hand misses one — CommandResult, a Struct in
+  # command.rb, went unregistered and only a Windows CI run found it — so the
+  # autoload table is checked against what the files actually define.
+  def test_every_constant_a_deferred_file_defines_is_registered
+    table = File.read(File.join(ROOT, "lib", "zui.rb"))
+                .scan(/autoload :(\w+), lazy\["(\w+)"\]/)
+                .each_with_object({}) { |(constant, file), map| (map[file] ||= []) << constant }
+
+    refute_empty table
+
+    unregistered = table.flat_map do |file, constants|
+      source = File.read(File.join(ROOT, "lib", "zui", "#{file}.rb"))
+      defined = source.scan(/^  (?:class|module)\s+([A-Z]\w*)/).flatten +
+                source.scan(/^  ([A-Z]\w*)\s*=/).flatten
+      (defined.uniq - constants).map { |constant| "Zui::#{constant} (zui/#{file})" }
+    end
+
+    assert_empty unregistered,
+                 "these constants were reachable through require \"zui\" and no longer are: #{unregistered.join(', ')}"
+  end
+
   DEFERRED_CONSTANTS = %i[
     ApplicationRuntime Client Command CommandOutputLimit CommandTimeout Dist
     DistPackager Distribution FullRuntime Generator Host LiteRuntime LiteSource
-    LockedGems MacOSArchitecture MacOSBundleSeal MacOSQmlPayload Mobile
+    CommandResult LockedGems MacOSArchitecture MacOSBundleSeal MacOSQmlPayload Mobile
     PEDependencies Platform QtBundleConfiguration ReproducibleBuild
     RubyRuntimeShaker Runner Runtime SourceBundle TreeShaker
   ].freeze
@@ -80,9 +100,11 @@ class RuntimeEntryTest < Minitest::Test
   end
 
   # The packaged runtime replaces lib/zui.rb with a require of the runtime
-  # entrypoint, so anything the entrypoint now pulls in has to be on the list
-  # of files that ship with it.
-  def test_the_packaged_runtime_ships_every_file_the_entrypoint_requires
+  # entrypoint, and the lite runtime inlines a hand-written list of the same
+  # sources for mruby, which has no require at all. Anything the entrypoint
+  # pulls in has to be on both lists or the application crashes on launch with
+  # an uninitialized constant — which is how lib/zui/trace.rb was caught.
+  def test_the_packaged_and_lite_runtimes_ship_every_file_the_entrypoint_requires
     required = File.read(File.join(ROOT, "lib", "zui", "runtime_entry.rb"))
                    .scan(/require_relative "([a-z_]+)"/).flatten
 
@@ -91,6 +113,8 @@ class RuntimeEntryTest < Minitest::Test
     required.each do |name|
       assert_includes Zui::FullRuntime::ZUI_RUNTIME_FILES, "lib/zui/#{name}.rb",
                       "the packaged runtime would be missing lib/zui/#{name}.rb"
+      assert_includes Zui::LiteSource::RUNTIME_FILES, "#{name}.rb",
+                      "the lite runtime would be missing #{name}.rb"
     end
   end
 end
