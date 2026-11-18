@@ -1,50 +1,48 @@
 # frozen_string_literal: true
 
-require_relative "zui/protocol"
-require_relative "zui/value"
-require_relative "zui/state_store"
-require_relative "zui/node"
-require_relative "zui/animation"
-require_relative "zui/scheduler"
-require_relative "zui/command"
-require_relative "zui/component_registry"
-require_relative "zui/components"
-require_relative "zui/builder"
-require_relative "zui/application"
-require_relative "zui/source_bundle"
-require_relative "zui/lite_source"
-require_relative "zui/platform"
-require_relative "zui/runtime"
-require_relative "zui/application_runtime"
-require_relative "zui/locked_gems"
-require_relative "zui/pe_dependencies"
-require_relative "zui/ruby_runtime_shaker"
-require_relative "zui/full_runtime"
-require_relative "zui/macos_qml_payload"
-require_relative "zui/macos_architecture"
-require_relative "zui/macos_bundle_seal"
-require_relative "zui/qt_bundle_configuration"
-require_relative "zui/tree_shaker"
-require_relative "zui/dist_config"
-require_relative "zui/client"
-require_relative "zui/lite_runtime"
-require_relative "zui/host"
-require_relative "zui/runner"
-require_relative "zui/generator"
-require_relative "zui/reproducible_build"
-require_relative "zui/distribution"
-require_relative "zui/dist_packager"
-require_relative "zui/mobile"
+# An application needs the control-tree runtime and nothing else. The other
+# half of the framework — client downloads, gem packaging, tree shaking, mobile
+# projects, distribution — is reached only through the `zui` command, and
+# loading it eagerly cost every single application a quarter of a second before
+# its first node existed. Worse, that cost was paid twice on every `zui run`:
+# once by the command and again by the application process it spawns.
+#
+# A packaged application never paid it, because FullRuntime rewrites this file
+# as `require_relative "zui/runtime_entry"` when it installs the runtime. The
+# autoloads below give development the same startup as production while leaving
+# `require "zui"` able to reach every constant it always could.
+require_relative "zui/runtime_entry"
+
+Zui::Trace.mark("framework-load-end")
 
 module Zui
-  VERSION = "0.0.10"
-  FRAMEWORK_ROOT = File.expand_path("..", __dir__)
+  lazy = ->(file) { File.expand_path("zui/#{file}.rb", __dir__) }
 
-  def self.app(&definition)
-    Application.new(&definition).run
-  end
-
-  class << self
-    alias application app
-  end
+  autoload :ApplicationRuntime, lazy["application_runtime"]
+  autoload :Client, lazy["client"]
+  autoload :Command, lazy["command"]
+  autoload :CommandOutputLimit, lazy["command"]
+  autoload :CommandTimeout, lazy["command"]
+  autoload :Dist, lazy["dist_config"]
+  autoload :DistPackager, lazy["dist_packager"]
+  autoload :Distribution, lazy["distribution"]
+  autoload :FullRuntime, lazy["full_runtime"]
+  autoload :Generator, lazy["generator"]
+  autoload :Host, lazy["host"]
+  autoload :LiteRuntime, lazy["lite_runtime"]
+  autoload :LiteSource, lazy["lite_source"]
+  autoload :LockedGems, lazy["locked_gems"]
+  autoload :MacOSArchitecture, lazy["macos_architecture"]
+  autoload :MacOSBundleSeal, lazy["macos_bundle_seal"]
+  autoload :MacOSQmlPayload, lazy["macos_qml_payload"]
+  autoload :Mobile, lazy["mobile"]
+  autoload :PEDependencies, lazy["pe_dependencies"]
+  autoload :Platform, lazy["platform"]
+  autoload :QtBundleConfiguration, lazy["qt_bundle_configuration"]
+  autoload :ReproducibleBuild, lazy["reproducible_build"]
+  autoload :RubyRuntimeShaker, lazy["ruby_runtime_shaker"]
+  autoload :Runner, lazy["runner"]
+  autoload :Runtime, lazy["runtime"]
+  autoload :SourceBundle, lazy["source_bundle"]
+  autoload :TreeShaker, lazy["tree_shaker"]
 end
