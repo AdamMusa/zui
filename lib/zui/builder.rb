@@ -578,6 +578,14 @@ module Zui
       component(:sequential_animation, id:, animations: normalize_animation_specs(animations), **props)
     end
     def frame_animation(id: nil, **props) = component(:frame_animation, id:, **props)
+
+    def sprite(name = "", id: nil, **props) = component(:sprite, id:, name: name.to_s, **props)
+    def animated_sprite(source = "", id: nil, **props)
+      component(:animated_sprite, id:, source: source.to_s, **props)
+    end
+    def sprite_sequence(sprites = [], id: nil, **props)
+      component(:sprite_sequence, id:, sprites: Array(sprites).map { |entry| node_id(entry) }, **props)
+    end
     def timer(interval, id: nil, **props) = component(:timer, id:, interval:, **props)
 
     def media_player(source = "", id: nil, **props) = component(:media_player, id:, source: source.to_s, **props)
