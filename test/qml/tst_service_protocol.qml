@@ -16,6 +16,18 @@ import "../.."
 TestCase {
   name: "ServiceProtocol"
 
+  // Deleting keys from the object being iterated only loses entries once the
+  // object is big enough: on Qt 6.8.3 a pristine object of 255 keys or fewer
+  // is emptied completely, and above that the loop stops early — 360 keys
+  // leaves 105 behind, 434 leaves 179. So a scene that builds a small
+  // container passes whether or not the bug is there.
+  //
+  // Every count below is deliberately well past that, and each test builds its
+  // own tree large enough on its own rather than relying on what an earlier
+  // test left in the index.
+  readonly property int leakThreshold: 255
+  readonly property int nodesPerTree: 400
+
   QtObject {
     id: fakeTransport
     property bool running: false
@@ -86,8 +98,11 @@ TestCase {
   // The count has to be large enough for the skipping to show. It does not
   // appear at all with a handful of nodes.
   function test_emptying_a_container_removes_every_node_under_it() {
+    verify(nodesPerTree > leakThreshold,
+           "a container this small cannot leak, so this test would pass either way")
+
     var children = []
-    for (var i = 0; i < 200; i++) children.push(chip("leaf." + i, "v" + i))
+    for (var i = 0; i < nodesPerTree; i++) children.push(chip("leaf." + i, "v" + i))
     render(container("root", [container("page", children)]))
     compare(service.lastError, "", "the render itself was refused")
     compare(service.nodeFor("leaf.0").props.text, "v0")
@@ -96,7 +111,7 @@ TestCase {
     compare(service.lastError, "", "emptying the container was refused")
 
     var survivors = []
-    for (var s = 0; s < 200; s++) if (service.nodeFor("leaf." + s) !== null) survivors.push("leaf." + s)
+    for (var s = 0; s < nodesPerTree; s++) if (service.nodeFor("leaf." + s) !== null) survivors.push("leaf." + s)
     compare(survivors.length, 0, "these nodes outlived the container that held them: " +
             survivors.slice(0, 8).join(", "))
   }
@@ -104,12 +119,12 @@ TestCase {
   // ...which is what makes re-entering a page work. This is the user-visible
   // shape of the bug: open a page, leave it, come back, and the body is blank.
   function test_a_page_can_be_entered_again_after_being_left() {
-    // Shaped like a real page — rows of nodes rather than one flat list —
-    // because the skipping depends on the index's internal layout and a flat
-    // list does not always trigger it.
+    // Shaped like a real page, and 440 nodes so it is past the threshold on
+    // its own. At 20 rows this passed on the unfixed code, which is exactly
+    // the trap the threshold describes.
     function build(tag) {
       var rows = []
-      for (var row = 0; row < 20; row++) {
+      for (var row = 0; row < 40; row++) {
         var cells = []
         for (var cell = 0; cell < 10; cell++)
           cells.push(chip("page.row." + row + ".chip." + cell, tag + row + "-" + cell))
@@ -129,7 +144,7 @@ TestCase {
     replaceChildren("page", build("b"))
     compare(service.lastError, "", "returning to the page was refused")
     compare(service.nodeFor("page.row.0.chip.0").props.text, "b0-0", "the page did not come back")
-    compare(service.nodeFor("page.row.19.chip.9").props.text, "b19-9", "the page came back only in part")
+    compare(service.nodeFor("page.row.39.chip.9").props.text, "b39-9", "the page came back only in part")
   }
 
   // The same staleness, one level deeper, so the fix cannot just special-case
