@@ -190,8 +190,16 @@ Item {
   // revision, so publishing a new index object before its revision would expose
   // intermediate patch state and invalidate every renderer in a batch.
   function commitNodeIndex(nextIndex) {
-    for (var oldId in nodeIndex)
-      if (nextIndex[oldId] === undefined) delete nodeIndex[oldId]
+    // The keys are taken before anything is deleted. Deleting from the object
+    // being iterated makes a for-in skip entries it has not reached yet, and
+    // with a page's worth of nodes that left most of a replaced subtree live:
+    // 255 of 360 in the showcase. The next time that page was built its ids
+    // collided with their own ghosts, the whole replacement was refused, and
+    // because Ruby had already advanced its own last_children it never
+    // resent — so the page stayed blank for the rest of the run.
+    var liveIds = Object.keys(nodeIndex)
+    for (var i = 0; i < liveIds.length; i++)
+      if (nextIndex[liveIds[i]] === undefined) delete nodeIndex[liveIds[i]]
     for (var nextId in nextIndex) nodeIndex[nextId] = nextIndex[nextId]
   }
 

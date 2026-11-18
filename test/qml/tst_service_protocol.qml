@@ -14,7 +14,7 @@ import "../.."
 // Ruby has already advanced its own last_children by then and never resends,
 // so that part of the interface silently stops updating for good.
 TestCase {
-  name: "ServiceStaleChildren"
+  name: "ServiceProtocol"
 
   QtObject {
     id: fakeTransport
@@ -72,6 +72,64 @@ TestCase {
     replaceChildren("page", [container("inner", [chip("inner.chip.2", "c")])])
     compare(service.lastError, "", "the outer patch was refused")
     compare(service.nodeFor("inner.chip.2").props.text, "c", "the outer patch did not take effect")
+  }
+
+  // Emptying a container has to take every node under it out of the index.
+  // commitNodeIndex deleted from the object it was iterating, and a for-in
+  // skips entries it has not reached yet once the object is mutated, so most
+  // of a replaced subtree stayed live — 255 of 360 nodes on a real showcase
+  // page. The next time that page was built its ids collided with their own
+  // ghosts, the replacement was refused, and because Ruby advances its own
+  // last_children before the client answers it never resent: the page stayed
+  // blank for the rest of the run.
+  //
+  // The count has to be large enough for the skipping to show. It does not
+  // appear at all with a handful of nodes.
+  function test_emptying_a_container_removes_every_node_under_it() {
+    var children = []
+    for (var i = 0; i < 200; i++) children.push(chip("leaf." + i, "v" + i))
+    render(container("root", [container("page", children)]))
+    compare(service.lastError, "", "the render itself was refused")
+    compare(service.nodeFor("leaf.0").props.text, "v0")
+
+    replaceChildren("page", [])
+    compare(service.lastError, "", "emptying the container was refused")
+
+    var survivors = []
+    for (var s = 0; s < 200; s++) if (service.nodeFor("leaf." + s) !== null) survivors.push("leaf." + s)
+    compare(survivors.length, 0, "these nodes outlived the container that held them: " +
+            survivors.slice(0, 8).join(", "))
+  }
+
+  // ...which is what makes re-entering a page work. This is the user-visible
+  // shape of the bug: open a page, leave it, come back, and the body is blank.
+  function test_a_page_can_be_entered_again_after_being_left() {
+    // Shaped like a real page — rows of nodes rather than one flat list —
+    // because the skipping depends on the index's internal layout and a flat
+    // list does not always trigger it.
+    function build(tag) {
+      var rows = []
+      for (var row = 0; row < 20; row++) {
+        var cells = []
+        for (var cell = 0; cell < 10; cell++)
+          cells.push(chip("page.row." + row + ".chip." + cell, tag + row + "-" + cell))
+        rows.push(container("page.row." + row, cells))
+      }
+      return rows
+    }
+
+    render(container("root", [container("page", build("a"))]))
+    compare(service.lastError, "", "the render itself was refused")
+
+    replaceChildren("page", [])
+    compare(service.lastError, "", "leaving the page was refused")
+
+    // a dynamic's scoped ids are deterministic, so returning rebuilds exactly
+    // the same ids it used before
+    replaceChildren("page", build("b"))
+    compare(service.lastError, "", "returning to the page was refused")
+    compare(service.nodeFor("page.row.0.chip.0").props.text, "b0-0", "the page did not come back")
+    compare(service.nodeFor("page.row.19.chip.9").props.text, "b19-9", "the page came back only in part")
   }
 
   // The same staleness, one level deeper, so the fix cannot just special-case
