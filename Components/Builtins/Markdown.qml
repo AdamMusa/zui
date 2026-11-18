@@ -13,7 +13,7 @@ Text {
       }
       text: String(renderer.prop("text", ""))
       textFormat: Text.MarkdownText
-      baseUrl: String(renderer.prop("base_url", ""))
+      baseUrl: renderer.assetUrl(renderer.prop("base_url", ""))
       color: renderer.prop("color", renderer.foreground)
       linkColor: renderer.prop("link_color", Color.accent)
       font.family: renderer.fontFamily

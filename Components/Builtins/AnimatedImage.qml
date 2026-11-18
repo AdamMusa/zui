@@ -6,7 +6,7 @@ import "../../Controls" as ZuiControls
 
 AnimatedImage {
   required property var renderer
-      source: String(renderer.prop("source", ""))
+      source: renderer.assetUrl(renderer.prop("source", ""))
       width: Number(renderer.prop("width", sourceSize.width > 0 ? sourceSize.width : 120))
       height: Number(renderer.prop("height", sourceSize.height > 0 ? sourceSize.height : 120))
       fillMode: {

@@ -39,14 +39,14 @@ WebView {
     var first = handledCommandRevision < 0
     handledCommandRevision = revision
     var html = String(renderer.prop("html", ""))
-    if (first && html !== "") loadHtml(html, String(renderer.prop("base_url", "")))
+    if (first && html !== "") loadHtml(html, String(renderer.assetUrl(renderer.prop("base_url", ""))))
     if (first && revision <= 0) return
     var command = String(renderer.prop("command", ""))
     if (command === "back") goBack()
     else if (command === "forward") goForward()
     else if (command === "reload") reload()
     else if (command === "stop") stop()
-    else if (command === "load_html") loadHtml(html, String(renderer.prop("base_url", "")))
+    else if (command === "load_html") loadHtml(html, String(renderer.assetUrl(renderer.prop("base_url", ""))))
     else if (command === "javascript") runJavaScript(String(renderer.prop("script", "")), function(result) {
       renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "javascript", { result: result })
     })
@@ -57,7 +57,7 @@ WebView {
   implicitWidth: Number(renderer.prop("width", 640))
   implicitHeight: Number(renderer.prop("height", 420))
   visible: renderer.prop("visible", true) !== false
-  url: String(renderer.prop("url", ""))
+  url: renderer.assetUrl(renderer.prop("url", ""))
   httpUserAgent: String(renderer.prop("http_user_agent", ""))
   onLoadingChanged: function(request) {
     var name = statusName(request.status)
