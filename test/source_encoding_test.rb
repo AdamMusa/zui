@@ -30,7 +30,7 @@ class SourceEncodingTest < Minitest::Test
   def test_no_source_read_in_the_framework_depends_on_the_callers_locale
     sources = Dir[File.join(ROOT, "lib", "**", "*.rb")] +
               Dir[File.join(ROOT, "test", "**", "*.rb")] +
-              Dir[File.join(ROOT, "script", "**", "*.rb")]
+              Dir[File.join(ROOT, "scripts", "**", "*.rb")]
     offenders = sources.sort.flat_map { |path| locale_dependent_reads(path) }
 
     assert_empty offenders,
