@@ -17,6 +17,7 @@ transitions, and animation groups receive Ruby APIs even though they are not vis
 
 ## Foundation and layout
 
+- [x] item
 - [x] control
 - [x] container
 - [x] row
@@ -42,6 +43,8 @@ transitions, and animation groups receive Ruby APIs even though they are not vis
 - [x] loader
 - [x] flickable
 - [x] focus_scope
+- [x] layout_mirroring
+- [x] accessible
 - [x] flipable
 - [x] border_image
 - [x] window
@@ -265,6 +268,7 @@ transitions, and animation groups receive Ruby APIs even though they are not vis
 - [x] anchor_changes
 - [x] parent_change
 - [x] timer
+- [x] shortcut
 
 ## Effects
 
