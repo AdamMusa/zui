@@ -90,6 +90,51 @@ class QmlContractTest < Minitest::Test
     end
   end
 
+  def test_particle_painters_paint_a_system_referenced_by_control_id
+    image = File.read(File.join(ROOT, "Components", "Builtins", "ImageParticle.qml"))
+    item = File.read(File.join(ROOT, "Components", "Builtins", "ItemParticle.qml"))
+    group = File.read(File.join(ROOT, "Components", "Builtins", "ParticleGroup.qml"))
+    system = File.read(File.join(ROOT, "Components", "Builtins", "ParticleSystem.qml"))
+
+    assert_includes system, "readonly property var nativeParticleSystem: nativeSystem"
+    [image, item, group].each do |qml|
+      assert_includes qml, "import QtQuick.Particles"
+      assert_includes qml, 'nativeHandle(renderer ? renderer.prop("system", "") : "", "nativeParticleSystem")'
+    end
+    assert_includes image, "ImageParticle {"
+    assert_includes item, "ItemParticle {"
+    assert_includes group, "ParticleGroup {"
+    refute_includes image, "Image {"
+    refute_includes item, "Rectangle {"
+  end
+
+  def test_image_particle_reports_a_texture_it_cannot_load
+    image = File.read(File.join(ROOT, "Components", "Builtins", "ImageParticle.qml"))
+
+    assert_includes image, "property int lastPublishedStatus: -1"
+    assert_includes image, "if (!renderer || nativeImageParticle.status === lastPublishedStatus) return"
+    assert_includes image, 'renderer.componentError("particle_texture_unavailable"'
+    assert_includes Zui::COMPONENTS.fetch(:image_particle)[1], :error
+  end
+
+  def test_item_particle_takes_and_gives_back_rendered_nodes
+    item = File.read(File.join(ROOT, "Components", "Builtins", "ItemParticle.qml"))
+
+    assert_includes item, "nativeItemParticle.take(item, true)"
+    assert_includes item, "nativeItemParticle.give(entry.item)"
+    assert_includes item, "nativeItemParticle.freeze(takenItems[index].item)"
+    assert_includes item, "nativeItemParticle.unfreeze(takenItems[index].item)"
+    refute_includes item, "delegate:"
+  end
+
+  def test_particle_modules_are_linked_whenever_tree_shaking_keeps_their_adapters
+    cmake = File.read(File.join(ROOT, "native", "CMakeLists.txt"))
+
+    assert_includes cmake, "function(zui_framework_imports_qml_module"
+    assert_includes cmake, 'zui_framework_imports_qml_module("QtQuick\\\\.Particles" ZUI_USES_PARTICLES)'
+    assert_includes cmake, "target_link_libraries(zui-host PRIVATE Qt6::QuickParticlesPrivate)"
+  end
+
   def test_component_coverage_catalog_has_no_unimplemented_entries
     coverage = File.read(File.join(ROOT, "docs", "component-coverage.md"))
 

@@ -393,6 +393,15 @@ module Zui
       component(:particle_system, id:, **props)
     end
 
+    PARTICLE_PAINTER_REFERENCES = %i[system x_vector y_vector].freeze
+    PARTICLE_PAINTER_LIST_REFERENCES = %i[sprites items].freeze
+    %i[image_particle item_particle particle_group].each do |type|
+      define_method(type) do |system = nil, id: nil, **props|
+        props = props.merge(system:) unless system.nil?
+        component(type, id:, **normalize_particle_painter_references(props))
+      end
+    end
+
     def selection_rectangle(target, id: nil, **props) = component(:selection_rectangle, id:, target: node_id(target), **props)
     def scroll_bar(target = nil, id: nil, **props)
       props = props.merge(target: node_id(target)) unless target.nil?
@@ -819,6 +828,21 @@ module Zui
 
     def node_id(value)
       value.is_a?(Node) ? value.id : value.to_s
+    end
+
+    # Particle painters reference the system, their deformation vectors, their
+    # sprites and the items they carry by control id, so nodes passed for those
+    # properties become ids.
+    def normalize_particle_painter_references(props)
+      props.each_with_object({}) do |(key, value), normalized|
+        normalized[key] = if PARTICLE_PAINTER_REFERENCES.include?(key)
+                            node_id(value)
+                          elsif PARTICLE_PAINTER_LIST_REFERENCES.include?(key)
+                            Array(value).map { |entry| node_id(entry) }
+                          else
+                            value
+                          end
+      end
     end
 
     def normalize_animation_specs(animations)
