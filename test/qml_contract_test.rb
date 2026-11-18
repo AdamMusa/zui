@@ -26,7 +26,7 @@ class QmlContractTest < Minitest::Test
 
   def adapter_sources
     Dir[File.join(ROOT, "Components", "Builtins", "**", "*.qml")].sort.to_h do |path|
-      [path.delete_prefix("#{ROOT}/"), File.read(path)]
+      [path.delete_prefix("#{ROOT}/"), File.read(path, encoding: "UTF-8")]
     end
   end
 
@@ -155,7 +155,7 @@ class QmlContractTest < Minitest::Test
   # ControlNode is not a function" and silently got no cursor. The contract is
   # checkable without a display, so it is checked here.
   def test_adapters_only_call_functions_control_node_defines
-    router = File.read(File.join(ROOT, "ControlNode.qml"))
+    router = File.read(File.join(ROOT, "ControlNode.qml"), encoding: "UTF-8")
     defined = router.scan(/function\s+([A-Za-z_]\w*)\s*\(/).flatten.to_set
 
     offenders = adapter_sources.each_with_object({}) do |(name, qml), found|
@@ -176,7 +176,7 @@ class QmlContractTest < Minitest::Test
 
   def test_deferred_width_sync_gives_up_when_its_node_is_gone
     DEFERRED_WIDTH_ADAPTERS.each do |adapter|
-      qml = File.read(File.join(ROOT, "Components", "Builtins", "#{adapter}.qml"))
+      qml = File.read(File.join(ROOT, "Components", "Builtins", "#{adapter}.qml"), encoding: "UTF-8")
 
       assert_includes qml, "Qt.callLater(root.synchronizeWidth)",
                       "#{adapter}.qml no longer defers its width sync; drop it from this list"
@@ -189,7 +189,7 @@ class QmlContractTest < Minitest::Test
   # takes the focus away, so these handlers run while the node behind them is
   # being torn down.
   def test_item_delegate_events_check_their_node_before_posting
-    qml = File.read(File.join(ROOT, "Components", "Builtins", "ItemDelegate.qml"))
+    qml = File.read(File.join(ROOT, "Components", "Builtins", "ItemDelegate.qml"), encoding: "UTF-8")
 
     assert_match(/function postEvent\(eventName, payload\) \{\s*if \(!renderer \|\| !renderer\.bridge \|\| !renderer\.subscribed\(eventName\)\) return/m,
                  qml)
@@ -201,7 +201,7 @@ class QmlContractTest < Minitest::Test
   # item, so `parent` inside them is not the tooltip. Every themed property
   # resolved to undefined and the tooltip drew with Qt's defaults.
   def test_the_panel_tooltip_theme_reaches_its_content_and_background
-    qml = File.read(File.join(ROOT, "Controls", "PanelToolTip.qml"))
+    qml = File.read(File.join(ROOT, "Controls", "PanelToolTip.qml"), encoding: "UTF-8")
 
     refute_match(/parent\.panel(Foreground|Background|Border)/, qml)
     refute_match(/parent\.font(Family|Size)/, qml)
@@ -291,7 +291,7 @@ class QmlContractTest < Minitest::Test
   # Windows drive letter was taken for a URL scheme, so "C:/..." was passed
   # through as a "c:" URL and never opened.
   def test_asset_resolution_emits_a_file_url_and_knows_a_drive_letter
-    router = File.read(File.join(ROOT, "ControlNode.qml"))
+    router = File.read(File.join(ROOT, "ControlNode.qml"), encoding: "UTF-8")
 
     assert_includes router, "function assetUrl(value)"
     assert_includes router, "function fileUrl(value)"
