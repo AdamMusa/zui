@@ -27,6 +27,7 @@ Item {
 
   property var allowedTypes: ({})
   property var allowedProperties: ({})
+  property string lastRejection: ""
 
   signal effectReceived(string name, var payload)
 
@@ -70,30 +71,43 @@ Item {
     return false
   }
 
+  // Every refusal says which node it was and what was wrong with it. A bare
+  // "invalid control tree" means reading the whole tree by hand to find the
+  // one node the client would not take, and a page that silently renders as
+  // nothing is exactly the moment that detail is worth having.
+  function refuse(detail, node) {
+    lastRejection = String(detail) + " at " + String(node && node.id ? node.id : "?") +
+      " (" + String(node && node.type ? node.type : "?") + ")"
+    return false
+  }
+
   function validateNode(node, index, depth, count) {
-    if (!plainObject(node) || depth > 32 || count.value >= 2000) return false
-    if (!allowedTypes[String(node.type || "")] || !validId(node.id)) return false
-    if (index[node.id] !== undefined) return false
+    if (!plainObject(node)) return refuse("node is not an object", node)
+    if (depth > 32) return refuse("node is nested deeper than 32", node)
+    if (count.value >= 2000) return refuse("more than 2000 live nodes", node)
+    if (!allowedTypes[String(node.type || "")]) return refuse("unknown component type", node)
+    if (!validId(node.id)) return refuse("unusable node id", node)
+    if (index[node.id] !== undefined) return refuse("node id already live", node)
 
     var props = node.props === undefined ? {} : node.props
-    if (!plainObject(props)) return false
+    if (!plainObject(props)) return refuse("properties are not an object", node)
     var whitelist = allowedProperties[node.type]
     for (var key in props) {
-      if (!whitelist[key]) return false
+      if (!whitelist[key]) return refuse("property " + key + " is not declared", node)
       var value = props[key]
-      if (!boundedValue(value, 0)) return false
+      if (!boundedValue(value, 0)) return refuse("property " + key + " is out of bounds", node)
     }
 
     var children = node.children === undefined ? [] : node.children
-    if (!Array.isArray(children)) return false
+    if (!Array.isArray(children)) return refuse("children are not an array", node)
     if (!componentDefinitions[node.type].container && children.length !== 0)
-      return false
+      return refuse("component cannot hold children", node)
     var subscriptions = node.events === undefined ? [] : node.events
-    if (!Array.isArray(subscriptions)) return false
+    if (!Array.isArray(subscriptions)) return refuse("events are not an array", node)
     for (var e = 0; e < subscriptions.length; e++) {
       var eventName = String(subscriptions[e])
       if (eventName !== "mount" && eventName !== "unmount" && componentDefinitions[node.type].events.indexOf(eventName) < 0)
-        return false
+        return refuse("event " + eventName + " is not declared", node)
     }
 
     index[node.id] = node
@@ -185,7 +199,7 @@ Item {
     if (!plainObject(options)) return false
     var allowed = {
       title: true, width: true, height: true, min_width: true, min_height: true,
-      max_width: true, max_height: true, color: true, visible: true,
+      max_width: true, max_height: true, padding: true, color: true, visible: true,
       maximized: true, fullscreen: true
     }
     for (var surfaceName in options) {
@@ -370,7 +384,10 @@ Item {
   }
 
   function reject(reason) {
-    lastError = String(reason || "protocol error").slice(0, 512)
+    var detail = String(reason || "protocol error")
+    if (lastRejection !== "") detail += " — " + lastRejection
+    lastRejection = ""
+    lastError = detail.slice(0, 512)
     console.warn("zui bridge:", lastError)
     return false
   }

@@ -102,10 +102,43 @@ class QmlContractTest < Minitest::Test
     shell = File.read(File.join(ROOT, "Desktop.qml"))
 
     assert_includes shell, 'window.option("padding", 20)'
+    assert_match(/max_height: true, padding: true/, File.read(File.join(ROOT, "Service.qml")))
 
     application = Zui::Application.new { app(:main, padding: 0) { text "fits" } }
 
     assert_equal 0, application.surface_options.fetch("main").fetch("padding")
+  end
+
+  # An adapter is named after the type it adapts, and QML resolves a type name
+  # against the file's own directory as well as its imports. That is harmless
+  # while the imported module really provides the type. When it does not — a
+  # type added in a later Qt, or one that was never Qt's at all — the name
+  # resolves to the adapter file itself and the adapter instantiates itself
+  # without end. The window stops answering and the process pins a core, and
+  # the only trace is a single QML warning. Neither of these two may name
+  # itself again.
+  SELF_NAMING_ADAPTERS = {
+    "RectangularShadow" => "QtQuick.Effects gained RectangularShadow in 6.9",
+    "SortFilterProxyModel" => "QtQml.Models has never provided SortFilterProxyModel"
+  }.freeze
+
+  def test_adapters_for_absent_types_do_not_resolve_to_themselves
+    SELF_NAMING_ADAPTERS.each_key do |adapter|
+      qml = File.read(File.join(ROOT, "Components", "Builtins", "#{adapter}.qml"))
+
+      refute_match(/^\s+#{adapter}\s*\{/, qml,
+                   "#{adapter}.qml instantiates #{adapter}, which resolves to itself")
+    end
+
+    shadow = File.read(File.join(ROOT, "Components", "Builtins", "RectangularShadow.qml"))
+
+    assert_includes shadow, "MultiEffect"
+    assert_includes shadow, "blurMax"
+
+    proxy = File.read(File.join(ROOT, "Components", "Builtins", "SortFilterProxyModel.qml"))
+
+    assert_includes proxy, "ListModel { id: rows }"
+    refute_includes proxy, "import QtQml.Models"
   end
 
   def test_gpu_adapters_ship_native_effects_particles_and_precompiled_shaders

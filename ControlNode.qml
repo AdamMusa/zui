@@ -191,6 +191,7 @@ Loader {
   }
 
   function ensureAdapterLoaded() {
+    adapterLoadPending = false
     if (!node || adapterSource === "") {
       loadedAdapterKey = ""
       if (source !== "") source = ""
@@ -203,13 +204,28 @@ Loader {
     else source = adapterSource
   }
 
+  // A deferred adapter load has to be owned by the node it loads. A bare
+  // Qt.callLater closure outlives the node: when a page is replaced, every
+  // scheduled callback for the nodes that went away still runs, fails with
+  // "attempted to evaluate a function in an invalid context", and leaves
+  // adapterLoadPending stuck true on any node the renderer reuses. That node
+  // then refuses every later load request and renders as nothing at all — a
+  // card silently missing from a page it had rendered a moment earlier.
+  // A Timer is a child of the node, so it is cancelled when the node goes.
+  Timer {
+    id: adapterLoadTimer
+    interval: 0
+    repeat: false
+    onTriggered: {
+      root.adapterLoadPending = false
+      root.ensureAdapterLoaded()
+    }
+  }
+
   function scheduleAdapterLoad() {
     if (adapterLoadPending) return
     adapterLoadPending = true
-    Qt.callLater(function() {
-      root.adapterLoadPending = false
-      root.ensureAdapterLoaded()
-    })
+    adapterLoadTimer.restart()
   }
 
   function requestAdapterLoad() {
