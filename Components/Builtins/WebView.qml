@@ -27,6 +27,19 @@ WebView {
     if (props.allow_file_access !== undefined) settings.allowFileAccess = props.allow_file_access === true
     if (props.local_content_file_access !== undefined)
       settings.localContentCanAccessFileUrls = props.local_content_file_access === true
+    publishSettings()
+  }
+  // WebViewSettings is isCreatable: false - it reaches QML only as WebView.settings. The
+  // effective values matter to an application because the iOS branch above deliberately
+  // leaves the platform defaults alone, so an override there does not take effect.
+  function publishSettings() {
+    renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "settings", {
+      local_storage: settings.localStorageEnabled === true,
+      javascript: settings.javaScriptEnabled === true,
+      allow_file_access: settings.allowFileAccess === true,
+      local_content_file_access: settings.localContentCanAccessFileUrls === true,
+      overridable: Qt.platform.os !== "ios"
+    })
   }
   function synchronize() {
     synchronizeSettings()
@@ -62,9 +75,12 @@ WebView {
   onLoadingChanged: function(request) {
     var name = statusName(request.status)
     var payload = { status: name, native_status: Number(request.status), url: String(request.url),
-      error: String(request.errorString), can_go_back: canGoBack, can_go_forward: canGoForward }
+      error: String(request.errorString), can_go_back: canGoBack, can_go_forward: canGoForward,
+      loading: loading === true }
     renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "load", payload)
-    renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "navigation", { can_go_back: canGoBack, can_go_forward: canGoForward })
+    renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "navigation",
+      { can_go_back: canGoBack, can_go_forward: canGoForward, loading: loading === true })
+    if (name === "succeeded" || name === "failed") publishSettings()
     if (name === "failed") renderer.componentError("web_view_load_failed", request.errorString, payload)
   }
   onLoadProgressChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "progress", { value: loadProgress })
