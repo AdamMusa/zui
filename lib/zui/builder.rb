@@ -607,6 +607,36 @@ module Zui
     def sort_filter_proxy_model(items = [], id: nil, **props) = component(:sort_filter_proxy_model, id:, items: Array(items), **props)
     def folder_list_model(folder = "", id: nil, **props) = component(:folder_list_model, id:, folder: folder.to_s, **props)
     def settings(values = {}, id: nil, **props) = component(:settings, id:, values:, **props)
+    def font_metrics(text = "", id: nil, **props, &handler)
+      node = component(:font_metrics, id:, text: text.to_s, **props)
+      @application.register_handler(node.id, :metrics, handler) if handler
+      node
+    end
+
+    def screen_info(id: nil, **props, &handler)
+      node = component(:screen_info, id:, **props)
+      @application.register_handler(node.id, :screen, handler) if handler
+      node
+    end
+
+    def system_palette(color_group = :active, id: nil, **props, &handler)
+      node = component(:system_palette, id:, color_group: color_group.to_s, **props)
+      @application.register_handler(node.id, :palette, handler) if handler
+      node
+    end
+
+    def input_method(id: nil, **props, &handler)
+      node = component(:input_method, id:, **props)
+      @application.register_handler(node.id, :change, handler) if handler
+      node
+    end
+
+    def graphics_info(id: nil, **props, &handler)
+      node = component(:graphics_info, id:, **props)
+      @application.register_handler(node.id, :graphics, handler) if handler
+      node
+    end
+
     def standard_paths(location = :home, id: nil, **props) = component(:standard_paths, id:, location: location.to_s, **props)
     def system_info(id: nil, **props, &handler)
       node = component(:system_info, id:, **props)

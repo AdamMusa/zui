@@ -116,6 +116,12 @@ module Zui
       PDF = %w[PdfDocument PdfMultiPageView PdfPageView PdfScrollablePageView PdfPageImage
                PdfPageNavigator PdfSearchModel PdfSelection].to_h { |name| [name, :pdf_view] }.freeze
 
+      METRICS_AND_SYSTEM = {
+        "FontMetrics" => :font_metrics, "Screen" => :screen_info,
+        "ScreenInfo" => :screen_info, "SystemPalette" => :system_palette,
+        "InputMethod" => :input_method, "GraphicsInfo" => :graphics_info
+      }.freeze
+
       TOUCH_INTERACTION = {
         "TapHandler" => :tap_area, "PointHandler" => :point_handler,
         "MultiPointTouchArea" => :multi_touch_area, "WheelHandler" => :wheel_area,
@@ -127,7 +133,7 @@ module Zui
       ALL = CORE.merge(PERMISSIONS).merge(DEVICE_INFORMATION).merge(VIRTUAL_KEYBOARD)
                 .merge(SENSORS).merge(POSITIONING).merge(LOCATION)
                 .merge(TEXT_TO_SPEECH).merge(WEB).merge(WEB_SOCKETS).merge(LOTTIE)
-                .merge(PDF).merge(TOUCH_INTERACTION).freeze
+                .merge(PDF).merge(TOUCH_INTERACTION).merge(METRICS_AND_SYSTEM).freeze
     end
   end
 end
