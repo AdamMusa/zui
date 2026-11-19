@@ -5,7 +5,6 @@ require "fileutils"
 require "json"
 require "tmpdir"
 require_relative "client_packager"
-require_relative "macos_bundle_seal"
 require_relative "macos_qml_payload"
 
 module Zui
@@ -77,22 +76,22 @@ module Zui
         stage = File.join(temporary, "stage")
         qml_scan_root = File.join(temporary, "qml-scan")
         phase("install qml") { Runtime.install_qml(qml_scan_root, framework_root: @framework_root) }
-        cmake = command!("cmake")
-        phase("cmake configure") do
-          run!([cmake, "-S", File.join(@framework_root, "native"), "-B", build,
-                "-DCMAKE_BUILD_TYPE=Release", "-DCMAKE_INSTALL_PREFIX=#{stage}",
-                "-DZUI_QML_SCAN_ROOT=#{qml_scan_root}"], timeout: 240)
-        end
-        phase("cmake build") { run!([cmake, "--build", build, "--config", "Release", "--parallel"], timeout: 900) }
 
         qt = qt_installation
-        key = deployment_key(qt, qml_scan_root)
-        restored = phase("restore deployed qt") { restore_deployment(stage, build, key) }
-        unless restored
+        key = client_cache_key(qt, qml_scan_root)
+        unless phase("restore client") { restore_client(stage, key) }
+          cmake = command!("cmake")
+          phase("cmake configure") do
+            run!([cmake, "-S", File.join(@framework_root, "native"), "-B", build,
+                  "-DCMAKE_BUILD_TYPE=Release", "-DCMAKE_INSTALL_PREFIX=#{stage}",
+                  "-DZUI_QML_SCAN_ROOT=#{qml_scan_root}"], timeout: 240)
+          end
+          phase("cmake build") { run!([cmake, "--build", build, "--config", "Release", "--parallel"], timeout: 900) }
           phase("cmake install") { run!([cmake, "--install", build, "--config", "Release"], timeout: 900) }
           phase("catalog runtime") { install_catalog_runtime(stage, qt) }
-          phase("save deployed qt") { save_deployment(stage, key) }
+          phase("save client") { save_client(stage, key) }
         end
+
         phase("package") do
           ClientPackager.new(
             platform: @platform, source_date_epoch: @environment["SOURCE_DATE_EPOCH"]
@@ -265,40 +264,41 @@ module Zui
       end
     end
 
-    # Deploying Qt is 92% of a client build — 322 of 351 seconds on macOS, where
-    # `cmake --install` runs macdeployqt and copies ~140 MB of frameworks.
-    # Compiling the client itself is 2.4 seconds. So the thing worth keeping
-    # between builds is the deployed tree, not the object files.
+    # Deploying Qt is 92% of a client build — 232 of 256 seconds on macOS,
+    # where `cmake --install` runs macdeployqt and copies ~140 MB of
+    # frameworks. Compiling the client itself is under two seconds. So what is
+    # worth keeping between builds is the staged client, and the key is what
+    # makes keeping it honest.
     #
-    # The payload is everything the deployment produced except our own
-    # executable, which is rebuilt every time and dropped back in. A cache hit
-    # therefore still compiles, and still produces a client built from the
-    # source in front of it.
-    def deployment_cache_root
+    # Everything that decides what that staging directory contains is in the
+    # key: the native sources and CMake file the client is compiled from, the
+    # Qt it is deployed against, the QML tree that -qmldir scans, this file,
+    # which chooses what is installed and what is purged, and the platform. If
+    # all of those match, a rebuild produces the same client — which is the
+    # same assumption Client#runtime_contract already makes when it reuses a
+    # downloaded client rather than building one.
+    def client_cache_root
       override = @environment["ZUI_CLIENT_CACHE_DIR"]
       return File.expand_path(override) if override && !override.empty?
 
       File.join(Client.new(platform: @platform, environment: @environment).cache_root,
-                "zui", "client-deployments")
+                "zui", "client-builds")
     end
 
-    def deployment_cache_enabled?
+    def client_cache_enabled?
       value = @environment["ZUI_CLIENT_CACHE"].to_s
       value.empty? || !%w[0 no off false].include?(value.downcase)
     end
 
-    # Everything that changes what the deployment produces has to be in the
-    # key. The QML tree is in it because -qmldir is what decides which QML
-    # modules are deployed at all, and native/CMakeLists.txt because it carries
-    # the deploy tool's options.
-    def deployment_key(qt, qml_scan_root)
+    def client_cache_key(qt, qml_scan_root)
       digest = Digest::SHA256.new
-      digest << "zui-client-deployment/#{CACHE_LAYOUT_VERSION}\0"
+      digest << "zui-client/#{CACHE_LAYOUT_VERSION}\0"
       digest << @platform.id.to_s << "\0"
       %w[QT_VERSION QT_INSTALL_QML QT_INSTALL_PLUGINS QT_INSTALL_TRANSLATIONS].each do |field|
         digest << field << "=" << qt[field].to_s << "\0"
       end
-      digest << Digest::SHA256.file(File.join(@framework_root, "native", "CMakeLists.txt")).hexdigest << "\0"
+      digest << Client.runtime_contract(framework_root: @framework_root) << "\0"
+      digest << Digest::SHA256.file(__FILE__).hexdigest << "\0"
       digest << tree_digest(qml_scan_root) << "\0"
       digest.hexdigest
     end
@@ -314,59 +314,46 @@ module Zui
       digest.hexdigest
     end
 
-    def deployment_entry(key) = File.join(deployment_cache_root, key)
+    def client_cache_entry(key) = File.join(client_cache_root, key)
 
-    def restore_deployment(stage, build, key)
-      return false unless deployment_cache_enabled?
+    def restore_client(stage, key)
+      return false unless client_cache_enabled?
 
-      entry = deployment_entry(key)
+      entry = client_cache_entry(key)
       manifest_path = File.join(entry, "manifest.json")
-      payload = File.join(entry, "payload.tar")
+      payload = File.join(entry, "client.tar")
       return false unless File.file?(manifest_path) && File.file?(payload)
-
-      manifest = JSON.parse(File.read(manifest_path, encoding: "UTF-8"))
-      return false unless manifest["layout"] == CACHE_LAYOUT_VERSION
+      return false unless JSON.parse(File.read(manifest_path, encoding: "UTF-8"))["layout"] == CACHE_LAYOUT_VERSION
 
       FileUtils.mkdir_p(stage)
       run!([command!("tar"), "-xpf", payload, "-C", stage], timeout: 900)
-      # Every packaged client is checked for the forbidden browser payload, and
-      # that has to stay true of one assembled from a cache. The entry was
-      # purged when it was written, so this only fires on a cache that has been
-      # corrupted or tampered with — which is exactly when it should.
+      raise ArgumentError, "the cached client has no executable" unless File.file?(File.join(stage, executable_relative_path))
+
+      # Every client that is packaged is checked for the forbidden browser
+      # payload, and one assembled from a cache is no exception. The entry was
+      # purged before it was written, so this only fires on an entry that has
+      # been corrupted or tampered with — which is when it should.
       purge_browser_payload!(stage)
-      install_built_executable(build, stage, manifest)
       true
-    rescue ArgumentError, JSON::ParserError, Errno::ENOENT => error
-      # A cache that cannot be trusted is not worth a failed build. Fall back
-      # to deploying, which also replaces the entry.
-      warn "zui client: ignoring the cached Qt deployment (#{error.message})"
+    rescue ArgumentError, JSON::ParserError, SystemCallError => error
+      # A cache that cannot be trusted is not worth a failed build.
+      warn "zui client: ignoring the cached client (#{error.message})"
       FileUtils.rm_rf(stage)
       false
     end
 
-    def save_deployment(stage, key)
-      return unless deployment_cache_enabled?
+    def save_client(stage, key)
+      return unless client_cache_enabled?
 
-      executable = File.join(stage, executable_relative_path)
-      raise ArgumentError, "the deployment produced no executable: #{executable}" unless File.file?(executable)
-
-      manifest = {
-        "layout" => CACHE_LAYOUT_VERSION,
-        "platform" => @platform.id.to_s,
-        "executable" => executable_relative_path,
-        "rpaths" => executable_rpaths(executable)
-      }
-
-      entry = deployment_entry(key)
+      entry = client_cache_entry(key)
       FileUtils.mkdir_p(File.dirname(entry))
       staging = "#{entry}.tmp-#{Process.pid}"
       FileUtils.rm_rf(staging)
       FileUtils.mkdir_p(staging)
       begin
-        # Our own executable is left out: it is rebuilt every time, and keeping
-        # it would hand back a binary that did not come from this source tree.
-        run!([command!("tar"), "-cpf", File.join(staging, "payload.tar"),
-              "-C", stage, "--exclude", "./#{executable_relative_path}", "."], timeout: 900)
+        run!([command!("tar"), "-cpf", File.join(staging, "client.tar"), "-C", stage, "."], timeout: 900)
+        manifest = { "layout" => CACHE_LAYOUT_VERSION, "platform" => @platform.id.to_s,
+                     "executable" => executable_relative_path }
         File.write(File.join(staging, "manifest.json"), "#{JSON.pretty_generate(manifest)}\n")
         FileUtils.rm_rf(entry)
         File.rename(staging, entry)
@@ -376,72 +363,7 @@ module Zui
     rescue ArgumentError, SystemCallError => error
       # The client is already built. A cache that cannot be written is a
       # slower next build, not a failed this one.
-      warn "zui client: could not keep the deployed Qt payload (#{error.message})"
-    end
-
-    def install_built_executable(build, stage, manifest)
-      source = built_executable(build)
-      destination = File.join(stage, executable_relative_path)
-      FileUtils.mkdir_p(File.dirname(destination))
-      FileUtils.cp(source, destination)
-      FileUtils.chmod(0o755, destination)
-      restore_executable_rpaths(destination, Array(manifest["rpaths"]))
-      reseal_macos_bundle(stage)
-    end
-
-    def built_executable(build)
-      name = File.basename(executable_relative_path)
-      candidates = [
-        File.join(build, executable_relative_path),
-        File.join(build, name),
-        File.join(build, "Release", name)
-      ]
-      found = candidates.find { |path| File.file?(path) }
-      found ||= Dir[File.join(build, "**", name)].sort.find { |path| File.file?(path) }
-      raise ArgumentError, "the build produced no #{name} to pair with the cached deployment" unless found
-
-      found
-    end
-
-    # macdeployqt adds one load path to the executable, and a freshly compiled
-    # one does not have it. The paths are read off the deployed binary when the
-    # payload is saved rather than hard-coded, so this keeps working if Qt or
-    # CMake change what they add.
-    def restore_executable_rpaths(executable, rpaths)
-      return if rpaths.empty? || !@platform.macos?
-
-      present = executable_rpaths(executable)
-      (rpaths - present).each do |rpath|
-        run!([command!("install_name_tool"), "-add_rpath", rpath, executable], timeout: 120)
-      end
-    end
-
-    def executable_rpaths(executable)
-      return [] unless @platform.macos?
-
-      otool = command?("otool")
-      return [] unless otool
-
-      result = Command.run([otool, "-l", executable], timeout: 120, max_output_bytes: 32_000_000)
-      return [] unless result.success?
-
-      result.stdout.scan(/^\s*path (\S+) \(offset \d+\)$/).flatten.uniq
-    end
-
-    # install_name_tool invalidates the signature the linker put on the
-    # executable, and macOS refuses to run a binary whose signature does not
-    # match it. Sealing the bundle also restores the framework symlinks, which
-    # is why this goes through the same code the distribution path uses.
-    def reseal_macos_bundle(stage)
-      return unless @platform.macos?
-
-      MacOSBundleSeal.seal!(stage)
-    end
-
-    def command?(*names)
-      command!(*names)
-    rescue ArgumentError
-      nil
+      warn "zui client: could not keep the built client (#{error.message})"
     end
 
     def qt_installation
