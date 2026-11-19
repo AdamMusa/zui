@@ -126,6 +126,12 @@ module Zui
       DOCUMENT_PATH
     end
 
+    # Every type each Qt QML module declares, from its `qmldir` and its `.qmltypes` descriptions.
+    def declared_types
+      scan_sdk
+      @declared_types
+    end
+
     private
 
     # Framework QML in load order: the adapters, the control library, the theme and the entry
@@ -412,13 +418,8 @@ module Zui
       name.gsub(/([a-z\d])([A-Z])/, '\1_\2').gsub(/([A-Z]+)([A-Z][a-z])/, '\1_\2').downcase
     end
 
-    # Every type a module declares, from the `qmldir` of pure-QML modules and the `exports` of the
-    # `.qmltypes` descriptions that `qmltyperegistrar` writes for C++ modules.
-    def declared_types
-      scan_sdk
-      @declared_types
-    end
-
+    # The `qmldir` of pure-QML modules and the `exports` of the `.qmltypes` descriptions that
+    # `qmltyperegistrar` writes for C++ modules both contribute to `declared_types`.
     # The modules whose types an `import` also brings into scope: `depends`, plus the plain,
     # optional and default `import` lines a module's own `qmldir` declares.
     def module_dependencies
