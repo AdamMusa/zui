@@ -133,6 +133,172 @@ class ClientBuilderTest < Minitest::Test
     end
   end
 
+  # Deploying Qt is 92% of a client build and compiling is 2.4 seconds of it,
+  # so what is worth keeping between builds is the deployed tree. Everything
+  # that changes what the deployment produces has to be in the key, or a build
+  # quietly reuses a payload that no longer matches its source.
+  QT = {
+    "QT_VERSION" => "6.8.3",
+    "QT_INSTALL_QML" => "/opt/qt/6.8.3/macos/qml",
+    "QT_INSTALL_PLUGINS" => "/opt/qt/6.8.3/macos/plugins",
+    "QT_INSTALL_TRANSLATIONS" => "/opt/qt/6.8.3/macos/translations"
+  }.freeze
+
+  def test_the_deployment_key_covers_everything_that_changes_the_payload
+    Dir.mktmpdir do |scan|
+      File.write(File.join(scan, "Desktop.qml"), "import QtQuick\n")
+      baseline = builder.send(:deployment_key, QT, scan)
+
+      assert_equal baseline, builder.send(:deployment_key, QT, scan),
+                   "the same inputs gave two different keys"
+
+      File.write(File.join(scan, "Desktop.qml"), "import QtQuick\nimport QtMultimedia\n")
+      refute_equal baseline, builder.send(:deployment_key, QT, scan),
+                   "a changed QML tree has to change the key: -qmldir decides what is deployed"
+
+      File.write(File.join(scan, "Desktop.qml"), "import QtQuick\n")
+      assert_equal baseline, builder.send(:deployment_key, QT, scan),
+                   "putting the QML tree back has to give the key back"
+
+      refute_equal baseline, builder.send(:deployment_key, QT.merge("QT_VERSION" => "6.9.0"), scan)
+      refute_equal baseline, builder.send(:deployment_key, QT.merge("QT_INSTALL_QML" => "/elsewhere"), scan)
+
+      other = Zui::ClientBuilder.new(platform: Zui::Platform.new(os: :macos, arch: :arm64))
+
+      refute_equal baseline, other.send(:deployment_key, QT, scan),
+                   "two platforms cannot share a deployment"
+    end
+  end
+
+  def test_a_saved_deployment_comes_back_without_the_executable_in_it
+    Dir.mktmpdir do |directory|
+      cache = File.join(directory, "cache")
+      stage = File.join(directory, "stage")
+      build = File.join(directory, "build")
+      cached = Zui::ClientBuilder.new(platform: Zui::Platform.new(os: :linux, arch: :x86_64),
+                                      environment: { "ZUI_CLIENT_CACHE_DIR" => cache, "PATH" => ENV["PATH"] })
+
+      FileUtils.mkdir_p([File.join(stage, "bin"), File.join(stage, "lib"), build])
+      File.write(File.join(stage, "bin", "zui-host"), "deployed binary")
+      File.write(File.join(stage, "lib", "libQt6Core.so.6"), "qt core")
+      File.symlink("libQt6Core.so.6", File.join(stage, "lib", "libQt6Core.so"))
+      File.write(File.join(build, "zui-host"), "freshly compiled binary")
+
+      cached.send(:save_deployment, stage, "k")
+
+      assert_path_exists File.join(cache, "k", "payload.tar")
+      assert_path_exists File.join(cache, "k", "manifest.json")
+
+      restored = File.join(directory, "restored")
+      assert cached.send(:restore_deployment, restored, build, "k"), "the payload did not come back"
+
+      assert_equal "qt core", File.read(File.join(restored, "lib", "libQt6Core.so.6"))
+      assert File.symlink?(File.join(restored, "lib", "libQt6Core.so")), "a framework symlink was flattened"
+      assert_equal "freshly compiled binary", File.read(File.join(restored, "bin", "zui-host")),
+                   "a cache hit must still ship the binary this build compiled"
+      assert File.executable?(File.join(restored, "bin", "zui-host"))
+    end
+  end
+
+  # Every packaged client is checked for the forbidden WebEngine payload. A
+  # client assembled from a cache has to be checked too, or a corrupted entry
+  # would walk straight past the one guard that exists.
+  def test_a_cached_payload_is_still_checked_for_forbidden_browser_files
+    Dir.mktmpdir do |directory|
+      cache = File.join(directory, "cache")
+      stage = File.join(directory, "stage")
+      build = File.join(directory, "build")
+      cached = Zui::ClientBuilder.new(platform: Zui::Platform.new(os: :linux, arch: :x86_64),
+                                      environment: { "ZUI_CLIENT_CACHE_DIR" => cache, "PATH" => ENV["PATH"] })
+      FileUtils.mkdir_p([File.join(stage, "bin"), File.join(stage, "qml", "QtWebEngine"), build])
+      File.write(File.join(stage, "bin", "zui-host"), "deployed")
+      File.write(File.join(stage, "qml", "QtWebEngine", "qmldir"), "module QtWebEngine\n")
+      File.write(File.join(build, "zui-host"), "compiled")
+
+      # saving purges it, so the entry itself is clean
+      cached.send(:save_deployment, stage, "k")
+      restored = File.join(directory, "restored")
+
+      assert cached.send(:restore_deployment, restored, build, "k")
+      refute_path_exists File.join(restored, "qml", "QtWebEngine")
+
+      # and an entry that has WebEngine in it — however it got there — is
+      # purged on the way out, so what gets packaged is still clean. The
+      # guarantee is about what ships, not about rejecting the cache.
+      Dir.mktmpdir do |tampered|
+        FileUtils.mkdir_p([File.join(tampered, "qml", "QtWebEngine"), File.join(tampered, "bin")])
+        File.write(File.join(tampered, "qml", "QtWebEngine", "qmldir"), "module QtWebEngine\n")
+        File.write(File.join(tampered, "bin", "keep"), "kept")
+        system("tar", "-cpf", File.join(cache, "k", "payload.tar"), "-C", tampered, ".", out: File::NULL)
+      end
+      again = File.join(directory, "again")
+
+      assert cached.send(:restore_deployment, again, build, "k")
+      refute_path_exists File.join(again, "qml", "QtWebEngine"),
+                         "a cached payload carrying WebEngine must not reach the package"
+      assert_path_exists File.join(again, "bin", "keep")
+    end
+  end
+
+  def test_a_cache_miss_and_a_disabled_cache_both_just_build
+    Dir.mktmpdir do |directory|
+      cache = File.join(directory, "cache")
+      enabled = Zui::ClientBuilder.new(platform: Zui::Platform.new(os: :linux, arch: :x86_64),
+                                       environment: { "ZUI_CLIENT_CACHE_DIR" => cache, "PATH" => ENV["PATH"] })
+
+      refute enabled.send(:restore_deployment, File.join(directory, "a"), directory, "missing"),
+             "a key that was never saved cannot restore"
+
+      off = Zui::ClientBuilder.new(platform: Zui::Platform.new(os: :linux, arch: :x86_64),
+                                   environment: { "ZUI_CLIENT_CACHE_DIR" => cache, "ZUI_CLIENT_CACHE" => "0",
+                                                  "PATH" => ENV["PATH"] })
+
+      refute off.send(:deployment_cache_enabled?), "ZUI_CLIENT_CACHE=0 has to turn it off"
+      refute off.send(:restore_deployment, File.join(directory, "b"), directory, "missing")
+    end
+  end
+
+  # One definition of where Zui caches things, shared with the installed
+  # clients, so the two cannot drift apart.
+  def test_the_deployment_cache_sits_beside_the_installed_clients
+    shared = Zui::Client.new(platform: Zui::Platform.new(os: :linux, arch: :x86_64),
+                             environment: { "HOME" => "/home/probe" }).cache_root
+    beside = Zui::ClientBuilder.new(platform: Zui::Platform.new(os: :linux, arch: :x86_64),
+                                    environment: { "HOME" => "/home/probe" }).send(:deployment_cache_root)
+
+    assert_equal File.join(shared, "zui", "client-deployments"), beside
+
+    override = Zui::ClientBuilder.new(platform: Zui::Platform.new(os: :linux, arch: :x86_64),
+                                      environment: { "ZUI_CLIENT_CACHE_DIR" => "/tmp/elsewhere" })
+
+    assert_equal "/tmp/elsewhere", override.send(:deployment_cache_root)
+  end
+
+  def test_the_compiled_executable_is_found_in_each_layout
+    Dir.mktmpdir do |build|
+      linux = Zui::ClientBuilder.new(platform: Zui::Platform.new(os: :linux, arch: :x86_64))
+      FileUtils.mkdir_p(build)
+      File.write(File.join(build, "zui-host"), "elf")
+
+      assert_equal File.join(build, "zui-host"), linux.send(:built_executable, build)
+
+      macos = Zui::ClientBuilder.new(platform: Zui::Platform.new(os: :macos, arch: :arm64))
+      bundle = File.join(build, "zui-host.app", "Contents", "MacOS")
+      FileUtils.mkdir_p(bundle)
+      File.write(File.join(bundle, "zui-host"), "mach-o")
+
+      assert_equal File.join(bundle, "zui-host"), macos.send(:built_executable, build)
+    end
+  end
+
+  def test_a_build_without_its_executable_refuses_to_use_a_cached_payload
+    Dir.mktmpdir do |build|
+      error = assert_raises(ArgumentError) { builder.send(:built_executable, build) }
+
+      assert_includes error.message, "cached deployment"
+    end
+  end
+
   private
 
   def builder
