@@ -15,7 +15,7 @@ class MobileSetupTest < Minitest::Test
       setup.enable!
 
       assert setup.enabled?
-      assert_equal true, JSON.parse(File.read(config)).fetch("enabled")
+      assert_equal true, JSON.parse(File.read(config, encoding: "UTF-8")).fetch("enabled")
     end
   end
 
@@ -33,8 +33,8 @@ class MobileSetupTest < Minitest::Test
       directories = setup.prepare_project!(project)
 
       assert_equal [File.join(project, "android"), File.join(project, "ios")], directories
-      manifest = File.read(File.join(project, "android", "AndroidManifest.xml"))
-      info_plist = File.read(File.join(project, "ios", "Info.plist.in"))
+      manifest = File.read(File.join(project, "android", "AndroidManifest.xml"), encoding: "UTF-8")
+      info_plist = File.read(File.join(project, "ios", "Info.plist.in"), encoding: "UTF-8")
       assert_includes manifest, "%%INSERT_PERMISSIONS"
       assert_includes manifest, "QtActivity"
       assert_includes info_plist, "NSCameraUsageDescription"
@@ -65,7 +65,7 @@ class MobileSetupTest < Minitest::Test
 
       setup.prepare_project!(directory)
 
-      assert_equal "custom manifest\n", File.read(manifest)
+      assert_equal "custom manifest\n", File.read(manifest, encoding: "UTF-8")
       assert File.file?(File.join(directory, "android", "README.md"))
       assert File.file?(File.join(directory, "ios", "Info.plist.in"))
     end
@@ -101,7 +101,7 @@ class MobileSetupTest < Minitest::Test
       assert_equal paths.fetch(:qt_android), values.fetch("qt_android")
       assert_equal paths.fetch(:android_ndk), values.fetch("android_ndk")
       assert_equal "TEAM123456", values.fetch("apple_team")
-      assert_equal values, JSON.parse(File.read(config))
+      assert_equal values, JSON.parse(File.read(config, encoding: "UTF-8"))
       { qt_ios: Zui::Mobile::Setup::QT_IOS_MODULES,
         qt_android: Zui::Mobile::Setup::QT_ANDROID_MODULES }.each do |target, modules|
         modules.each do |qt_module|

@@ -68,7 +68,7 @@ class DistPackagerTest < Minitest::Test
       assert_includes data_entries.keys, "./opt/signal-board/run"
       assert_includes data_entries.keys, "./usr/share/applications/signal-board.desktop"
       assert_includes data_entries.keys, "./usr/share/icons/hicolor/256x256/apps/signal-board.png"
-      assert_equal "rpm-fixture", File.read(artifacts.last)
+      assert_equal "rpm-fixture", File.read(artifacts.last, encoding: "UTF-8")
       assert packager.tree_shake_report
     end
   end
@@ -152,7 +152,7 @@ class DistPackagerTest < Minitest::Test
 
       assert_equal 1, artifacts.length
       assert_match(/windows-x86_64-setup\.exe\z/, artifacts.first)
-      assert_equal "setup-fixture", File.read(artifacts.first)
+      assert_equal "setup-fixture", File.read(artifacts.first, encoding: "UTF-8")
     end
   end
 
@@ -201,7 +201,7 @@ class DistPackagerTest < Minitest::Test
       control = tar_gzip_entries(ar_members(deb).fetch("control.tar.gz")).fetch("./control")
 
       refute_includes control, "Depends: ruby"
-      refute_includes File.read(rpm), "Requires: ruby"
+      refute_includes File.read(rpm, encoding: "UTF-8"), "Requires: ruby"
     end
   end
 

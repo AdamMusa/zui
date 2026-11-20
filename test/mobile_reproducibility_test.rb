@@ -56,7 +56,7 @@ class MobileReproducibilityTest < Minitest::Test
 
       Zui::Mobile::Reproducibility.write_metadata(result)
 
-      metadata = JSON.parse(File.read(result.metadata))
+      metadata = JSON.parse(File.read(result.metadata, encoding: "UTF-8"))
       assert_equal "payload", metadata.dig("identity", "payload_sha256")
       assert_equal build_identity.source_date_epoch, File.mtime(result.metadata).to_i
     end

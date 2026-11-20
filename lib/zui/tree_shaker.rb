@@ -90,7 +90,7 @@ module Zui
       known = COMPONENTS.keys.to_h { |name| [name.to_s, name] }
       selected = Set.new(BASE_COMPONENTS)
       ruby_sources.each do |path|
-        syntax = Ripper.sexp(File.read(path))
+        syntax = Ripper.sexp(File.read(path, encoding: "UTF-8"))
         raise ArgumentError, "cannot tree-shake Ruby file with syntax errors: #{path}" unless syntax
 
         component_references(syntax, known).each { |component| selected << component }
@@ -110,7 +110,7 @@ module Zui
         path = File.join(@framework, "Components", "Builtins", adapter)
         raise ArgumentError, "component adapter is missing while tree-shaking: #{path}" unless File.file?(path)
 
-        File.read(path).scan(/\bBuiltins\.([A-Z][A-Za-z0-9]*)/).flatten.each do |class_name|
+        File.read(path, encoding: "UTF-8").scan(/\bBuiltins\.([A-Z][A-Za-z0-9]*)/).flatten.each do |class_name|
           dependency = "#{class_name}.qml"
           next unless types_by_adapter.key?(dependency) && adapters.add?(dependency)
 
@@ -216,7 +216,7 @@ module Zui
       queue = adapter_sources.dup
       until queue.empty?
         source_path = queue.shift
-        source = File.read(source_path)
+        source = File.read(source_path, encoding: "UTF-8")
         support_references(source, source_path.start_with?("#{root}#{File::SEPARATOR}"), by_component).each do |relative|
           path = available[relative]
           next unless path && required.add?(path)
@@ -254,7 +254,7 @@ module Zui
 
     def qml_imports(paths)
       paths.each_with_object(Set.new) do |path, imports|
-        File.foreach(path) do |line|
+        File.foreach(path, encoding: "UTF-8") do |line|
           line.scan(/(?:^|["'])\s*import\s+([A-Za-z][A-Za-z0-9_.]*)\b/) do |match|
             imports << match.first
           end
@@ -300,7 +300,7 @@ module Zui
 
     def module_directories(root)
       Dir[File.join(root, "**", "qmldir")].each_with_object({}) do |path, modules|
-        module_name = File.foreach(path).filter_map { |line| line[/^\s*module\s+(\S+)/, 1] }.first
+        module_name = File.foreach(path, encoding: "UTF-8").filter_map { |line| line[/^\s*module\s+(\S+)/, 1] }.first
         modules[module_name] = File.dirname(path) if module_name
       end
     end
@@ -308,7 +308,7 @@ module Zui
     def module_imports(directory, modules)
       imports = Set.new
       qmldir = File.join(directory, "qmldir")
-      File.foreach(qmldir) do |line|
+      File.foreach(qmldir, encoding: "UTF-8") do |line|
         dependency = line[/^\s*(?:depends|import)\s+([A-Za-z][A-Za-z0-9_.]*)\b/, 1]
         imports << dependency if dependency
       end
@@ -327,7 +327,7 @@ module Zui
       manifest_path = File.join(@native, "client.json")
       return nil unless File.file?(manifest_path)
 
-      manifest = JSON.parse(File.read(manifest_path))
+      manifest = JSON.parse(File.read(manifest_path, encoding: "UTF-8"))
       relative = Array(manifest.fetch("environment", {})[environment_name]).first
       return nil unless relative
 
@@ -381,7 +381,7 @@ module Zui
     def detected_qt_features
       features = Set.new(@configuration.features)
       ruby_sources.each do |path|
-        Ripper.lex(File.read(path)).each do |_position, event, token, _state|
+        Ripper.lex(File.read(path, encoding: "UTF-8")).each do |_position, event, token, _state|
           next unless event == :on_tstring_content
 
           token.scan(/\.([A-Za-z0-9]+)(?:\z|[?#])/).flatten.each do |extension|
@@ -607,7 +607,7 @@ module Zui
     end
 
     def native_binary_roots(patterns)
-      manifest = JSON.parse(File.read(File.join(@native, "client.json")))
+      manifest = JSON.parse(File.read(File.join(@native, "client.json"), encoding: "UTF-8"))
       roots = [File.join(@native, manifest.fetch("executable"))]
       [native_path_for("QML_IMPORT_PATH"), native_path_for("QT_PLUGIN_PATH")].compact.each do |root|
         patterns.each { |pattern| roots.concat(Dir[File.join(root, "**", pattern)]) }
@@ -619,7 +619,7 @@ module Zui
       path = File.join(@native, "client.json")
       return unless File.file?(path)
 
-      manifest = JSON.parse(File.read(path))
+      manifest = JSON.parse(File.read(path, encoding: "UTF-8"))
       manifest["tree_shaken"] = true
       manifest["components"] = components.map(&:to_s).sort
       manifest["qml_modules"] = qml_modules.sort
