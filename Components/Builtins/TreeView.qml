@@ -99,8 +99,13 @@ Rectangle {
     return rows
   }
 
+  // Unversioned on purpose. TreeModel is the only QML-creatable hierarchical
+  // model Qt offers, and Qt.labs.qmlmodels did not gain it until after 6.8.3,
+  // so an explicit version pin only reports "version X is not installed" and
+  // hides the real cause. Unversioned means latest available, so this starts
+  // working the moment the bundled Qt ships TreeModel.
   function modelSource() {
-    var source = "import Qt.labs.qmlmodels 6.10\nTreeModel {\n"
+    var source = "import Qt.labs.qmlmodels\nTreeModel {\n"
     for (var column = 0; column < effectiveColumns.length; column++)
       source += "  TableModelColumn { display: \"_c" + column + "\"; edit: \"_c" + column + "\" }\n"
     return source + "}"
@@ -111,7 +116,19 @@ Rectangle {
     treeModel = null
     if (previous) previous.destroy()
     if (effectiveColumns.length === 0) return
-    var created = Qt.createQmlObject(modelSource(), treeRoot, "ZuiDynamicTreeModel")
+    // Without this the exception escapes, treeModel stays null and the tree
+    // renders empty with nothing reported: exactly the silent failure the
+    // framework boundary forbids.
+    var created = null
+    try {
+      created = Qt.createQmlObject(modelSource(), treeRoot, "ZuiDynamicTreeModel")
+    } catch (error) {
+      renderer.componentError("tree_model_unavailable",
+        "This Qt build has no Qt.labs.qmlmodels TreeModel, which tree_view needs "
+          + "for its hierarchy: " + String(error.message),
+        { columns: effectiveColumns.length })
+      return
+    }
     created.rows = normalizedRows()
     treeModel = created
     Qt.callLater(syncTreeState)
