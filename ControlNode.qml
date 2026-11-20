@@ -239,12 +239,37 @@ Loader {
     return BorderImage.Stretch
   }
 
+  // The renderer resolves a relative asset path against the directory holding
+  // the application's main.rb, because that is the only directory the author
+  // of the application knows about. Anything that skips this and hands a
+  // relative path straight to QML resolves it against the adapter's own
+  // directory inside the framework checkout instead, and asks for a file that
+  // was never there — "demos/nova_pour/assets/future-pour-bar.webp" became
+  // "<framework>/Components/Builtins/demos/nova_pour/assets/future-pour-bar.webp".
+  //
+  // Two further corrections over what this used to return. A bare absolute
+  // path left it as a URL with no scheme, which QML resolved against the
+  // adapter's base URL and happened to come out right on Unix; and a single
+  // letter followed by a colon was taken for a URL scheme, so every Windows
+  // path "C:/..." was passed through as a "c:" URL.
   function assetUrl(value) {
-    var source = String(value || "")
+    var source = String(value || "").replace(/\\/g, "/")
     if (source === "") return ""
+    if (windowsPath(source)) return fileUrl(source)
     if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(source)) return source
-    if (source[0] === "/") return "file://" + source
-    return bridge && bridge.projectDir ? bridge.projectDir + "/" + source : Qt.resolvedUrl(source)
+    if (source.charAt(0) === "/") return fileUrl(source)
+    var project = bridge && bridge.projectDir ? String(bridge.projectDir) : ""
+    return project === "" ? Qt.resolvedUrl(source) : fileUrl(project + "/" + source)
+  }
+
+  function windowsPath(value) {
+    return /^[a-zA-Z]:\//.test(String(value))
+  }
+
+  function fileUrl(value) {
+    var path = String(value).replace(/\\/g, "/")
+    if (path.charAt(0) !== "/") path = "/" + path
+    return "file://" + encodeURI(path).replace(/#/g, "%23").replace(/\?/g, "%3F")
   }
 
   function builtInSource(typeName) {

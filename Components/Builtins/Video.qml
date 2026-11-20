@@ -19,7 +19,7 @@ Multimedia.Video {
         "The installed Qt version does not support mirrored video output", {})
   }
 
-  source: String(renderer.prop("source", ""))
+  source: renderer.assetUrl(renderer.prop("source", ""))
   implicitWidth: Number(renderer.prop("width", 640))
   implicitHeight: Number(renderer.prop("height", 360))
   autoPlay: renderer.prop("auto_play", false) === true

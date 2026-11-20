@@ -10,7 +10,7 @@ Item {
       implicitWidth: 0
       implicitHeight: 0
       Quick.FontLoader {
-        source: String(renderer.prop("source", ""))
+        source: renderer.assetUrl(renderer.prop("source", ""))
         onStatusChanged: {
           if (renderer.subscribed("status")) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "status", { value: status, name: name })
           if (status === Quick.FontLoader.Ready && renderer.subscribed("loaded")) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "loaded", { name: name })
