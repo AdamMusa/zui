@@ -124,6 +124,15 @@ module Zui
     def model_view_3d(source, id: nil, **props) = component(:model_view_3d, id:, source: source.to_s, **props)
     def font_loader(source, id: nil, **props) = component(:font_loader, id:, source: source.to_s, **props)
     def text_metrics(value, id: nil, **props) = component(:text_metrics, id:, text: value.to_s, **props)
+    def int_validator(value = "", id: nil, **props, &handler)
+      validator_component(:int_validator, value, id:, props:, handler:)
+    end
+    def double_validator(value = "", id: nil, **props, &handler)
+      validator_component(:double_validator, value, id:, props:, handler:)
+    end
+    def regex_validator(pattern, value = "", id: nil, **props, &handler)
+      validator_component(:regex_validator, value, id:, props: props.merge(pattern: pattern.is_a?(Regexp) ? pattern.source : pattern.to_s), handler:)
+    end
     def animated_image(source, id: nil, **props) = component(:animated_image, id:, source: source.to_s, **props)
     def video(source, id: nil, **props) = component(:video, id:, source: source.to_s, **props)
     def audio(source, id: nil, **props) = component(:audio, id:, source: source.to_s, **props)
@@ -856,6 +865,12 @@ module Zui
       node = @application.build_node(:container, explicit_id: id)
       @application.add_surface(name, node, options:)
       within(node, &block)
+      node
+    end
+
+    def validator_component(type, value, id:, props:, handler:)
+      node = component(type, id:, **props.merge(text: value.to_s))
+      @application.register_handler(node.id, :validate, handler) if handler
       node
     end
 
