@@ -123,11 +123,20 @@ module Zui
         "HoverHandler" => :hover_area, "DropArea" => :drop_area
       }.freeze
 
+      # Qt5Compat.GraphicalEffects. Keys are the Qt type names; the three that
+      # also exist in QtQuick.Shapes are module-qualified so the map stays
+      # unambiguous once the vector shape gradients are listed too.
+      GRAPHICAL_EFFECTS = {
+        "FastBlur" => :fast_blur, "GaussianBlur" => :gaussian_blur,
+        "DirectionalBlur" => :directional_blur, "RadialBlur" => :radial_blur,
+        "ZoomBlur" => :zoom_blur, "RecursiveBlur" => :recursive_blur
+      }.freeze
+
       CORE = QUICK_CONTROLS.merge(QUICK_DIALOGS).merge(QUICK_LAYOUTS).freeze
       ALL = CORE.merge(PERMISSIONS).merge(DEVICE_INFORMATION).merge(VIRTUAL_KEYBOARD)
                 .merge(SENSORS).merge(POSITIONING).merge(LOCATION)
                 .merge(TEXT_TO_SPEECH).merge(WEB).merge(WEB_SOCKETS).merge(LOTTIE)
-                .merge(PDF).merge(TOUCH_INTERACTION).freeze
+                .merge(PDF).merge(TOUCH_INTERACTION).merge(GRAPHICAL_EFFECTS).freeze
     end
   end
 end

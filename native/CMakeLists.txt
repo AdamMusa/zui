@@ -397,6 +397,24 @@ if(IOS OR ANDROID)
   qt_import_qml_plugins(zui-host)
 endif()
 
+# Qt5Compat.GraphicalEffects and QtQuick.Shapes are pure QML modules, so a static
+# iOS or Android build reaches them through the import scan above. Keep the GPU
+# effect and vector shape plugins named explicitly as well: an adapter that
+# cannot resolve its Qt type fails to load instead of degrading into another
+# type, so a scan that misses a generated resource tree would silently cost the
+# whole effects catalog on mobile.
+if(IOS OR ANDROID)
+  foreach(zui_gpu_qml_plugin IN ITEMS
+    Qt6::qtgraphicaleffectsplugin
+    Qt6::qtgraphicaleffectsprivate
+    Qt6::qmlshapesplugin
+  )
+    if(TARGET ${zui_gpu_qml_plugin})
+      qt_import_plugins(zui-host INCLUDE ${zui_gpu_qml_plugin})
+    endif()
+  endforeach()
+endif()
+
 # Static Qt packages otherwise link every plugin found for a module. Keep iOS on
 # its native implementations so an app that uses speech does not also absorb the
 # FFmpeg multimedia backend, mock speech engine, or non-mobile position sources.
