@@ -39,6 +39,38 @@ class MacOSBundleSealTest < Minitest::Test
     end
   end
 
+  # Purging the browser payload deletes QtPositioning's binary and leaves its
+  # directory standing, so every macOS client carries a framework with no code
+  # in it. Sealing used to raise on that — before it had repaired the
+  # frameworks that came after it alphabetically — so codesign refused the
+  # bundle and no macOS application could be sealed at all. A framework with no
+  # binary is debris: it is removed, and the repair carries on.
+  def test_a_framework_left_without_a_binary_is_removed_rather_than_fatal
+    Dir.mktmpdir do |native|
+      good = framework_fixture(native)
+      frameworks = File.dirname(good)
+      # sorts after QtCore, so it is only reached if the gutted one did not stop us
+      later = File.join(frameworks, "QtQuickControls2.framework")
+      FileUtils.mkdir_p(File.join(later, "Versions", "A", "Resources"))
+      File.binwrite(File.join(later, "Versions", "A", "QtQuickControls2"), "framework")
+      # gutted: sorts between the two, and has Resources but no binary
+      gutted = File.join(frameworks, "QtPositioning.framework")
+      FileUtils.mkdir_p(File.join(gutted, "Versions", "A", "Resources"))
+      File.write(File.join(gutted, "Versions", "A", "Resources", "Info.plist"), "plist")
+      command = FakeCodesign.new
+
+      application = Zui::MacOSBundleSeal.seal!(native, command:)
+
+      assert_equal File.join(native, "zui-host.app"), application
+      refute_path_exists gutted, "a framework with no binary cannot be signed and must not survive"
+      assert_equal "A", File.readlink(File.join(good, "Versions", "Current"))
+      assert_equal "A", File.readlink(File.join(later, "Versions", "Current")),
+                   "the gutted framework stopped the repair before reaching this one"
+      assert_equal "Versions/Current/QtQuickControls2", File.readlink(File.join(later, "QtQuickControls2"))
+      refute_empty command.calls, "the bundle was never sealed"
+    end
+  end
+
   def test_rejects_an_unexpected_existing_framework_link
     Dir.mktmpdir do |native|
       framework = framework_fixture(native)
