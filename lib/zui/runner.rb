@@ -13,7 +13,7 @@ module Zui
     def run(file, name: nil, environment: ENV.to_h)
       program = File.expand_path(file)
       raise ArgumentError, "Ruby file not found: #{program}" unless File.file?(program)
-      executable = @host.executable
+      executable = Trace.measure("resolve-client") { @host.executable }
       project = File.dirname(program)
       arguments = [
         executable,
@@ -24,6 +24,7 @@ module Zui
         "--load-path", File.join(@framework_root, "lib"),
         "--name", name || project_name(project)
       ]
+      Trace.mark("spawn-client")
       system(@host.environment(environment), *arguments)
       $?&.exitstatus || 1
     end

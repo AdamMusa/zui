@@ -3,7 +3,7 @@
 module Zui
   class LiteSource
     RUNTIME_FILES = %w[
-      lite_support.rb protocol.rb value.rb state_store.rb node.rb animation.rb scheduler.rb
+      lite_support.rb trace.rb protocol.rb value.rb state_store.rb node.rb animation.rb scheduler.rb
       component_registry.rb components.rb builder.rb application.rb lite_entry.rb
     ].freeze
     REQUIRE = /^\s*require\s*(?:\(\s*)?["']([^"']+)["']/
