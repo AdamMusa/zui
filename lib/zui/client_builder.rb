@@ -2,21 +2,17 @@
 
 require "fileutils"
 require "tmpdir"
+require_relative "client_payload"
 require_relative "client_packager"
 require_relative "macos_qml_payload"
 
 module Zui
   # Internal CI/release builder. It is deliberately not used by `zui configure`.
   class ClientBuilder
-    LINUX_QML_ROOTS = %w[QML Qt QtCore QtMultimedia QtQml QtQuick QtQuick3D].freeze
-    LINUX_QML_EXCLUSIONS = %w[
-      Qt/labs/StyleKit Qt/labs/animation Qt/labs/settings Qt/labs/sharedimage Qt/labs/synchronizer
-      Qt/labs/wavefrontmesh Qt/test QtQuick/Controls/FluentWinUI3 QtQuick/Controls/Imagine
-      QtQuick/Controls/Material QtQuick/Controls/Universal QtQuick/Controls/designer QtQuick/LocalStorage
-      QtQuick/Pdf QtQuick/Timeline QtQuick/tooling QtQuick3D/Effects QtQuick3D/Helpers
-      QtQuick3D/MaterialEditor QtQuick3D/ParticleEffects QtQuick3D/Particles3D QtQuick3D/SpatialAudio
-      QtQuick3D/Xr QtQuick3D/designer QtQuick3D/lightmapviewer QtQml/XmlListModel
-    ].freeze
+    # The payload description lives in Zui::ClientPayload so the release audit, the builder and
+    # the framework-import guard cannot drift apart.
+    LINUX_QML_ROOTS = ClientPayload::QML_ROOTS
+    LINUX_QML_EXCLUSIONS = ClientPayload::QML_EXCLUSIONS
     LINUX_PLUGIN_DIRECTORIES = %w[
       assetimporters generic iconengines imageformats multimedia networkinformation platforminputcontexts
       platforms platformthemes tls wayland-decoration-client wayland-graphics-integration-client
@@ -34,18 +30,9 @@ module Zui
       libQt6 libicu libavcodec libavdevice libavfilter libavformat libavutil libpostproc
       libswresample libswscale
     ].freeze
-    BROWSER_PAYLOAD_PATTERN = %r{
-      (?:\A|/)(?:
-        QtWebEngine[^/]* |
-        QtWebChannel[^/]* |
-        QtPositioning |
-        qtwebengine[^/]* |
-        (?:lib)?qwebengine[^/]* |
-        webchannel[^/]* |
-        (?:lib)?Qt6(?:WebEngine|WebChannel|Positioning)[^/]* |
-        position
-      )(?:/|\z)
-    }ix
+    # Payload that must never reach a released client; purge_browser_payload! removes it from the
+    # stage and scripts/audit_client.rb rejects an archive that still carries any of it.
+    BROWSER_PAYLOAD_PATTERN = ClientPayload.forbidden_pattern
 
     def initialize(platform: Platform.current, framework_root: FRAMEWORK_ROOT, environment: ENV)
       @platform = platform.assert_supported!

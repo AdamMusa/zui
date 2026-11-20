@@ -2,6 +2,7 @@
 
 require "rubygems/package"
 require "zlib"
+require_relative "../lib/zui/client_payload"
 
 archive = File.expand_path(ARGV.fetch(0) { abort "Usage: audit_client.rb CLIENT.tar.gz" })
 abort "client archive is missing: #{archive}" unless File.file?(archive)
@@ -13,14 +14,7 @@ if size > maximum_bytes
   abort format("client archive is %.1f MiB; budget is %d MiB", size.fdiv(1024 * 1024), maximum_megabytes)
 end
 
-forbidden = %r{
-  (?:\A|/)(?:
-    QtWebEngine[^/]*|QtWebChannel[^/]*|QtPositioning|qtwebengine[^/]*|(?:lib)?qwebengine[^/]*|
-    webchannel[^/]*|(?:lib)?Qt6(?:WebEngine|WebChannel|Positioning)[^/]*|position|Quickshell|
-    SddmComponents|Qt5Compat
-  )(?:/|\z)|
-  (?:\A|/)qml/org/|(?:\A|/)QtQuick/Pdf(?:/|\z)
-}ix
+forbidden = Zui::ClientPayload.forbidden_pattern
 
 entries = []
 Zlib::GzipReader.open(archive) do |gzip|

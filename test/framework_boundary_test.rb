@@ -227,7 +227,10 @@ class FrameworkBoundaryTest < Minitest::Test
       File.binread(path).match?(/\b(?:OmarchyUI|Quickshell|OMARCHY_UI)\b/)
     end
 
-    assert_empty coupled.map { |path| relative_path(path) }
+    # The release payload deny-list has to name the toolkits a client must never carry, which is
+    # the opposite of depending on them.
+    assert_equal ["lib/zui/client_payload.rb"] & coupled.map { |path| relative_path(path) },
+                 coupled.map { |path| relative_path(path) }
   end
 
   private
