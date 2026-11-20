@@ -15,6 +15,11 @@ classes, QML compiler infrastructure, compositor protocols, and operating-system
 are not widgets and are intentionally excluded. Framework concepts such as state, timers,
 transitions, and animation groups receive Ruby APIs even though they are not visual widgets.
 
+Some public Qt QML types exist only to execute application-supplied script, or only to be
+handed application-authored QML delegates. Those are deliberately not exposed, because
+application logic lives in Ruby and QML here is purely a renderer. Each decision and its
+Ruby-side equivalent is recorded in [script-execution-boundary.md](script-execution-boundary.md).
+
 ## Foundation and layout
 
 - [x] control
