@@ -17,7 +17,7 @@ QQC.TabButton {
   implicitWidth: Number(renderer.prop("width", 140))
   implicitHeight: Number(renderer.prop("height", 44))
   icon.name: String(renderer.prop("icon", ""))
-  icon.source: String(renderer.prop("icon_source", ""))
+  icon.source: renderer.assetUrl(renderer.prop("icon_source", ""))
   icon.color: renderer.prop("icon_color", renderer.prop("foreground", renderer.foreground))
   icon.width: Number(renderer.prop("icon_width", Style.font.body))
   icon.height: Number(renderer.prop("icon_height", Style.font.body))
@@ -30,7 +30,7 @@ QQC.TabButton {
 
     Image {
       visible: source.toString().length > 0
-      source: String(renderer.prop("icon_source", ""))
+      source: renderer.assetUrl(renderer.prop("icon_source", ""))
       width: Number(renderer.prop("icon_width", Style.font.body))
       height: Number(renderer.prop("icon_height", Style.font.body))
       sourceSize.width: Util.scalableImageSourceSize(source, -1, width, Screen.devicePixelRatio)
@@ -54,10 +54,11 @@ QQC.TabButton {
     }
 
     Text {
-      text: buttonRoot.text
-      color: !buttonRoot.enabled ? renderer.prop("muted", Color.muted)
+      readonly property color restingColor: !buttonRoot.enabled ? renderer.prop("muted", Color.muted)
         : (buttonRoot.checked ? renderer.prop("checked_foreground", renderer.prop("accent", Color.accent))
           : renderer.prop("foreground", renderer.foreground))
+      text: buttonRoot.text
+      color: buttonRoot.down ? renderer.pressedForeground(restingColor) : restingColor
       font: buttonRoot.font
       anchors.verticalCenter: parent.verticalCenter
       elide: Text.ElideRight
@@ -65,9 +66,10 @@ QQC.TabButton {
   }
 
   background: Rectangle {
-    color: buttonRoot.checked
+    readonly property color restingColor: buttonRoot.checked
       ? renderer.prop("checked_background", renderer.prop("background", "transparent"))
       : renderer.prop("background", "transparent")
+    color: buttonRoot.down ? renderer.pressedBackground(restingColor) : restingColor
     radius: Number(renderer.prop("radius", 0))
     border.width: Number(renderer.prop("border_width",
       String(renderer.prop("border_color", "")).length > 0 ? Style.normalBorderWidth : 0))

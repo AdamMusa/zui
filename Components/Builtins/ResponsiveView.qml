@@ -8,9 +8,18 @@ Item {
   id: viewport
   required property var renderer
 
+  // Filling the window is the right default for the one view an application
+  // puts at its root, and it was the only thing this could do: an explicit
+  // width or height was ignored, so a responsive_view could never be nested
+  // beside a sidebar or inside a card. An explicit size now wins, and the
+  // window is what it falls back to.
   readonly property var hostWindow: Window.window
-  width: hostWindow ? hostWindow.width : (parent ? parent.width : 390)
-  height: hostWindow ? hostWindow.height : (parent ? parent.height : 844)
+  width: renderer && renderer.hasProp("width")
+    ? Number(renderer.prop("width", 0))
+    : (hostWindow ? hostWindow.width : (parent ? parent.width : 390))
+  height: renderer && renderer.hasProp("height")
+    ? Number(renderer.prop("height", 0))
+    : (hostWindow ? hostWindow.height : (parent ? parent.height : 844))
   clip: true
 
   readonly property real safeLeft: zuiMobile ? Number(zuiSafeArea.left) : 0

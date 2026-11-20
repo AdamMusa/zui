@@ -14,18 +14,21 @@ QQC.RoundButton {
       implicitWidth: Number(renderer.prop("diameter", 44))
       implicitHeight: implicitWidth
       background: Rectangle {
-        radius: width / 2
-        color: nativeRoundButton.checked
+        readonly property color restingColor: nativeRoundButton.checked
           ? renderer.prop("checked_background", renderer.prop("accent", Color.accent))
           : renderer.prop("background", Color.popups.background)
+        radius: width / 2
+        color: nativeRoundButton.down ? renderer.pressedBackground(restingColor) : restingColor
         border.width: Style.normalBorderWidth
         border.color: nativeRoundButton.activeFocus ? renderer.prop("accent", Color.accent) : renderer.prop("foreground", renderer.foreground)
-        opacity: nativeRoundButton.down ? 0.75 : (nativeRoundButton.hovered ? 0.9 : 1)
+        opacity: nativeRoundButton.hovered ? 0.9 : 1
       }
       contentItem: Text {
+        readonly property color restingColor: nativeRoundButton.checked
+          ? Color.background : renderer.prop("foreground", renderer.foreground)
         text: String(renderer.prop("icon", "")).length > 0 ? renderer.iconGlyph(renderer.prop("icon", "")) : nativeRoundButton.text
         textFormat: Text.PlainText
-        color: nativeRoundButton.checked ? Color.background : renderer.prop("foreground", renderer.foreground)
+        color: nativeRoundButton.down ? renderer.pressedForeground(restingColor) : restingColor
         font.family: String(renderer.prop("icon", "")).length > 0
           ? renderer.iconFontFamilyFor(renderer.prop("icon", ""))
           : String(renderer.prop("font_family", renderer.fontFamily))

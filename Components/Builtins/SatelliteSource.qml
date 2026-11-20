@@ -1,5 +1,5 @@
 import QtQuick
-import QtPositioning
+import QtPositioning as Positioning
 
 Item {
   id: root
@@ -25,7 +25,7 @@ Item {
     publish("in_view", nativeSource.satellitesInView)
     publish("in_use", nativeSource.satellitesInUse)
   }
-  SatelliteSource {
+  Positioning.SatelliteSource {
     id: nativeSource
     active: renderer.prop("active", false) === true
     updateInterval: Number(renderer.prop("update_interval", 1000))
@@ -33,7 +33,7 @@ Item {
     onSatellitesInViewChanged: root.publish("in_view", satellitesInView)
     onSatellitesInUseChanged: root.publish("in_use", satellitesInUse)
     onActiveChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "active_change", { value: active })
-    onSourceErrorChanged: if (sourceError !== SatelliteSource.NoError) renderer.componentError("satellite_source_failed", "The native satellite backend reported an error", { native_code: Number(sourceError) })
+    onSourceErrorChanged: if (sourceError !== Positioning.SatelliteSource.NoError) renderer.componentError("satellite_source_failed", "The native satellite backend reported an error", { native_code: Number(sourceError) })
   }
   Connections { target: renderer; function onNodeChanged() { root.refresh() } }
   Component.onCompleted: refresh()

@@ -12,7 +12,7 @@ Item {
   visible: renderer.prop("visible", true) !== false
   PdfDocument {
     id: nativeDocument
-    source: String(root.renderer.prop("source", ""))
+    source: root.renderer.assetUrl(root.renderer.prop("source", ""))
     password: String(root.renderer.prop("password", ""))
     onStatusChanged: {var name=root.statusName(status);renderer.bridge.sendEvent(renderer.surfaceName,renderer.controlId,"status",{value:name,native_status:Number(status),title:title,page_count:pageCount});if(name==="error")renderer.componentError("pdf_load_failed",error,{source:String(source)})}
     onPageCountChanged: renderer.bridge.sendEvent(renderer.surfaceName,renderer.controlId,"page_count",{value:pageCount})

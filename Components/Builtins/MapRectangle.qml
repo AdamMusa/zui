@@ -1,8 +1,8 @@
 import QtQuick
-import QtLocation
+import QtLocation as Location
 import QtPositioning
 
-MapRectangle {
+Location.MapRectangle {
   id: root
   required property var renderer
   function referenceSurfaceValue() {

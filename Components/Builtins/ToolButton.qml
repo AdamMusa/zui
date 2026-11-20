@@ -14,18 +14,20 @@ QQC.ToolButton {
       implicitWidth: Number(renderer.prop("width", 40))
       implicitHeight: Number(renderer.prop("height", 36))
       background: Rectangle {
-        radius: Style.cornerRadius
-        color: nativeToolButton.checked
+        readonly property color restingColor: nativeToolButton.checked
           ? renderer.prop("checked_background", renderer.prop("accent", Color.accent))
           : renderer.prop("background", nativeToolButton.hovered ? Color.popups.background : "transparent")
+        radius: Style.cornerRadius
+        color: nativeToolButton.down ? renderer.pressedBackground(restingColor) : restingColor
         border.width: nativeToolButton.activeFocus ? Style.normalBorderWidth : 0
         border.color: renderer.prop("accent", Color.accent)
-        opacity: nativeToolButton.down ? 0.72 : 1
       }
       contentItem: Text {
+        readonly property color restingColor: nativeToolButton.checked
+          ? Color.background : renderer.prop("foreground", renderer.foreground)
         text: String(renderer.prop("icon", "")).length > 0 ? renderer.iconGlyph(renderer.prop("icon", "")) : nativeToolButton.text
         textFormat: Text.PlainText
-        color: nativeToolButton.checked ? Color.background : renderer.prop("foreground", renderer.foreground)
+        color: nativeToolButton.down ? renderer.pressedForeground(restingColor) : restingColor
         font.family: String(renderer.prop("icon", "")).length > 0
           ? renderer.iconFontFamilyFor(renderer.prop("icon", ""))
           : String(renderer.prop("font_family", renderer.fontFamily))

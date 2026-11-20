@@ -1,10 +1,10 @@
 import QtQuick
 import QtQuick.Controls as QQC
-import QtQuick.Layouts
+import QtQuick.Layouts as Layouts
 import "../../Theme"
 import "../../Controls" as ZuiControls
 
-StackLayout {
+Layouts.StackLayout {
   required property var renderer
       implicitWidth: Number(renderer.prop("width", 420))
       implicitHeight: Number(renderer.prop("height", 280))

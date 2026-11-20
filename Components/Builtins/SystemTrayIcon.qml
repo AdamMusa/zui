@@ -69,7 +69,7 @@ Item {
     id: nativeTray
     visible: root.renderer.prop("visible", true) !== false
     tooltip: String(root.renderer.prop("tooltip", ""))
-    icon.source: String(root.renderer.prop("icon_source", ""))
+    icon.source: root.renderer.assetUrl(root.renderer.prop("icon_source", ""))
     icon.name: String(root.renderer.prop("icon_name", ""))
     menu: trayMenu
     onActivated: function(reason) {

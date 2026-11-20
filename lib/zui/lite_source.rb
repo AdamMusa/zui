@@ -3,7 +3,7 @@
 module Zui
   class LiteSource
     RUNTIME_FILES = %w[
-      lite_support.rb protocol.rb value.rb state_store.rb node.rb animation.rb scheduler.rb
+      lite_support.rb trace.rb protocol.rb value.rb state_store.rb node.rb animation.rb scheduler.rb
       component_registry.rb components.rb builder.rb application.rb lite_entry.rb
     ].freeze
     REQUIRE = /^\s*require\s*(?:\(\s*)?["']([^"']+)["']/
@@ -28,7 +28,7 @@ module Zui
         path = File.join(@framework_root, "lib", "zui", name)
         raise ArgumentError, "lite runtime source is missing: #{path}" unless File.file?(path)
 
-        source = File.readlines(path).reject { |line| REQUIRE.match?(line) }.join
+        source = File.readlines(path, encoding: "UTF-8").reject { |line| REQUIRE.match?(line) }.join
         "# runtime: #{name}\n#{source}"
       end
       runtime << "module Zui\n  VERSION = #{VERSION.dump}\nend"

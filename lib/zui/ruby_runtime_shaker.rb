@@ -138,7 +138,7 @@ module Zui
     end
 
     def analyze_file(path)
-      syntax = Ripper.sexp(File.read(path))
+      syntax = Ripper.sexp(File.read(path, encoding: "UTF-8"))
       raise ArgumentError, "cannot tree-shake Ruby file with syntax errors: #{path}" unless syntax
 
       analysis = Analysis.new(requirements: [], dynamic_requires: [], rubygems: false)

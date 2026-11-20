@@ -72,11 +72,12 @@ QQC.SwipeDelegate {
   }
 
   background: Rectangle {
-    color: swipeRoot.highlighted
+    readonly property color restingColor: swipeRoot.highlighted
       ? renderer.prop("highlighted_background", renderer.prop("selected_background", Color.popups.background))
       : (swipeRoot.selected
         ? renderer.prop("selected_background", Color.popups.background)
         : renderer.prop("background", Color.background))
+    color: swipeRoot.down ? renderer.pressedBackground(restingColor) : restingColor
     radius: Number(renderer.prop("radius", Style.cornerRadius))
     border.width: Number(renderer.prop("border_width",
       String(renderer.prop("border_color", "")).length > 0 ? Style.normalBorderWidth : 0))
@@ -91,7 +92,7 @@ QQC.SwipeDelegate {
       Layout.preferredHeight: Number(renderer.prop("icon_size", 22))
       Layout.alignment: Qt.AlignVCenter
       visible: source.toString().length > 0
-      source: String(renderer.prop("icon_source", ""))
+      source: renderer.assetUrl(renderer.prop("icon_source", ""))
       sourceSize.width: Util.scalableImageSourceSize(source, -1, width, Screen.devicePixelRatio)
       sourceSize.height: Util.scalableImageSourceSize(source, -1, height, Screen.devicePixelRatio)
       fillMode: Image.PreserveAspectFit
@@ -119,10 +120,11 @@ QQC.SwipeDelegate {
       spacing: Style.spacing.xs
       Text {
         Layout.fillWidth: true
-        text: swipeRoot.text
-        color: swipeRoot.selected
+        readonly property color restingColor: swipeRoot.selected
           ? renderer.prop("selected_foreground", renderer.prop("foreground", renderer.foreground))
           : renderer.prop("foreground", renderer.foreground)
+        text: swipeRoot.text
+        color: swipeRoot.down ? renderer.pressedForeground(restingColor) : restingColor
         font: swipeRoot.font
         elide: Text.ElideRight
       }

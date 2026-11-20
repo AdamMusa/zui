@@ -1,19 +1,20 @@
 import QtQuick
+import QtQuick as Quick
 import QtQuick.Window
 
-Window {
+Quick.Window {
   id: nativeWindow
 
   required property var renderer
 
   function visibilityValue(value) {
     var name = String(value || "automatic")
-    if (name === "hidden") return Window.Hidden
-    if (name === "minimized") return Window.Minimized
-    if (name === "maximized") return Window.Maximized
-    if (name === "fullscreen" || name === "full_screen") return Window.FullScreen
-    if (name === "windowed") return Window.Windowed
-    return Window.AutomaticVisibility
+    if (name === "hidden") return Quick.Window.Hidden
+    if (name === "minimized") return Quick.Window.Minimized
+    if (name === "maximized") return Quick.Window.Maximized
+    if (name === "fullscreen" || name === "full_screen") return Quick.Window.FullScreen
+    if (name === "windowed") return Quick.Window.Windowed
+    return Quick.Window.AutomaticVisibility
   }
 
   function modalityValue(value) {

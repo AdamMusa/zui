@@ -1,10 +1,11 @@
 import QtQuick
+import QtQuick as Quick
 import QtQuick.Controls as QQC
 import QtQuick.Layouts
 import "../../Theme"
 import "../../Controls" as ZuiControls
 
-Loader {
+Quick.Loader {
   required property var renderer
       readonly property var childNode: renderer.node && Array.isArray(renderer.node.children) && renderer.node.children.length > 0
         ? renderer.node.children[0] : null
@@ -25,7 +26,7 @@ Loader {
       onStatusChanged: {
         if (renderer.subscribed("status"))
           renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "status", { value: status })
-        if (status === Loader.Error)
+        if (status === Quick.Loader.Error)
           renderer.componentError("loader_child_failed",
             "Unable to load the child of the declared loader component", {})
       }

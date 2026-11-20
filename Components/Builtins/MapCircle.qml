@@ -1,8 +1,8 @@
 import QtQuick
-import QtLocation
+import QtLocation as Location
 import QtPositioning
 
-MapCircle {
+Location.MapCircle {
   id: root
   required property var renderer
   function referenceSurfaceValue() {

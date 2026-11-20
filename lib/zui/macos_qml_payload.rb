@@ -34,7 +34,7 @@ module Zui
 
     def required_plugins(qml_root)
       Dir[File.join(qml_root, "**", "qmldir")].sort.flat_map do |qmldir|
-        File.foreach(qmldir).filter_map do |line|
+        File.foreach(qmldir, encoding: "UTF-8").filter_map do |line|
           name = line[/\A\s*(?:optional\s+)?plugin\s+([A-Za-z0-9._+-]+)/, 1]
           [File.dirname(qmldir), name] if name
         end

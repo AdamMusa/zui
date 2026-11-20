@@ -1,11 +1,12 @@
 import QtQuick
+import QtQuick as Quick
 import QtQuick.Controls as QQC
 import QtQuick.Layouts
 import QtQuick.Window
 import "../../Theme"
 import "../../Controls" as ZuiControls
 
-Image {
+Quick.Image {
     id: imageRoot
 
     required property var renderer
@@ -13,56 +14,56 @@ Image {
     function fillModeValue(value) {
         var mode = String(value || "preserve_aspect_fit");
         if (mode === "stretch")
-            return Image.Stretch;
+            return Quick.Image.Stretch;
 
         if (mode === "preserve_aspect_crop" || mode === "crop")
-            return Image.PreserveAspectCrop;
+            return Quick.Image.PreserveAspectCrop;
 
         if (mode === "tile")
-            return Image.Tile;
+            return Quick.Image.Tile;
 
         if (mode === "tile_vertically" || mode === "tile_vertical")
-            return Image.TileVertically;
+            return Quick.Image.TileVertically;
 
         if (mode === "tile_horizontally" || mode === "tile_horizontal")
-            return Image.TileHorizontally;
+            return Quick.Image.TileHorizontally;
 
         if (mode === "pad")
-            return Image.Pad;
+            return Quick.Image.Pad;
 
-        return Image.PreserveAspectFit;
+        return Quick.Image.PreserveAspectFit;
     }
 
     function horizontalAlignmentValue(value) {
         var alignment = String(value || "center");
         if (alignment === "left" || alignment === "start")
-            return Image.AlignLeft;
+            return Quick.Image.AlignLeft;
 
         if (alignment === "right" || alignment === "end")
-            return Image.AlignRight;
+            return Quick.Image.AlignRight;
 
-        return Image.AlignHCenter;
+        return Quick.Image.AlignHCenter;
     }
 
     function verticalAlignmentValue(value) {
         var alignment = String(value || "center");
         if (alignment === "top" || alignment === "start")
-            return Image.AlignTop;
+            return Quick.Image.AlignTop;
 
         if (alignment === "bottom" || alignment === "end")
-            return Image.AlignBottom;
+            return Quick.Image.AlignBottom;
 
-        return Image.AlignVCenter;
+        return Quick.Image.AlignVCenter;
     }
 
     function statusName(value) {
-        if (value === Image.Ready)
+        if (value === Quick.Image.Ready)
             return "ready";
 
-        if (value === Image.Loading)
+        if (value === Quick.Image.Loading)
             return "loading";
 
-        if (value === Image.Error)
+        if (value === Quick.Image.Error)
             return "error";
 
         return "null";
@@ -101,9 +102,9 @@ Image {
             "height": implicitHeight
         };
         send("status", payload);
-        if (status === Image.Ready)
+        if (status === Quick.Image.Ready)
             send("loaded", payload);
-        else if (status === Image.Error)
+        else if (status === Quick.Image.Error)
             renderer.componentError("image_load_failed", "Unable to load the declared image", payload);
     }
 }

@@ -1108,6 +1108,26 @@ class ZuiTest < Minitest::Test
     assert_equal [1, 3, 2], render.dig("surfaces", "main", "children", 0, "props", "values")
   end
 
+  # Every application copies the default registry before it builds a node, and
+  # re-registering all three hundred components re-ran validation the framework
+  # had already done once at load time. The copy shares the component objects,
+  # which are frozen and have no writers, and owns only its own index — so it
+  # can still take registrations the original never sees.
+  def test_duplicating_the_component_registry_shares_definitions_without_revalidating
+    original = Zui::DEFAULT_COMPONENTS
+    copy = original.dup
+
+    refute_same original, copy
+    assert_same original.fetch(:text), copy.fetch(:text)
+    assert_equal original.protocol_schema, copy.protocol_schema
+
+    copy.register(:registry_copy_probe, qml: "Probe.qml", properties: [:value])
+
+    assert copy.key?(:registry_copy_probe)
+    refute original.key?(:registry_copy_probe)
+    assert_raises(ArgumentError) { original.fetch(:registry_copy_probe) }
+  end
+
   def test_component_schema_rejects_unknown_properties_and_unsafe_paths
     assert_raises(ArgumentError) do
       Zui::Application.new do

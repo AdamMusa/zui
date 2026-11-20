@@ -22,7 +22,7 @@ class AndroidMobileTest < Minitest::Test
         environment: { "ZUI_MOBILE_HOME" => directory }
       ).prepare_project!(project)
       manifest_path = File.join(project, "android", "AndroidManifest.xml")
-      manifest = File.read(manifest_path).sub(
+      manifest = File.read(manifest_path, encoding: "UTF-8").sub(
         "    <!-- %%INSERT_PERMISSIONS -->",
         "    <uses-permission android:name=\"android.permission.CAMERA\" />\n    <!-- %%INSERT_PERMISSIONS -->"
       )
@@ -41,9 +41,9 @@ class AndroidMobileTest < Minitest::Test
       config = Zui::Dist.load(project:, platform: Zui::Mobile::AndroidBuilder::ANDROID_PLATFORM)
       stage = builder.send(:prepare_stage, config)
 
-      source = File.read(File.join(stage, "app.rb"))
-      manifest = File.read(File.join(stage, "android", "AndroidManifest.xml"))
-      styles = File.read(File.join(stage, "android", "res", "values", "styles.xml"))
+      source = File.read(File.join(stage, "app.rb"), encoding: "UTF-8")
+      manifest = File.read(File.join(stage, "android", "AndroidManifest.xml"), encoding: "UTF-8")
+      styles = File.read(File.join(stage, "android", "res", "values", "styles.xml"), encoding: "UTF-8")
       assert_includes source, 'text "Touch ready"'
       assert_includes manifest, "org.qtproject.qt.android.bindings.QtActivity"
       assert_includes manifest, "android.permission.CAMERA"
@@ -53,14 +53,14 @@ class AndroidMobileTest < Minitest::Test
       assert File.file?(File.join(stage, "android", "res", "drawable", "zui_icon.png"))
       assert File.file?(File.join(stage, "android", "res", "drawable", "zui_splash.png"))
       assert_includes styles, "@drawable/zui_launch_background"
-      gradle = File.read(File.join(stage, "android", "build.gradle"))
+      gradle = File.read(File.join(stage, "android", "build.gradle"), encoding: "UTF-8")
       assert_includes gradle, "apply plugin: qtGradlePluginType"
       assert_includes gradle, "apply from: 'zui.gradle'"
-      assert_includes File.read(File.join(stage, "android", "zui.gradle")), "mobile-sdk"
+      assert_includes File.read(File.join(stage, "android", "zui.gradle"), encoding: "UTF-8"), "mobile-sdk"
       assert File.file?(File.join(stage, "android", "src", "dev", "zui", "MobileBridge.java"))
       refute File.exist?(File.join(stage, "assets", "ruby.png"))
       refute File.exist?(File.join(stage, "assets", "release.icns"))
-      assert_equal "runtime asset", File.read(File.join(stage, "assets", "runtime.txt"))
+      assert_equal "runtime asset", File.read(File.join(stage, "assets", "runtime.txt"), encoding: "UTF-8")
     end
   end
 

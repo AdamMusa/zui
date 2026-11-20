@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick as Quick
 
 Item {
   id: effectSourceRoot
@@ -18,7 +19,7 @@ Item {
     onLoaded: renderer.configureFace(item, renderer.node.children[0])
   }
 
-  ShaderEffectSource {
+  Quick.ShaderEffectSource {
     id: nativeSource
     anchors.fill: parent
     sourceItem: sourceLoader
@@ -26,23 +27,23 @@ Item {
     textureSize: Qt.size(Number(renderer.prop("texture_width", 0)), Number(renderer.prop("texture_height", 0)))
     format: {
       var value = String(renderer.prop("format", "rgba8"))
-      if (value === "rgba16f") return ShaderEffectSource.RGBA16F
-      if (value === "rgba32f") return ShaderEffectSource.RGBA32F
-      return ShaderEffectSource.RGBA8
+      if (value === "rgba16f") return Quick.ShaderEffectSource.RGBA16F
+      if (value === "rgba32f") return Quick.ShaderEffectSource.RGBA32F
+      return Quick.ShaderEffectSource.RGBA8
     }
     samples: Number(renderer.prop("samples", 0))
     wrapMode: {
       var value = String(renderer.prop("wrap_mode", "clamp"))
-      if (value === "repeat") return ShaderEffectSource.Repeat
-      if (value === "repeat_horizontal") return ShaderEffectSource.RepeatHorizontally
-      if (value === "repeat_vertical") return ShaderEffectSource.RepeatVertically
-      return ShaderEffectSource.ClampToEdge
+      if (value === "repeat") return Quick.ShaderEffectSource.Repeat
+      if (value === "repeat_horizontal") return Quick.ShaderEffectSource.RepeatHorizontally
+      if (value === "repeat_vertical") return Quick.ShaderEffectSource.RepeatVertically
+      return Quick.ShaderEffectSource.ClampToEdge
     }
     textureMirroring: {
       var value = String(renderer.prop("texture_mirroring", "none"))
-      if (value === "horizontal") return ShaderEffectSource.MirrorHorizontally
-      if (value === "vertical") return ShaderEffectSource.MirrorVertically
-      return ShaderEffectSource.NoMirroring
+      if (value === "horizontal") return Quick.ShaderEffectSource.MirrorHorizontally
+      if (value === "vertical") return Quick.ShaderEffectSource.MirrorVertically
+      return Quick.ShaderEffectSource.NoMirroring
     }
     mipmap: renderer.prop("mipmap", false) === true
     live: renderer.prop("live", true) !== false

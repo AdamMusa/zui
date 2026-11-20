@@ -64,7 +64,7 @@ module Zui
       raise ArgumentError, "Zui lite runtime manifest not found: #{manifest_path}" unless File.file?(manifest_path)
       raise ArgumentError, "Zui lite runtime manifest is too large" if File.size(manifest_path) > 65_536
 
-      manifest = JSON.parse(File.read(manifest_path))
+      manifest = JSON.parse(File.read(manifest_path, encoding: "UTF-8"))
       raise ArgumentError, "invalid Zui lite runtime manifest root" unless manifest.is_a?(Hash)
       expected = {
         "format" => FORMAT,

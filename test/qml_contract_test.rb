@@ -1,17 +1,18 @@
 # frozen_string_literal: true
 
 require "minitest/autorun"
+require "set"
 require_relative "../lib/zui"
 
 class QmlContractTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
 
   def source(name)
-    contents = File.read(File.join(ROOT, name))
+    contents = File.read(File.join(ROOT, name), encoding: "UTF-8")
     return contents unless name == "ControlNode.qml"
 
     extracted = Dir[File.join(ROOT, "Components", "Builtins", "*.qml")].sort.map do |path|
-      File.read(path)
+      File.read(path, encoding: "UTF-8")
         .gsub(/\brenderer\./, "root.")
         .gsub("root.childDelegateComponent", "childDelegate")
         .gsub("root.rowChildDelegateComponent", "rowChildDelegate")
@@ -23,6 +24,12 @@ class QmlContractTest < Minitest::Test
     ([contents] + extracted).join("\n")
   end
 
+  def adapter_sources
+    Dir[File.join(ROOT, "Components", "Builtins", "**", "*.qml")].sort.to_h do |path|
+      [path.delete_prefix("#{ROOT}/"), File.read(path, encoding: "UTF-8")]
+    end
+  end
+
   def assert_dynamic_component_route(renderer, component)
     assert_equal true, Zui::DEFAULT_COMPONENTS.protocol_schema.dig(component, "built_in")
     assert_includes renderer, "nativeSchema.builtIn === true"
@@ -31,7 +38,7 @@ class QmlContractTest < Minitest::Test
   end
 
   def test_each_builtin_renderer_lives_in_its_own_qml_file
-    router = File.read(File.join(ROOT, "ControlNode.qml"))
+    router = File.read(File.join(ROOT, "ControlNode.qml"), encoding: "UTF-8")
 
     refute_includes router, 'import "Components/Builtins" as Builtins'
     refute_match(/Builtins\.\w+ \{ renderer: root \}/, router)
@@ -49,7 +56,7 @@ class QmlContractTest < Minitest::Test
       name = component_name.to_s.split("_").map(&:capitalize).join
       path = File.join(ROOT, "Components", "Builtins", "#{name}.qml")
       assert File.file?(path), "missing #{path}"
-      assert_match(/(?:(?:required\s+)?property var renderer|renderer:\s*null)/, File.read(path), "#{path} does not expose its renderer bridge")
+      assert_match(/(?:(?:required\s+)?property var renderer|renderer:\s*null)/, File.read(path, encoding: "UTF-8"), "#{path} does not expose its renderer bridge")
     end
     refute_includes router, "QQC.Button {"
     refute_includes router, "OmarchyUi.WidgetButton {"
@@ -61,7 +68,7 @@ class QmlContractTest < Minitest::Test
 
     Zui::COMPONENTS.each do |component_name, (properties, _events, _container)|
       adapter_name = component_name.to_s.split("_").map(&:capitalize).join
-      qml = File.read(File.join(ROOT, "Components", "Builtins", "#{adapter_name}.qml"))
+      qml = File.read(File.join(ROOT, "Components", "Builtins", "#{adapter_name}.qml"), encoding: "UTF-8")
       property_reads = qml.scan(/(?:renderer|root)\.prop\(\s*["']([^"']+)["']/).flatten.uniq
       missing = property_reads - properties.map(&:to_s) - common
       undeclared[component_name] = missing unless missing.empty?
@@ -83,7 +90,7 @@ class QmlContractTest < Minitest::Test
       assert_includes properties, "alignment", "#{component} cannot align its content"
 
       adapter = component.split("_").map(&:capitalize).join
-      qml = File.read(File.join(ROOT, "Components", "Builtins", "#{adapter}.qml"))
+      qml = File.read(File.join(ROOT, "Components", "Builtins", "#{adapter}.qml"), encoding: "UTF-8")
 
       assert_includes qml, 'renderer.prop("alignment", "center")'
       assert_match(/anchors\.top:[^\n]*"start"/, qml)
@@ -99,10 +106,10 @@ class QmlContractTest < Minitest::Test
   def test_an_application_can_set_the_inset_the_shell_leaves_around_it
     assert_includes Zui::Builder::APP_OPTIONS, :padding
 
-    shell = File.read(File.join(ROOT, "Desktop.qml"))
+    shell = File.read(File.join(ROOT, "Desktop.qml"), encoding: "UTF-8")
 
     assert_includes shell, 'window.option("padding", 20)'
-    assert_match(/max_height: true, padding: true/, File.read(File.join(ROOT, "Service.qml")))
+    assert_match(/max_height: true, padding: true/, File.read(File.join(ROOT, "Service.qml"), encoding: "UTF-8"))
 
     application = Zui::Application.new { app(:main, padding: 0) { text "fits" } }
 
@@ -124,21 +131,352 @@ class QmlContractTest < Minitest::Test
 
   def test_adapters_for_absent_types_do_not_resolve_to_themselves
     SELF_NAMING_ADAPTERS.each_key do |adapter|
-      qml = File.read(File.join(ROOT, "Components", "Builtins", "#{adapter}.qml"))
+      qml = File.read(File.join(ROOT, "Components", "Builtins", "#{adapter}.qml"), encoding: "UTF-8")
 
       refute_match(/^\s+#{adapter}\s*\{/, qml,
                    "#{adapter}.qml instantiates #{adapter}, which resolves to itself")
     end
 
-    shadow = File.read(File.join(ROOT, "Components", "Builtins", "RectangularShadow.qml"))
+    shadow = File.read(File.join(ROOT, "Components", "Builtins", "RectangularShadow.qml"), encoding: "UTF-8")
 
     assert_includes shadow, "MultiEffect"
     assert_includes shadow, "blurMax"
 
-    proxy = File.read(File.join(ROOT, "Components", "Builtins", "SortFilterProxyModel.qml"))
+    proxy = File.read(File.join(ROOT, "Components", "Builtins", "SortFilterProxyModel.qml"), encoding: "UTF-8")
 
     assert_includes proxy, "ListModel { id: rows }"
     refute_includes proxy, "import QtQml.Models"
+  end
+
+  # An adapter reaches its node through `renderer`, which is a ControlNode. A
+  # call to something ControlNode does not define fails only when the adapter
+  # is actually on screen, and then only as one line of QML warning: every
+  # checkbox in the showcase reported "Property 'cursorShape' of object
+  # ControlNode is not a function" and silently got no cursor. The contract is
+  # checkable without a display, so it is checked here.
+  def test_adapters_only_call_functions_control_node_defines
+    router = File.read(File.join(ROOT, "ControlNode.qml"), encoding: "UTF-8")
+    defined = router.scan(/function\s+([A-Za-z_]\w*)\s*\(/).flatten.to_set
+
+    offenders = adapter_sources.each_with_object({}) do |(name, qml), found|
+      called = qml.scan(/renderer\.([A-Za-z_]\w*)\s*\(/).flatten.uniq
+      unknown = called.reject { |function| defined.include?(function) }
+      found[name] = unknown unless unknown.empty?
+    end
+
+    assert_empty offenders,
+                 "these adapters call ControlNode functions that do not exist: #{offenders.inspect}"
+  end
+
+  # A deferred callback owns nothing. When a page is replaced, the width syncs
+  # queued for the text nodes that went away still run, against a renderer
+  # whose functions are already gone. #103 fixed one instance of this class of
+  # bug in ControlNode itself, where it made cards fail to render at all.
+  DEFERRED_WIDTH_ADAPTERS = %w[Text Label RichText Markdown SelectableText].freeze
+
+  def test_deferred_width_sync_gives_up_when_its_node_is_gone
+    DEFERRED_WIDTH_ADAPTERS.each do |adapter|
+      qml = File.read(File.join(ROOT, "Components", "Builtins", "#{adapter}.qml"), encoding: "UTF-8")
+
+      assert_includes qml, "Qt.callLater(root.synchronizeWidth)",
+                      "#{adapter}.qml no longer defers its width sync; drop it from this list"
+      assert_match(/function synchronizeWidth\(\) \{.*?if \(!renderer \|\| typeof renderer\.hasProp !== "function"\) return/m,
+                   qml, "#{adapter}.qml runs its deferred width sync against a destroyed node")
+    end
+  end
+
+  # Replacing a page hides every delegate on the way out, drops the hover and
+  # takes the focus away, so these handlers run while the node behind them is
+  # being torn down.
+  def test_item_delegate_events_check_their_node_before_posting
+    qml = File.read(File.join(ROOT, "Components", "Builtins", "ItemDelegate.qml"), encoding: "UTF-8")
+
+    assert_match(/function postEvent\(eventName, payload\) \{\s*if \(!renderer \|\| !renderer\.bridge \|\| !renderer\.subscribed\(eventName\)\) return/m,
+                 qml)
+    refute_match(/^\s*on[A-Z]\w*(?:Changed)?: renderer\.bridge\.sendEvent/, qml,
+                 "an ItemDelegate handler still calls the bridge without checking its node")
+  end
+
+  # Qt Quick Controls already tracks a press in `down`, and an adapter that
+  # overrides `background` throws that away unless it paints the press itself.
+  # None of the adapters a user clicks to navigate did, so pressing a sidebar
+  # entry drew nothing at all and the first visible answer to the click was the
+  # next page arriving -- 85-230 ms later on a light page, seconds on a heavy
+  # one. The appearance is derived in one place so that the adapters cannot
+  # drift apart on it, and these are the ones wired to it.
+  PRESSED_ADAPTERS = {
+    "ItemDelegate" => "delegateRoot.down",
+    "CheckDelegate" => "checkRoot.down",
+    "RadioDelegate" => "radioRoot.down",
+    "SwitchDelegate" => "switchRoot.down",
+    "SwipeDelegate" => "swipeRoot.down",
+    "TabButton" => "buttonRoot.down",
+    "MenuItem" => "itemRoot.down",
+    "ToolButton" => "nativeToolButton.down",
+    "RoundButton" => "nativeRoundButton.down",
+    "Button" => "tap.pressed",
+    "Chip" => "chipTap.pressed"
+  }.freeze
+
+  # A bar slot paints no resting fill to derive anything from, so its press is a
+  # veil behind the glyph and the protocol value falls back to that.
+  TINTED_ADAPTERS = %w[BarIconButton WidgetButton].freeze
+
+  def test_clickable_adapters_paint_their_own_press
+    renderer = File.read(File.join(ROOT, "ControlNode.qml"), encoding: "UTF-8")
+    style = File.read(File.join(ROOT, "Theme", "Style.qml"), encoding: "UTF-8")
+
+    assert_includes style, "function pressedFillFor(resting, accent)"
+    assert_includes style, "function pressedTintFor(accent)"
+    assert_includes renderer, "function pressedBackground(resting)"
+    assert_includes renderer, "function pressedForeground(resting)"
+    assert_includes renderer, 'prop("pressed_background", Style.pressedFillFor('
+    assert_includes renderer, 'prop("pressed_foreground", resting)'
+
+    PRESSED_ADAPTERS.each do |adapter, pressed|
+      qml = File.read(File.join(ROOT, "Components", "Builtins", "#{adapter}.qml"), encoding: "UTF-8")
+
+      assert_includes qml, "color: #{pressed} ? renderer.pressedBackground(restingColor) : restingColor",
+                      "#{adapter}.qml does not paint its own press"
+      refute_match(/opacity:.*\bdown \?/, qml,
+                   "#{adapter}.qml dims itself on a press instead of painting it")
+    end
+
+    TINTED_ADAPTERS.each do |adapter|
+      qml = File.read(File.join(ROOT, "Components", "Builtins", "#{adapter}.qml"), encoding: "UTF-8")
+
+      assert_includes qml, 'pressedBackground: renderer.prop("pressed_background", Style.pressedTintFor(',
+                      "#{adapter}.qml cannot be given a pressed fill"
+    end
+
+    action = File.read(File.join(ROOT, "Components", "Builtins", "ActionButton.qml"), encoding: "UTF-8")
+    assert_includes action, "pressedBackground: renderer.pressedBackground(actionButton.background)"
+    assert_includes action, "pressedForeground: renderer.pressedForeground(actionButton.foreground)"
+  end
+
+  def test_shared_controls_carry_a_pressed_appearance_of_their_own
+    button = File.read(File.join(ROOT, "Controls", "Button.qml"), encoding: "UTF-8")
+
+    assert_includes button, "property color pressedBackground: Style.pressedFillFor("
+    assert_includes button, "property color pressedForeground:"
+    assert_includes button, "color: mouse.pressed ? root.pressedBackground : restingColor"
+    refute_includes button, "opacity: mouse.pressed ? 0.78"
+
+    %w[BarIconButton WidgetButton].each do |control|
+      qml = File.read(File.join(ROOT, "Controls", "#{control}.qml"), encoding: "UTF-8")
+
+      assert_includes qml, "property color pressedBackground: Style.pressedTintFor(Color.accent)"
+      assert_includes qml, "visible: pointer.pressed"
+      assert_includes qml, "color: root.pressedBackground"
+      assert_includes qml, "MouseArea { id: pointer;"
+    end
+  end
+
+  def test_every_adapter_that_resolves_a_pressed_colour_can_be_given_one
+    components = PRESSED_ADAPTERS.keys.map do |adapter|
+      adapter.gsub(/([a-z\d])([A-Z])/, '\1_\2').downcase.to_sym
+    end + [:action_button]
+
+    components.each do |component|
+      properties = Zui::COMPONENTS.fetch(component).first
+
+      assert_includes properties, :pressed_background, "#{component} cannot be given a pressed fill"
+      assert_includes properties, :pressed_foreground, "#{component} cannot be given a pressed label colour"
+    end
+
+    %i[bar_icon_button widget_button].each do |component|
+      assert_includes Zui::COMPONENTS.fetch(component).first, :pressed_background,
+                      "#{component} cannot be given a pressed fill"
+    end
+  end
+
+  # A Popup reparents its contentItem and its background onto its own internal
+  # item, so `parent` inside them is not the tooltip. Every themed property
+  # resolved to undefined and the tooltip drew with Qt's defaults.
+  def test_the_panel_tooltip_theme_reaches_its_content_and_background
+    qml = File.read(File.join(ROOT, "Controls", "PanelToolTip.qml"), encoding: "UTF-8")
+
+    refute_match(/parent\.panel(Foreground|Background|Border)/, qml)
+    refute_match(/parent\.font(Family|Size)/, qml)
+    assert_match(/id: panel\b/, qml)
+    assert_includes qml, "color: panel.panelForeground"
+    assert_includes qml, "color: panel.panelBackground"
+  end
+
+  # A QML file resolves a type name against its own directory as well as its
+  # imports, and an adapter is named after the type it adapts. While the
+  # imported module really provides that type, nothing goes wrong. When it does
+  # not — a type Qt added in a later release, or an optional module the client
+  # was not built with — the name resolves to the adapter file itself and the
+  # adapter instantiates itself without end. RectangularShadow did exactly that
+  # on every Qt before 6.9: the window stopped answering, the process pinned a
+  # core, and the only trace was one line of QML warning.
+  #
+  # Forty-eight more adapters were one Qt version away from the same hang. They
+  # now name the module they mean, so a type that is not there is a load error
+  # the client reports against the node, which is what every other missing
+  # adapter already does.
+  def test_no_builtin_adapter_can_resolve_its_own_file_as_a_type
+    offenders = adapter_sources.filter_map do |path, qml|
+      own = File.basename(path, ".qml")
+      # A comment is free to name the type the file adapts; only code resolves it.
+      code = qml.gsub(%r{^\s*//.*$}, "")
+      next unless code.match?(/(?<![\w.])#{Regexp.escape(own)}(?=\s*\{|\.)/)
+
+      "#{path} refers to #{own} as a type, which resolves to itself"
+    end
+
+    assert_empty offenders, offenders.join("\n")
+  end
+
+  # Qualifying only helps while the alias really points at the module that owns
+  # the type, so every adapter that names itself through an alias has to import
+  # that alias.
+  def test_qualified_adapters_import_the_alias_they_qualify_with
+    missing = adapter_sources.filter_map do |path, qml|
+      own = File.basename(path, ".qml")
+      alias_used = qml[/(?<![\w.])([A-Z]\w*)\.#{Regexp.escape(own)}\s*\{/, 1]
+      next if alias_used.nil?
+      next if qml.match?(/^import\s+(?:"[^"]+"|[A-Za-z0-9_.]+)\s+as\s+#{Regexp.escape(alias_used)}\s*$/m)
+
+      "#{path} qualifies with #{alias_used}, which it never imports"
+    end
+
+    assert_empty missing, missing.join("\n")
+  end
+
+  # A relative asset path is relative to the directory holding the
+  # application's main.rb, because that is the only directory the author of the
+  # application knows about. ControlNode.assetUrl is where that is done. An
+  # adapter that hands a path straight to QML instead gets it resolved against
+  # the adapter's own directory inside the framework checkout, and asks for a
+  # file that was never there:
+  #
+  #   AnimatedImage.qml: Error Reading Animated Image File
+  #     file://<framework>/Components/Builtins/demos/nova_pour/assets/future-pour-bar.webp
+  #
+  # A URL property whose value is not an asset — a WebSocket endpoint, say —
+  # may be read raw, and is listed here so the exemption has to be deliberate.
+  URL_PROPERTIES = %w[source icon_source base_url folder output_location fragment_shader].freeze
+  RAW_URL_EXEMPTIONS = {
+    "Components/Builtins/WebSocket.qml" => %w[url],
+    "Components/Builtins/WebSocketServer.qml" => %w[url]
+  }.freeze
+
+  def test_every_adapter_resolves_an_asset_path_against_the_application
+    offenders = adapter_sources.flat_map do |path, qml|
+      exempt = RAW_URL_EXEMPTIONS.fetch(path, [])
+      (URL_PROPERTIES - exempt).flat_map do |property|
+        qml.scan(/^.*\brenderer\.prop\("#{property}",[^\n]*$/).filter_map do |line|
+          next unless line.match?(/(?:^|[\s.])(?:source|url|baseUrl|folder|outputLocation|fragmentShader)\s*:/)
+          next if line.include?("assetUrl") || line.include?("shaderUrl")
+
+          "#{path}: #{line.strip}"
+        end
+      end
+    end
+
+    assert_empty offenders,
+                 "these resolve an asset path against the framework, not the application:\n#{offenders.join("\n")}"
+  end
+
+  # Two corrections the move to assetUrl also had to make: a bare absolute path
+  # used to come back as a URL with no scheme, which QML resolved against the
+  # adapter's base URL and only happened to come out right on Unix; and a
+  # Windows drive letter was taken for a URL scheme, so "C:/..." was passed
+  # through as a "c:" URL and never opened.
+  def test_asset_resolution_emits_a_file_url_and_knows_a_drive_letter
+    router = File.read(File.join(ROOT, "ControlNode.qml"), encoding: "UTF-8")
+
+    assert_includes router, "function assetUrl(value)"
+    assert_includes router, "function fileUrl(value)"
+    assert_includes router, "function windowsPath(value)"
+    assert_match(/windowsPath\(source\)\) return fileUrl\(source\)/, router)
+    assert_match(/\^\[a-zA-Z\]:\\\//, router)
+    refute_match(/return "file:\/\/" \+ source/, router)
+  end
+
+  # Vector3dAnimation's from and to are QVector3D, so the driver's coercion has
+  # to hand back a vector for every shape an application might send. It used to
+  # pass anything that was not an array straight through, and QML reported
+  # "Unable to assign double to QVector3D" and "Could not find any constructor
+  # for value type QQuickVector3DValueType" — after which the animation
+  # silently did nothing.
+  #
+  # A double arrives because the driver declares every animation type and picks
+  # between them only in currentAnimation(), so a number_animation node's
+  # from: 0.35 evaluates the vector animation's bindings too.
+  def test_the_animation_driver_always_coerces_a_vector
+    qml = File.read(File.join(ROOT, "Components", "Builtins", "Support", "AnimationDriver.qml"),
+                    encoding: "UTF-8")
+    coercion = qml[/function vectorValue\(.*?\n  \}/m]
+
+    refute_nil coercion, "AnimationDriver no longer has a vectorValue function"
+    assert_includes coercion, "function vectorValue(value, fallback)",
+                    "the coercion cannot fall back without being told what to"
+
+    returns = coercion.scan(/\breturn\s+(.+)$/).flatten
+
+    refute_empty returns
+    returns.each do |returned|
+      assert_match(/\AQt\.vector3d\(/, returned.strip,
+                   "vectorValue returns #{returned.strip}, which is not a vector")
+    end
+
+    assert_match(/from: driver\.vectorValue\([^)]*\), 0\)/, qml)
+    assert_match(/to: driver\.vectorValue\([^)]*\), 1\)/, qml)
+  end
+
+  # An application had no way to find out how much room it had been given. An
+  # `app` surface is a plain container rather than an application_window, so no
+  # resize ever reached Ruby, and safe_area reports only the platform's insets.
+  # Every dimension therefore had to be a constant, and a resized window either
+  # clipped the layout or left dead space beside it.
+  def test_an_application_can_learn_the_room_its_surface_gives_it
+    schema = Zui::DEFAULT_COMPONENTS.protocol_schema.fetch("surface_metrics")
+
+    assert_equal "SurfaceMetrics.qml", schema.fetch("qml")
+    assert_equal ["change"], schema.fetch("events")
+    assert_includes schema.fetch("properties"), "interval"
+    assert_includes schema.fetch("properties"), "refresh_revision"
+    refute schema.fetch("container"), "surface_metrics draws nothing and holds nothing"
+
+    assert_respond_to Zui::Application.new { app { text "probe" } }.instance_variable_get(:@builder),
+                      :surface_metrics
+
+    qml = File.read(File.join(ROOT, "Components", "Builtins", "SurfaceMetrics.qml"),
+                    encoding: "UTF-8")
+
+    %w[width height window_width window_height pixel_ratio orientation].each do |field|
+      assert_includes qml, "#{field}:", "surface_metrics does not report #{field}"
+    end
+    assert_includes qml, "visible: false"
+    assert_match(/onContentWidthChanged: settle\.restart\(\)/, qml,
+                 "a resize has to reach Ruby")
+    assert_match(/onContentHeightChanged: settle\.restart\(\)/, qml)
+  end
+
+  # The shell is the only thing that knows the inset it applied, so it is the
+  # only thing that can say how much room the root control actually has.
+  def test_the_shell_publishes_the_room_it_leaves_for_the_root_control
+    shell = File.read(File.join(ROOT, "Desktop.qml"), encoding: "UTF-8")
+
+    assert_includes shell, "readonly property real zuiContentWidth: renderer.width"
+    assert_includes shell, "readonly property real zuiContentHeight: renderer.height"
+  end
+
+  # Filling the window is the right default for a view at the root of an
+  # application, and it was the only thing responsive_view could do: an
+  # explicit width or height was ignored, so it could never be nested beside a
+  # sidebar or inside a card.
+  def test_a_responsive_view_honours_an_explicit_size
+    qml = File.read(File.join(ROOT, "Components", "Builtins", "ResponsiveView.qml"),
+                    encoding: "UTF-8")
+
+    assert_match(/width: renderer && renderer\.hasProp\("width"\)/, qml)
+    assert_match(/height: renderer && renderer\.hasProp\("height"\)/, qml)
+    assert_includes qml, "hostWindow ? hostWindow.width"
+    assert_includes qml, "hostWindow ? hostWindow.height"
   end
 
   def test_gpu_adapters_ship_native_effects_particles_and_precompiled_shaders
@@ -162,7 +500,7 @@ class QmlContractTest < Minitest::Test
   end
 
   def test_component_coverage_catalog_has_no_unimplemented_entries
-    coverage = File.read(File.join(ROOT, "docs", "component-coverage.md"))
+    coverage = File.read(File.join(ROOT, "docs", "component-coverage.md"), encoding: "UTF-8")
 
     refute_match(/^- \[ \] /, coverage)
   end
@@ -479,7 +817,7 @@ class QmlContractTest < Minitest::Test
     style = source("Theme/Style.qml")
     renderer = source("ControlNode.qml")
     framework_qml = (Dir[File.join(ROOT, "*.qml")] +
-      Dir[File.join(ROOT, "{Components,Controls,Theme}", "**", "*.qml")]).map { File.read(_1) }.join("\n")
+      Dir[File.join(ROOT, "{Components,Controls,Theme}", "**", "*.qml")]).map { File.read(_1, encoding: "UTF-8") }.join("\n")
 
     %w[RobotoMono-Regular.otf RobotoMono-Bold.otf FontAwesome-Solid.otf FontAwesome-Brands.otf].each do |name|
       assert_operator File.size(File.join(ROOT, "Fonts", name)), :>, 10_000
@@ -734,7 +1072,7 @@ class QmlContractTest < Minitest::Test
 
     assert_dynamic_component_route(renderer, "markdown")
     assert_includes renderer, "textFormat: Text.MarkdownText"
-    assert_includes renderer, 'baseUrl: String(root.prop("base_url", ""))'
+    assert_includes renderer, 'baseUrl: root.assetUrl(root.prop("base_url", ""))'
   end
 
   def test_selectable_text_has_a_specific_native_selection_renderer
@@ -772,7 +1110,7 @@ class QmlContractTest < Minitest::Test
   end
 
   def test_model_view_3d_loads_real_geometry_and_native_pointer_controls
-    renderer = File.read(File.join(ROOT, "ControlNode.qml"))
+    renderer = File.read(File.join(ROOT, "ControlNode.qml"), encoding: "UTF-8")
     host = source("Components/Builtins/ModelView3d.qml")
     model = source("Components/Builtins/Support/ModelView3dScene.qml")
 
@@ -908,7 +1246,7 @@ class QmlContractTest < Minitest::Test
   end
 
   def test_reactive_patch_preserves_event_subscriptions
-    service = File.read(File.join(ROOT, "Service.qml"))
+    service = File.read(File.join(ROOT, "Service.qml"), encoding: "UTF-8")
 
     assert_includes service, "if (node.events !== undefined) replacement.events = node.events"
   end

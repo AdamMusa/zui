@@ -94,15 +94,30 @@ module Zui
       @components.transform_keys(&:to_s).transform_values(&:to_h)
     end
 
+    # Every application duplicates the default registry before it builds its
+    # first node, and re-registering all three hundred components cost it
+    # thirty-five milliseconds of validation it had already paid for once at
+    # load time. A Component exposes no writer and holds frozen collections, so
+    # the copy can share them; only the index has to be its own, which is what
+    # lets the copy register components the original does not have.
+    #
+    # Re-registering also widened the result: the second pass fed the already
+    # expanded property list back through normalization and added an identity
+    # mapping for every common item property, inflating the component schema
+    # the client is sent on every launch.
     def dup
       copy = self.class.new
-      @components.each_value do |component|
-        copy.register(component.name, qml: component.qml, properties: component.properties,
-                       events: component.events, property_map: component.property_map,
-                       event_map: component.event_map, container: component.container,
-                       auto_bind: component.auto_bind, built_in: component.built_in)
-      end
+      # Reached through send because mruby, which the lite runtime uses, does
+      # not let one instance call another's protected method.
+      copy.send(:adopt_components, @components)
       copy
+    end
+
+    private
+
+    # Only ComponentRegistry#dup has any business handing a registry its index.
+    def adopt_components(components)
+      @components = components.dup
     end
   end
 end

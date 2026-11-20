@@ -1,5 +1,5 @@
 import QtQuick
-import QtCore
+import QtCore as Core
 import "Support" as Support
 
 Item {
@@ -14,12 +14,12 @@ Item {
     if (desired === appliedAccessMode) return
     appliedAccessMode = desired
     nativePermission.accessMode = desired === "read_only"
-      ? ContactsPermission.ReadOnly : ContactsPermission.ReadWrite
+      ? Core.ContactsPermission.ReadOnly : Core.ContactsPermission.ReadWrite
   }
 
-  ContactsPermission {
+  Core.ContactsPermission {
     id: nativePermission
-    accessMode: ContactsPermission.ReadWrite
+    accessMode: Core.ContactsPermission.ReadWrite
   }
   Support.PermissionBridge { renderer: root.renderer; permission: nativePermission }
   Component.onCompleted: synchronizeAccessMode()

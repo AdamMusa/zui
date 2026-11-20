@@ -207,7 +207,7 @@ module Zui
       raise ArgumentError, "#{CONFIG_FILE} not found in project root" unless File.file?(path)
       raise ArgumentError, "#{CONFIG_FILE} is too large" if File.size(path) > 131_072
 
-      value = Module.new.module_eval(File.read(path), path, 1)
+      value = Module.new.module_eval(File.read(path, encoding: "UTF-8"), path, 1)
       unless value.is_a?(Config)
         raise ArgumentError, "#{CONFIG_FILE} must return Zui::Dist.configure do ... end"
       end

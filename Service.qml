@@ -190,8 +190,19 @@ Item {
   // revision, so publishing a new index object before its revision would expose
   // intermediate patch state and invalidate every renderer in a batch.
   function commitNodeIndex(nextIndex) {
-    for (var oldId in nodeIndex)
-      if (nextIndex[oldId] === undefined) delete nodeIndex[oldId]
+    // The keys are taken before anything is deleted. Deleting from the object
+    // being iterated makes a for-in skip entries it has not reached yet, and
+    // with a page's worth of nodes that left most of a replaced subtree live:
+    // 255 of a 360-node showcase page, out of an index of 434 keys. How the
+    // visits fall depends on the object's size and on how many keys survive,
+    // so those numbers describe one measured case, not a general ratio. The
+    // next time that page was built its ids
+    // collided with their own ghosts, the whole replacement was refused, and
+    // because Ruby had already advanced its own last_children it never
+    // resent — so the page stayed blank for the rest of the run.
+    var liveIds = Object.keys(nodeIndex)
+    for (var i = 0; i < liveIds.length; i++)
+      if (nextIndex[liveIds[i]] === undefined) delete nodeIndex[liveIds[i]]
     for (var nextId in nextIndex) nodeIndex[nextId] = nextIndex[nextId]
   }
 
@@ -235,10 +246,23 @@ Item {
     if (message.op === "replace_children") {
       if (!componentDefinitions[node.type].container || !Array.isArray(message.children))
         return reject("children patch rejected")
+      // What this replacement removes has to be read from the live index, not
+      // from the container's own children array. That array is a snapshot
+      // taken the last time this container was replaced, and it goes stale the
+      // moment a nested container is patched on its own — which is exactly
+      // what a nested `dynamic` does. Walking the snapshot then marks the
+      // nodes that *used* to be there, leaves the ones that really are there
+      // live, and the replacement is refused with "node id already live".
+      //
+      // Ruby has advanced its own last_children by then and never resends, so
+      // that part of the interface silently stops updating for good.
       var removed = ({})
       function markRemoved(child) {
+        if (!child || removed[child.id] !== undefined) return
         removed[child.id] = true
-        var nested = Array.isArray(child.children) ? child.children : []
+        var live = nodeIndex[child.id]
+        var nested = live && Array.isArray(live.children) ? live.children
+          : (Array.isArray(child.children) ? child.children : [])
         for (var r = 0; r < nested.length; r++) markRemoved(nested[r])
       }
       var oldChildren = Array.isArray(node.children) ? node.children : []

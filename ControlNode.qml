@@ -168,6 +168,70 @@ Loader {
     face.fontFamily = fontFamily
   }
 
+  // Three adapters wanted the protocol's cursor name turned into a Qt cursor
+  // shape, two of them carried their own copy of the mapping, and the third —
+  // Checkbox — called `renderer.cursorShape()`, which ControlNode had never
+  // defined. Every checkbox on the page threw "Property 'cursorShape' of
+  // object ControlNode is not a function" and got no cursor at all. Shared
+  // name-to-enum translation belongs here, beside easingType and
+  // layoutAlignment, and the two private copies disagreed about which names
+  // existed anyway.
+  function cursorShape(name, fallback) {
+    var shapes = {
+      arrow: Qt.ArrowCursor,
+      pointing_hand: Qt.PointingHandCursor,
+      open_hand: Qt.OpenHandCursor,
+      closed_hand: Qt.ClosedHandCursor,
+      cross: Qt.CrossCursor,
+      text: Qt.IBeamCursor,
+      horizontal: Qt.SizeHorCursor,
+      vertical: Qt.SizeVerCursor,
+      size_all: Qt.SizeAllCursor,
+      busy: Qt.BusyCursor,
+      wait: Qt.WaitCursor,
+      forbidden: Qt.ForbiddenCursor,
+      help: Qt.WhatsThisCursor,
+      blank: Qt.BlankCursor
+    }
+    var requested = shapes[String(name || "")]
+    if (requested !== undefined) return requested
+    var defaulted = shapes[String(fallback || "")]
+    return defaulted === undefined ? Qt.ArrowCursor : defaulted
+  }
+
+  // Qt Quick Controls already knows the control is pressed; an adapter that
+  // overrides `background` is what throws that away. The pressed appearance has
+  // to be resolved locally, because waiting for Ruby to answer the click is the
+  // whole of the delay the user feels -- Ruby turns a sidebar activation into a
+  // complete set of page patches in 3-12 ms, and the client then spends 85 ms
+  // to several seconds building the new page before anything repaints.
+  //
+  // These two resolve it in one place: the protocol's `pressed_background` and
+  // `pressed_foreground` when an application declares them, otherwise a value
+  // derived from what the control is already painting. Only the fill is
+  // derived. A tinted or darkened fill keeps the resting label legible, so
+  // `pressed_foreground` is what moves the label as well.
+  function pressedBackground(resting) {
+    return prop("pressed_background", Style.pressedFillFor(
+      resolvedColor(resting, Qt.rgba(0, 0, 0, 0)),
+      resolvedColor(prop("accent", ""), Color.accent)))
+  }
+
+  function pressedForeground(resting) {
+    return prop("pressed_foreground", resting)
+  }
+
+  // A protocol colour arrives as a string and an adapter's resting colour may
+  // be either, so the shared derivation above takes neither on trust. Qt.color
+  // throws on anything it cannot read, including the empty string.
+  function resolvedColor(value, fallback) {
+    try {
+      return Qt.color(value)
+    } catch (error) {
+      return fallback
+    }
+  }
+
   function borderImageTileMode(value) {
     var mode = String(value || "stretch")
     if (mode === "repeat") return BorderImage.Repeat
@@ -175,12 +239,37 @@ Loader {
     return BorderImage.Stretch
   }
 
+  // The renderer resolves a relative asset path against the directory holding
+  // the application's main.rb, because that is the only directory the author
+  // of the application knows about. Anything that skips this and hands a
+  // relative path straight to QML resolves it against the adapter's own
+  // directory inside the framework checkout instead, and asks for a file that
+  // was never there — "demos/nova_pour/assets/future-pour-bar.webp" became
+  // "<framework>/Components/Builtins/demos/nova_pour/assets/future-pour-bar.webp".
+  //
+  // Two further corrections over what this used to return. A bare absolute
+  // path left it as a URL with no scheme, which QML resolved against the
+  // adapter's base URL and happened to come out right on Unix; and a single
+  // letter followed by a colon was taken for a URL scheme, so every Windows
+  // path "C:/..." was passed through as a "c:" URL.
   function assetUrl(value) {
-    var source = String(value || "")
+    var source = String(value || "").replace(/\\/g, "/")
     if (source === "") return ""
+    if (windowsPath(source)) return fileUrl(source)
     if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(source)) return source
-    if (source[0] === "/") return "file://" + source
-    return bridge && bridge.projectDir ? bridge.projectDir + "/" + source : Qt.resolvedUrl(source)
+    if (source.charAt(0) === "/") return fileUrl(source)
+    var project = bridge && bridge.projectDir ? String(bridge.projectDir) : ""
+    return project === "" ? Qt.resolvedUrl(source) : fileUrl(project + "/" + source)
+  }
+
+  function windowsPath(value) {
+    return /^[a-zA-Z]:\//.test(String(value))
+  }
+
+  function fileUrl(value) {
+    var path = String(value).replace(/\\/g, "/")
+    if (path.charAt(0) !== "/") path = "/" + path
+    return "file://" + encodeURI(path).replace(/#/g, "%23").replace(/\?/g, "%3F")
   }
 
   function builtInSource(typeName) {

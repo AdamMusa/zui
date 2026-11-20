@@ -7,6 +7,7 @@ import "../../Controls" as ZuiControls
 ZuiControls.BarIconButton {
   required property var renderer
       text: renderer.iconGlyph(renderer.prop("icon", ""))
+      pressedBackground: renderer.prop("pressed_background", Style.pressedTintFor(Color.accent))
       tooltipText: renderer.escapeAutoText(renderer.prop("tooltip", ""))
       active: renderer.prop("active", false) === true
       foreground: renderer.prop("foreground", renderer.foreground)

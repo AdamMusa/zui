@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick as Quick
 import QtQuick.Controls as QQC
 import QtQml.Models
 import "../../Theme"
@@ -125,30 +126,30 @@ Rectangle {
 
   function selectionBehaviorValue(value) {
     var name = String(value || "cells")
-    if (name === "none" || name === "disabled") return TableView.SelectionDisabled
-    if (name === "rows") return TableView.SelectRows
-    if (name === "columns") return TableView.SelectColumns
-    return TableView.SelectCells
+    if (name === "none" || name === "disabled") return Quick.TableView.SelectionDisabled
+    if (name === "rows") return Quick.TableView.SelectRows
+    if (name === "columns") return Quick.TableView.SelectColumns
+    return Quick.TableView.SelectCells
   }
 
   function selectionModeValue(value) {
     var name = String(value || "single")
-    if (name === "contiguous") return TableView.ContiguousSelection
-    if (name === "extended" || name === "multiple") return TableView.ExtendedSelection
-    return TableView.SingleSelection
+    if (name === "contiguous") return Quick.TableView.ContiguousSelection
+    if (name === "extended" || name === "multiple") return Quick.TableView.ExtendedSelection
+    return Quick.TableView.SingleSelection
   }
 
   function editTriggersValue(value) {
-    if (renderer.prop("editable", false) !== true) return TableView.NoEditTriggers
+    if (renderer.prop("editable", false) !== true) return Quick.TableView.NoEditTriggers
     var names = Array.isArray(value) ? value : [value || "double_tap_and_key"]
-    var result = TableView.NoEditTriggers
+    var result = Quick.TableView.NoEditTriggers
     for (var index = 0; index < names.length; index++) {
       var name = String(names[index])
-      if (name === "single_tap") result |= TableView.SingleTapped
-      if (name === "double_tap" || name === "double_tap_and_key") result |= TableView.DoubleTapped
-      if (name === "selected_tap") result |= TableView.SelectedTapped
-      if (name === "edit_key" || name === "double_tap_and_key") result |= TableView.EditKeyPressed
-      if (name === "any_key") result |= TableView.AnyKeyPressed
+      if (name === "single_tap") result |= Quick.TableView.SingleTapped
+      if (name === "double_tap" || name === "double_tap_and_key") result |= Quick.TableView.DoubleTapped
+      if (name === "selected_tap") result |= Quick.TableView.SelectedTapped
+      if (name === "edit_key" || name === "double_tap_and_key") result |= Quick.TableView.EditKeyPressed
+      if (name === "any_key") result |= Quick.TableView.AnyKeyPressed
     }
     return result
   }
@@ -221,7 +222,7 @@ Rectangle {
     }
   }
 
-  TableView {
+  Quick.TableView {
     id: tableControl
     x: tableRoot.tablePadding
     y: tableRoot.tablePadding + headerClip.height
@@ -292,11 +293,11 @@ Rectangle {
         elide: Text.ElideRight
       }
 
-      TableView.editDelegate: FocusScope {
+      Quick.TableView.editDelegate: FocusScope {
         width: parent.width
         height: parent.height
 
-        TableView.onCommit: {
+        Quick.TableView.onCommit: {
           if (!tableRoot.columnEditable(cellDelegate.column)) return
           var index = tableRoot.tableModel.index(cellDelegate.row, cellDelegate.column)
           if (tableRoot.tableModel.setData(index, editor.text, Qt.EditRole)) {

@@ -99,7 +99,7 @@ class ClientTest < Minitest::Test
       platform = Zui::Platform.new(os: :linux, arch: :x86_64)
       root = ClientFixture.create(File.join(directory, "client"), platform:)
       manifest_path = File.join(root, "client.json")
-      manifest = JSON.parse(File.read(manifest_path))
+      manifest = JSON.parse(File.read(manifest_path, encoding: "UTF-8"))
       manifest["runtime_contract_sha256"] = "0" * 64
       File.write(manifest_path, JSON.pretty_generate(manifest))
       client = Zui::Client.new(platform:, environment: { "ZUI_CLIENT_ROOT" => root })
@@ -119,7 +119,7 @@ class ClientTest < Minitest::Test
       client = Zui::Client.new(platform:, environment: { "ZUI_CLIENT_ROOT" => root })
 
       assert_raises(ArgumentError) { client.configure! }
-      assert_equal "keep", File.read(File.join(root, "personal.txt"))
+      assert_equal "keep", File.read(File.join(root, "personal.txt"), encoding: "UTF-8")
     end
   end
 

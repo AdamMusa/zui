@@ -22,11 +22,12 @@ Rectangle {
   height: renderer.node && renderer.node.props && renderer.node.props.height !== undefined
     ? Number(renderer.node.props.height) : implicitHeight
   radius: Style.cornerRadius
-  color: selected || active ? accentColor : renderer.prop("background", "transparent")
+  readonly property color restingColor: selected || active ? accentColor : renderer.prop("background", "transparent")
+  color: tap.pressed ? renderer.pressedBackground(restingColor) : restingColor
   border.width: renderer.prop("bordered", true) !== false ? Style.normalBorderWidth : 0
   border.color: selected || active ? accentColor
     : Qt.rgba(foregroundColor.r, foregroundColor.g, foregroundColor.b, 0.3)
-  opacity: !interactive ? 0.5 : (tap.pressed ? 0.78 : (hover.hovered ? 0.9 : 1))
+  opacity: !interactive ? 0.5 : (hover.hovered ? 0.9 : 1)
 
   Row {
     id: content
@@ -55,10 +56,12 @@ Rectangle {
     }
 
     Text {
+      readonly property color restingColor: root.selected || root.active
+        ? Color.background : root.foregroundColor
       visible: String(renderer.prop("text", "")) !== ""
       text: String(renderer.prop("text", ""))
       textFormat: Text.PlainText
-      color: root.selected || root.active ? Color.background : root.foregroundColor
+      color: tap.pressed ? renderer.pressedForeground(restingColor) : restingColor
       font.family: String(renderer.prop("font_family", renderer.fontFamily))
       font.pixelSize: Number(renderer.prop("font_size", Style.font.body))
     }

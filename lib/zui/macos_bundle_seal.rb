@@ -31,6 +31,17 @@ module Zui
       Dir[File.join(framework_root, "*.framework")].sort.each do |framework|
         name = File.basename(framework, ".framework")
         version = framework_version(framework, name)
+        # A framework with no binary is not a framework — it is debris, and
+        # codesign refuses the whole bundle over it. One is left behind on
+        # every macOS client: purging the browser payload deletes
+        # QtPositioning's binary and leaves its directory standing. This used
+        # to raise instead, which stopped the repair before it reached the
+        # frameworks that did need it, so no macOS application could be sealed
+        # at all.
+        unless version
+          FileUtils.remove_entry(framework)
+          next
+        end
         ensure_link(File.join(framework, "Versions", "Current"), version)
         ensure_link(File.join(framework, name), "Versions/Current/#{name}")
         resources = File.join(framework, "Versions", version, "Resources")
@@ -42,10 +53,7 @@ module Zui
     def framework_version(framework, name)
       versions = File.join(framework, "Versions")
       candidates = Dir.children(versions).reject { |entry| entry == "Current" }.sort
-      version = candidates.find { |entry| File.file?(File.join(versions, entry, name)) }
-      raise ArgumentError, "macOS Qt framework has no versioned binary: #{framework}" unless version
-
-      version
+      candidates.find { |entry| File.file?(File.join(versions, entry, name)) }
     end
     private_class_method :framework_version
 

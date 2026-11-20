@@ -21,6 +21,7 @@ module Zui
       lib/zui/runtime_entry.rb
       lib/zui/scheduler.rb
       lib/zui/state_store.rb
+      lib/zui/trace.rb
       lib/zui/value.rb
     ].freeze
     ZUI_RUNTIME_ENTRYPOINT = <<~RUBY.freeze

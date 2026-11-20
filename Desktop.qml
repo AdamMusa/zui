@@ -14,6 +14,12 @@ QQC.ApplicationWindow {
     return service.optionsFor(activeSurface)
   }
 
+  // The shell is the only thing that knows the inset it applied, so it is the
+  // only thing that can say how much room the application's root control has.
+  // surface_metrics reads these; nothing else may rely on them.
+  readonly property real zuiContentWidth: renderer.width
+  readonly property real zuiContentHeight: renderer.height
+
   function option(name, fallback) {
     var value = windowOptions ? windowOptions[name] : undefined
     return value === undefined || value === null ? fallback : value

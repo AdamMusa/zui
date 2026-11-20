@@ -1,11 +1,11 @@
 import QtQuick
-import QtQuick.VectorImage
+import QtQuick.VectorImage as VectorImages
 import QtQuick.Controls as QQC
 import QtQuick.Layouts
 import "../../Theme"
 import "../../Controls" as ZuiControls
 
-VectorImage {
+VectorImages.VectorImage {
   id: vectorRoot
   required property var renderer
 
@@ -42,13 +42,13 @@ VectorImage {
   height: Number(renderer.prop("height", 120))
   fillMode: {
     var mode = String(renderer.prop("fill_mode", "contain"))
-    if (mode === "cover") return VectorImage.PreserveAspectCrop
-    if (mode === "stretch") return VectorImage.Stretch
-    if (mode === "none") return VectorImage.NoResize
-    return VectorImage.PreserveAspectFit
+    if (mode === "cover") return VectorImages.VectorImage.PreserveAspectCrop
+    if (mode === "stretch") return VectorImages.VectorImage.Stretch
+    if (mode === "none") return VectorImages.VectorImage.NoResize
+    return VectorImages.VectorImage.PreserveAspectFit
   }
   preferredRendererType: String(renderer.prop("renderer", "geometry")) === "curve"
-    ? VectorImage.CurveRenderer : VectorImage.GeometryRenderer
+    ? VectorImages.VectorImage.CurveRenderer : VectorImages.VectorImage.GeometryRenderer
   onSourceChanged: {
     if (renderer.subscribed("source_change"))
       renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "source_change", { value: source })

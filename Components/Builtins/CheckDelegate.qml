@@ -50,11 +50,12 @@ QQC.CheckDelegate {
   Accessible.name: String(renderer.prop("accessible_name", text))
 
   background: Rectangle {
-    color: checkRoot.highlighted
+    readonly property color restingColor: checkRoot.highlighted
       ? renderer.prop("highlighted_background", renderer.prop("selected_background", Color.popups.background))
       : (checkRoot.selected
         ? renderer.prop("selected_background", Color.popups.background)
         : renderer.prop("background", "transparent"))
+    color: checkRoot.down ? renderer.pressedBackground(restingColor) : restingColor
     radius: Number(renderer.prop("radius", Style.cornerRadius))
     border.width: Number(renderer.prop("border_width",
       String(renderer.prop("border_color", "")).length > 0 ? Style.normalBorderWidth : 0))
@@ -66,11 +67,12 @@ QQC.CheckDelegate {
 
     Text {
       Layout.fillWidth: true
-      text: checkRoot.text
-      textFormat: Text.PlainText
-      color: checkRoot.selected
+      readonly property color restingColor: checkRoot.selected
         ? renderer.prop("selected_foreground", renderer.prop("foreground", renderer.foreground))
         : renderer.prop("foreground", renderer.foreground)
+      text: checkRoot.text
+      textFormat: Text.PlainText
+      color: checkRoot.down ? renderer.pressedForeground(restingColor) : restingColor
       font: checkRoot.font
       elide: Text.ElideRight
     }

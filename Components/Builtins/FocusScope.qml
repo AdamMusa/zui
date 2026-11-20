@@ -1,10 +1,11 @@
 import QtQuick
+import QtQuick as Quick
 import QtQuick.Controls as QQC
 import QtQuick.Layouts
 import "../../Theme"
 import "../../Controls" as ZuiControls
 
-FocusScope {
+Quick.FocusScope {
   required property var renderer
       id: nativeFocusScope
       implicitWidth: Number(renderer.prop("width", focusContent.implicitWidth))

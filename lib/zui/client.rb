@@ -147,6 +147,25 @@ module Zui
       source.is_a?(URI) ? URI("#{source}.sha256") : "#{source}.sha256"
     end
 
+    # Public because ClientBuilder keeps its deployment cache beside the
+    # installed clients, and one definition of where Zui caches things is
+    # better than two that can drift.
+    def cache_root
+      return File.expand_path(@cache_root) if @cache_root
+
+      override = @environment["ZUI_CACHE_HOME"]
+      return File.expand_path(override) if override && !override.empty?
+
+      home = @environment["HOME"] || @environment["USERPROFILE"] || Dir.home
+      if platform.windows?
+        @environment["LOCALAPPDATA"] || @environment["APPDATA"] || File.join(home, "AppData", "Local")
+      elsif platform.macos?
+        File.join(home, "Library", "Caches")
+      else
+        @environment["XDG_CACHE_HOME"] || File.join(home, ".cache")
+      end
+    end
+
     private
 
     def install_download!
@@ -181,7 +200,7 @@ module Zui
       raise ArgumentError, "Zui client manifest not found: #{manifest_path}" unless File.file?(manifest_path)
       raise ArgumentError, "Zui client manifest is too large" if File.size(manifest_path) > 65_536
 
-      manifest = JSON.parse(File.read(manifest_path))
+      manifest = JSON.parse(File.read(manifest_path, encoding: "UTF-8"))
       raise ArgumentError, "invalid Zui client manifest root" unless manifest.is_a?(Hash)
       expected = {
         "format" => FORMAT,
@@ -243,7 +262,7 @@ module Zui
     end
 
     def verify_checksum!(archive, checksum_file)
-      expected = File.read(checksum_file, 4096)[/\A\s*([0-9a-fA-F]{64})(?:\s|\z)/, 1]
+      expected = File.read(checksum_file, 4096, encoding: "UTF-8")[/\A\s*([0-9a-fA-F]{64})(?:\s|\z)/, 1]
       raise ArgumentError, "invalid Zui client checksum file" unless expected
 
       actual = Digest::SHA256.file(archive).hexdigest
@@ -349,21 +368,6 @@ module Zui
         "https://github.com/AdamMusa/zui/releases/download/v#{version}"
     end
 
-    def cache_root
-      return File.expand_path(@cache_root) if @cache_root
-
-      override = @environment["ZUI_CACHE_HOME"]
-      return File.expand_path(override) if override && !override.empty?
-
-      home = @environment["HOME"] || @environment["USERPROFILE"] || Dir.home
-      if platform.windows?
-        @environment["LOCALAPPDATA"] || @environment["APPDATA"] || File.join(home, "AppData", "Local")
-      elsif platform.macos?
-        File.join(home, "Library", "Caches")
-      else
-        @environment["XDG_CACHE_HOME"] || File.join(home, ".cache")
-      end
-    end
 
     def client_root_override?
       value = @environment["ZUI_CLIENT_ROOT"]
