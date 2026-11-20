@@ -15,7 +15,7 @@ module Zui
       QtQuick/Controls/Material QtQuick/Controls/Universal QtQuick/Controls/designer QtQuick/LocalStorage
       QtQuick/Pdf QtQuick/Timeline QtQuick/tooling QtQuick3D/Effects QtQuick3D/Helpers
       QtQuick3D/MaterialEditor QtQuick3D/ParticleEffects QtQuick3D/Particles3D QtQuick3D/SpatialAudio
-      QtQuick3D/Xr QtQuick3D/designer QtQuick3D/lightmapviewer QtQml/XmlListModel
+      QtQuick3D/Xr QtQuick3D/designer QtQuick3D/lightmapviewer
     ].freeze
     LINUX_PLUGIN_DIRECTORIES = %w[
       assetimporters generic iconengines imageformats multimedia networkinformation platforminputcontexts
