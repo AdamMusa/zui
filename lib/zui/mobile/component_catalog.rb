@@ -57,10 +57,21 @@ module Zui
         "NetworkInformation" => :network_status
       }.freeze
 
+      # InputContext is an uncreatable singleton, and InputEngine, SelectionListModel,
+      # KeyboardObserver, Trace, ShiftHandler, VirtualKeyboardFeatures and QtVirtualKeyboard
+      # are reached only through it, so they all keep keyboard_context. InputMethod and
+      # PlainInputMethod exist to author an input method, not to use one.
       VIRTUAL_KEYBOARD = {
         "InputPanel" => :virtual_keyboard,
         "HandwritingInputPanel" => :handwriting_input,
         "InputContext" => :keyboard_context,
+        "InputEngine" => :keyboard_context,
+        "SelectionListModel" => :keyboard_context,
+        "KeyboardObserver" => :keyboard_context,
+        "ShiftHandler" => :keyboard_context,
+        "Trace" => :keyboard_context,
+        "VirtualKeyboardFeatures" => :keyboard_context,
+        "QtVirtualKeyboard" => :keyboard_context,
         "VirtualKeyboardSettings" => :keyboard_settings,
         "EnterKeyAction" => :keyboard_text_field,
         "VirtualKeyboard" => :keyboard_context
