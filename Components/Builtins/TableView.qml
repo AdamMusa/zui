@@ -8,6 +8,9 @@ Rectangle {
   id: tableRoot
 
   required property var renderer
+  // What a SelectionRectangle has to be attached to: the Qt TableView itself,
+  // not the Rectangle that frames it and draws its header.
+  readonly property var selectableView: tableControl
   readonly property var sourceRows: renderer.prop("rows", [])
   readonly property var requestedColumns: renderer.prop("columns", [])
   readonly property var effectiveColumns: inferColumns()

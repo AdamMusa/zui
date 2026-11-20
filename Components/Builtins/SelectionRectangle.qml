@@ -4,7 +4,15 @@ import QtQuick.Controls as QQC
 QQC.SelectionRectangle {
   id: selectionRoot
   property var renderer: null
-  target: renderer ? renderer.findRenderedItem(renderer.prop("target", "")) : null
+  // Qt only accepts a view that implements its selectable interface ("the
+  // assigned target is not supported by the control" otherwise), and the item a
+  // node renders is usually the adapter that wraps the view. Adapters that wrap
+  // one name it `selectableView`.
+  function selectableTarget() {
+    var found = renderer ? renderer.findRenderedItem(renderer.prop("target", "")) : null
+    return found && found.selectableView ? found.selectableView : found
+  }
+  target: selectableTarget()
   enabled: renderer && renderer.prop("enabled", true) !== false
   selectionMode: {
     var mode = String(renderer ? renderer.prop("mode", "auto") : "auto")
