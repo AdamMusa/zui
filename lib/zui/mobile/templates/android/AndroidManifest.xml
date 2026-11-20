@@ -12,6 +12,16 @@
     <uses-permission android:name="android.permission.CAMERA" />
     -->
 
+    <!-- position_source and satellite_source need a location permission, which
+         location_permission must also request at runtime on Android 6 and newer:
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    -->
+    <!-- Declare the hardware positioning depends on so the Play Store filters correctly:
+    <uses-feature android:name="android.hardware.location" android:required="false" />
+    <uses-feature android:name="android.hardware.location.gps" android:required="false" />
+    -->
+
     <supports-screens
         android:anyDensity="true"
         android:largeScreens="true"

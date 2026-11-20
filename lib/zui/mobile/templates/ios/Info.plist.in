@@ -46,5 +46,14 @@
     <key>NSCameraUsageDescription</key>
     <string>Explain why this app needs camera access.</string>
     -->
+
+    <!-- position_source and satellite_source read Core Location, which requires a usage
+         description; add the Always key as well only when the app keeps updating in the
+         background, and pair that with the UIBackgroundModes location value:
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>Explain why this app needs your location.</string>
+    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+    <string>Explain why this app needs your location in the background.</string>
+    -->
 </dict>
 </plist>

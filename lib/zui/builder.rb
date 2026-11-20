@@ -685,6 +685,24 @@ module Zui
       node
     end
 
+    def geo_address(id: nil, **props, &handler)
+      node = component(:geo_address, id:, **props)
+      @application.register_handler(node.id, :change, handler) if handler
+      node
+    end
+
+    def geo_location(id: nil, **props, &handler)
+      node = component(:geo_location, id:, **props)
+      @application.register_handler(node.id, :change, handler) if handler
+      node
+    end
+
+    def coordinate_animation(target, id: nil, **props, &handler)
+      node = component(:coordinate_animation, id:, target: node_id(target), **props)
+      @application.register_handler(node.id, :finish, handler) if handler
+      node
+    end
+
     def map_circle(id: nil, **props, &handler) = map_item_component(:map_circle, id:, props:, handler:)
     def map_rectangle(id: nil, **props, &handler) = map_item_component(:map_rectangle, id:, props:, handler:)
     def map_polygon(path = [], id: nil, **props, &handler) = map_item_component(:map_polygon, id:, props: props.merge(path: Array(path)), handler:)
