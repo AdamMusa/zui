@@ -43,7 +43,7 @@ Item {
       muted: renderer.prop("muted", false) === true
     }
 
-    onSourceChanged: Qt.callLater(audioRoot.syncPlayback)
+    onSourceChanged: syncPlaybackLater.restart()
 
     onPlaybackStateChanged: function(playbackState) {
       var eventName = playbackState === MediaPlayer.PlayingState ? "play"
@@ -81,5 +81,14 @@ Item {
   Connections {
     target: renderer
     function onNodeChanged() { audioRoot.syncPlayback() }
+  }
+
+  // Owned by this node, so a call still pending when the node goes is dropped
+  // with it; a bare Qt.callLater runs against a destroyed object instead.
+  Timer {
+    id: syncPlaybackLater
+    interval: 0
+    repeat: false
+    onTriggered: audioRoot.syncPlayback()
   }
 }

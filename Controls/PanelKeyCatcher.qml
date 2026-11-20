@@ -11,8 +11,8 @@ FocusScope {
   signal activateRequested()
   signal textKey(string text)
   focus: true
-  Component.onCompleted: Qt.callLater(function() { root.forceActiveFocus() })
-  onVisibleChanged: if (visible) Qt.callLater(function() { root.forceActiveFocus() })
+  Component.onCompleted: focusLater.restart()
+  onVisibleChanged: if (visible) focusLater.restart()
   Keys.onEscapePressed: if (!blocked) closeRequested()
   Keys.onDeletePressed: if (!blocked) deleteRequested()
   Keys.onReturnPressed: if (!blocked) returnRequested()
@@ -24,4 +24,13 @@ FocusScope {
   Keys.onDownPressed: if (!blocked) moveRequested(0, 1)
   Keys.onSpacePressed: if (!blocked) activateRequested()
   Keys.onPressed: function(event) { if (!blocked && event.text !== "") root.textKey(event.text) }
+
+  // Owned by this item: a bare Qt.callLater closure still runs after the item
+  // is destroyed.
+  Timer {
+    id: focusLater
+    interval: 0
+    repeat: false
+    onTriggered: root.forceActiveFocus()
+  }
 }

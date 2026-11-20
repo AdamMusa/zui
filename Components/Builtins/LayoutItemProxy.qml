@@ -37,10 +37,10 @@ Layouts.LayoutItemProxy {
 
   onTargetIdChanged: {
     target = null
-    Qt.callLater(resolveTarget)
+    resolveTargetLater.restart()
   }
   onTargetChanged: {
-    Qt.callLater(synchronizeDimensions)
+    synchronizeDimensionsLater.restart()
     if (renderer.subscribed("target_change"))
       renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "target_change", {
         target: target ? targetId : null,
@@ -48,13 +48,13 @@ Layouts.LayoutItemProxy {
       })
   }
   Component.onCompleted: {
-    Qt.callLater(resolveTarget)
-    Qt.callLater(synchronizeDimensions)
+    resolveTargetLater.restart()
+    synchronizeDimensionsLater.restart()
   }
 
   Connections {
     target: proxy.renderer
-    function onNodeChanged() { Qt.callLater(proxy.synchronizeDimensions) }
+    function onNodeChanged() { synchronizeDimensionsLater.restart() }
   }
 
   Timer {
@@ -62,5 +62,21 @@ Layouts.LayoutItemProxy {
     repeat: true
     running: proxy.targetId !== "" && proxy.target === null
     onTriggered: proxy.resolveTarget()
+  }
+
+  // Owned by this node, so a call still pending when the node goes is dropped
+  // with it; a bare Qt.callLater runs against a destroyed object instead.
+  Timer {
+    id: resolveTargetLater
+    interval: 0
+    repeat: false
+    onTriggered: resolveTarget()
+  }
+
+  Timer {
+    id: synchronizeDimensionsLater
+    interval: 0
+    repeat: false
+    onTriggered: synchronizeDimensions()
   }
 }

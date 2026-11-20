@@ -103,7 +103,7 @@ Rectangle {
     var created = Qt.createQmlObject(modelSource(), tableRoot, "ZuiDynamicTableModel")
     created.rows = normalizedRows()
     tableModel = created
-    Qt.callLater(syncSelection)
+    syncSelectionLater.restart()
   }
 
   function syncRows() {
@@ -112,7 +112,7 @@ Rectangle {
       return
     }
     tableModel.rows = normalizedRows()
-    Qt.callLater(syncSelection)
+    syncSelectionLater.restart()
   }
 
   function syncSelection() {
@@ -386,4 +386,13 @@ Rectangle {
   onSourceRowsChanged: syncRows()
   onVisibleChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
     visible ? "show" : "hide", {})
+
+  // Owned by this node, so a call still pending when the node goes is dropped
+  // with it; a bare Qt.callLater runs against a destroyed object instead.
+  Timer {
+    id: syncSelectionLater
+    interval: 0
+    repeat: false
+    onTriggered: syncSelection()
+  }
 }

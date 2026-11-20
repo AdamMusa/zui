@@ -169,17 +169,49 @@ class QmlContractTest < Minitest::Test
   end
 
   # A deferred callback owns nothing. When a page is replaced, the width syncs
-  # queued for the text nodes that went away still run, against a renderer
-  # whose functions are already gone. #103 fixed one instance of this class of
-  # bug in ControlNode itself, where it made cards fail to render at all.
+  # queued for the text nodes that went away still run, against an object whose
+  # context is already gone: dozens of "QQmlVMEMetaObject: Internal error -
+  # attempted to evaluate a function in an invalid context" per page switch on
+  # the showcase (Motion, then Effects, then Media), and a lost render when the
+  # callback belongs to a node a replacement reuses. #103 fixed one instance of
+  # this class of bug in ControlNode itself, where it made cards fail to render
+  # at all; the same rule holds for every adapter, so it is checked for all of
+  # them: no node schedules work with Qt.callLater, because nothing cancels it
+  # when the node is destroyed. A Timer is a child of the node and goes with it.
   DEFERRED_WIDTH_ADAPTERS = %w[Text Label RichText Markdown SelectableText].freeze
+
+  def test_no_node_defers_work_with_a_bare_call_later
+    offenders = adapter_sources.merge(Dir[File.join(ROOT, "Controls", "*.qml")].sort.to_h { |path| [path.delete_prefix("#{ROOT}/"), File.read(path, encoding: "UTF-8")] }).filter_map do |name, qml|
+      code = qml.lines.reject { |line| line.strip.start_with?("//") }.join
+      name if code.include?("Qt.callLater")
+    end
+    router = File.read(File.join(ROOT, "ControlNode.qml"), encoding: "UTF-8")
+    offenders << "ControlNode.qml" if router.lines.reject { |line| line.strip.start_with?("//") }.join.include?("Qt.callLater")
+
+    assert_empty offenders,
+                 "these nodes defer work with Qt.callLater, which outlives them; use a Timer child: #{offenders.inspect}"
+  end
+
+  # An id declared twice in one file is a compile error that Qt reports as one
+  # line of warning ("id is not unique") and then fails to load the component:
+  # the node renders as nothing.
+  def test_no_file_declares_the_same_id_twice
+    offenders = adapter_sources.each_with_object({}) do |(name, qml), found|
+      ids = qml.lines.reject { |line| line.strip.start_with?("//") }.join.scan(/^\s*id:\s*(\w+)/).flatten
+      repeated = ids.tally.select { |_id, count| count > 1 }.keys
+      found[name] = repeated unless repeated.empty?
+    end
+
+    assert_empty offenders, "these adapters declare an id twice: #{offenders.inspect}"
+  end
 
   def test_deferred_width_sync_gives_up_when_its_node_is_gone
     DEFERRED_WIDTH_ADAPTERS.each do |adapter|
       qml = File.read(File.join(ROOT, "Components", "Builtins", "#{adapter}.qml"), encoding: "UTF-8")
 
-      assert_includes qml, "Qt.callLater(root.synchronizeWidth)",
+      assert_includes qml, "widthSyncTimer.restart()",
                       "#{adapter}.qml no longer defers its width sync; drop it from this list"
+      assert_match(/Timer \{\s+id: widthSyncTimer/, qml, "#{adapter}.qml's width sync is not owned by the node")
       assert_match(/function synchronizeWidth\(\) \{.*?if \(!renderer \|\| typeof renderer\.hasProp !== "function"\) return/m,
                    qml, "#{adapter}.qml runs its deferred width sync against a destroyed node")
     end
@@ -656,7 +688,7 @@ class QmlContractTest < Minitest::Test
   def test_mobile_webview_defers_explicit_settings_until_native_completion
     webview = source("Components/Builtins/WebView.qml")
 
-    assert_includes webview, "function scheduleSynchronize() { Qt.callLater(synchronize) }"
+    assert_includes webview, "function scheduleSynchronize() { synchronizeLater.restart() }"
     assert_includes webview, "if (props.local_storage !== undefined)"
     assert_includes webview, "settings.localStorageEnabled = props.local_storage !== false"
     assert_includes webview, 'if (Qt.platform.os === "ios") {'
@@ -745,7 +777,8 @@ class QmlContractTest < Minitest::Test
 
     assert_includes renderer, "property bool adapterLoadPending: false"
     assert_includes renderer, "if (adapterLoadPending) return"
-    assert_includes renderer, "Qt.callLater(function()"
+    assert_includes renderer, "id: adapterLoadTimer"
+    assert_includes renderer, "adapterLoadTimer.restart()"
     assert_includes renderer, "root.adapterLoadPending = false"
     assert_includes renderer, "root.ensureAdapterLoaded()"
     assert_includes renderer, "root.scheduleAdapterLoad()"

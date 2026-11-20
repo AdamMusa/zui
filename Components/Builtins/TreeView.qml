@@ -115,13 +115,13 @@ Rectangle {
     var created = Qt.createQmlObject(modelSource(), treeRoot, "ZuiDynamicTreeModel")
     created.rows = normalizedRows()
     treeModel = created
-    Qt.callLater(syncTreeState)
+    syncTreeStateLater.restart()
   }
 
   function syncRows() {
     if (!treeModel) return rebuildModel()
     treeModel.rows = normalizedRows()
-    Qt.callLater(syncTreeState)
+    syncTreeStateLater.restart()
   }
 
   function cleanPath(value) {
@@ -421,4 +421,13 @@ Rectangle {
   onChildrenFieldChanged: rebuildModel()
   onVisibleChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
     visible ? "show" : "hide", {})
+
+  // Owned by this node, so a call still pending when the node goes is dropped
+  // with it; a bare Qt.callLater runs against a destroyed object instead.
+  Timer {
+    id: syncTreeStateLater
+    interval: 0
+    repeat: false
+    onTriggered: syncTreeState()
+  }
 }
