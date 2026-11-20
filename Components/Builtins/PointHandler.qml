@@ -1,4 +1,5 @@
 import QtQuick
+import "Support" as Support
 
 Item {
   id: root
@@ -6,18 +7,37 @@ Item {
   implicitWidth: Number(renderer.prop("width", contentHost.childrenRect.width || 44))
   implicitHeight: Number(renderer.prop("height", contentHost.childrenRect.height || 44))
   visible: renderer.prop("visible", true) !== false
-  function buttons(value) { var values=Array.isArray(value)?value:[value||"all"];var result=Qt.NoButton;for(var index=0;index<values.length;index++){var name=String(values[index]);if(name==="left")result|=Qt.LeftButton;else if(name==="right")result|=Qt.RightButton;else if(name==="middle")result|=Qt.MiddleButton;else if(name==="all")result|=Qt.AllButtons}return result }
-  function devices(value) { var values=Array.isArray(value)?value:[value||"all"];var result=PointerDevice.Unknown;for(var index=0;index<values.length;index++){var name=String(values[index]);if(name==="mouse")result|=PointerDevice.Mouse;else if(name==="touch_screen")result|=PointerDevice.TouchScreen;else if(name==="touch_pad")result|=PointerDevice.TouchPad;else if(name==="stylus")result|=PointerDevice.Stylus;else if(name==="all")result|=PointerDevice.AllDevices}return result }
-  function payload() { return { x: nativePoint.point.position.x, y: nativePoint.point.position.y, scene_x: nativePoint.point.scenePosition.x, scene_y: nativePoint.point.scenePosition.y, pressure: nativePoint.point.pressure, rotation: nativePoint.point.rotation, unique_id: String(nativePoint.point.uniqueId.numericId) } }
+
+  function payload() {
+    var resolved = flags.handlerPoint(nativePoint.point)
+    resolved.unique_id = String(nativePoint.point.uniqueId.numericId)
+    resolved.translation_x = nativePoint.translation.x
+    resolved.translation_y = nativePoint.translation.y
+    resolved.active = nativePoint.active
+    return resolved
+  }
+
+  function applyOptionalHandlerProperties() {
+    if (renderer.hasProp("cursor")) nativePoint.cursorShape = flags.cursorShape(renderer.prop("cursor", null), "arrow")
+    if (renderer.hasProp("grab_permissions")) nativePoint.grabPermissions = flags.grabPermissions(renderer.prop("grab_permissions", null), [])
+    if (renderer.hasProp("drag_threshold")) nativePoint.dragThreshold = Number(renderer.prop("drag_threshold", 0))
+  }
+
+  Support.PointerFlags { id: flags }
   Item { id: contentHost; anchors.fill: parent; Repeater { model: renderer.node.children || []; delegate: renderer.childDelegateComponent } }
   PointHandler {
     id: nativePoint
     enabled: renderer.prop("enabled", true) !== false
-    acceptedButtons: root.buttons(renderer.prop("accepted_buttons", ["all"]))
-    acceptedDevices: root.devices(renderer.prop("accepted_devices", ["all"]))
+    acceptedButtons: flags.buttons(renderer.prop("accepted_buttons", null), ["all"])
+    acceptedDevices: flags.devices(renderer.prop("accepted_devices", null), ["all"])
+    acceptedPointerTypes: flags.pointerTypes(renderer.prop("accepted_pointer_types", null), ["all"])
+    acceptedModifiers: flags.modifiers(renderer.prop("accepted_modifiers", null), ["any"])
     margin: Number(renderer.prop("margin", 0))
     onPointChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "point", root.payload())
     onActiveChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "active_change", { value: active })
     onCanceled: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "cancel", root.payload())
   }
+
+  Component.onCompleted: applyOptionalHandlerProperties()
+  Connections { target: renderer; function onNodeChanged() { root.applyOptionalHandlerProperties() } }
 }
