@@ -53,7 +53,7 @@ QQC.Button {
       | (renderer.prop("no_buttons", false) === true ? ColorDialog.NoButtons : 0)
       | (renderer.prop("native_dialog", true) === false ? ColorDialog.DontUseNativeDialog : 0)
 
-    onSelectedColorChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "input", {
+    onSelectedColorChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "input", {
       value: selectedColor.toString()
     })
     onAccepted: {
@@ -61,10 +61,10 @@ QQC.Button {
       renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "change", { value: value })
       renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "accept", { value: value })
     }
-    onRejected: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "reject", {
+    onRejected: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "reject", {
       value: selectedColor.toString()
     })
-    onVisibleChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
+    onVisibleChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
       visible ? "open" : "close", { value: selectedColor.toString() })
   }
 }

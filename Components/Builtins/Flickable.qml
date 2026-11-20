@@ -29,8 +29,8 @@ Quick.Flickable {
       onContentYChanged: {
         if (renderer.subscribed("scroll")) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "scroll", positionPayload())
       }
-      onMovementStarted: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "flick_start", positionPayload())
-      onMovementEnded: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "flick_end", positionPayload())
+      onMovementStarted: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "flick_start", positionPayload())
+      onMovementEnded: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "flick_end", positionPayload())
       Column {
         id: flickContent
         spacing: Style.spacing.panelGap

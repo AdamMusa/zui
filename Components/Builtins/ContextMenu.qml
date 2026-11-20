@@ -129,10 +129,10 @@ Item {
       onObjectRemoved: function(index, object) { nativeMenu.removeItem(object) }
     }
 
-    onOpened: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "open", {})
-    onClosed: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "close", {})
-    onAboutToShow: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "about_to_show", {})
-    onAboutToHide: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "about_to_hide", {})
+    onOpened: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "open", {})
+    onClosed: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "close", {})
+    onAboutToShow: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "about_to_show", {})
+    onAboutToHide: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "about_to_hide", {})
   }
 
   Component.onCompleted: syncOpenState()

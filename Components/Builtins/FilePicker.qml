@@ -108,8 +108,8 @@ QQC.Button {
       if (!paths.length && String(selectedFile).length) paths.push(picker.localPath(selectedFile))
       picker.emitSelection(paths)
     }
-    onRejected: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "reject", {})
-    onVisibleChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
+    onRejected: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "reject", {})
+    onVisibleChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
       visible ? "open" : "close", {})
     onCurrentFolderChanged: {
       var value = picker.localPath(currentFolder)
@@ -128,8 +128,8 @@ QQC.Button {
     options: renderer.prop("native_dialog", true) === false ? FolderDialog.DontUseNativeDialog : 0
 
     onAccepted: picker.emitSelection([picker.localPath(selectedFolder)])
-    onRejected: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "reject", {})
-    onVisibleChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
+    onRejected: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "reject", {})
+    onVisibleChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
       visible ? "open" : "close", {})
     onCurrentFolderChanged: {
       var value = picker.localPath(currentFolder)

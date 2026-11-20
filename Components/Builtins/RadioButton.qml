@@ -40,5 +40,5 @@ QQC.RadioButton {
       }
       onClicked: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "click", { value: renderer.prop("value", null) })
       onToggled: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "change", { value: checked, option: renderer.prop("value", null) })
-      onHoveredChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "hover", { value: hovered })
+      onHoveredChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "hover", { value: hovered })
     }

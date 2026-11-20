@@ -87,7 +87,7 @@ Rectangle {
   HoverHandler {
     id: hover
     enabled: root.interactive
-    onHoveredChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
+    onHoveredChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
       "hover", { value: hovered })
   }
 

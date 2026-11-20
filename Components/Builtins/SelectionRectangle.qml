@@ -12,6 +12,6 @@ QQC.SelectionRectangle {
     if (mode === "press_and_hold") return QQC.SelectionRectangle.PressAndHold
     return QQC.SelectionRectangle.Auto
   }
-  onActiveChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "active_change", { value: active, dragging: dragging })
-  onDraggingChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "selection_change", { active: active, dragging: dragging })
+  onActiveChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "active_change", { value: active, dragging: dragging })
+  onDraggingChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "selection_change", { active: active, dragging: dragging })
 }

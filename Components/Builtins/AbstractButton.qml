@@ -40,7 +40,7 @@ QQC.AbstractButton {
   onDoubleClicked: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "double_click", {})
   onPressed: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "press", {})
   onReleased: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "release", {})
-  onCanceled: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "cancel", {})
+  onCanceled: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "cancel", {})
   onPressAndHold: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "press_and_hold", {})
   onToggled: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "change", { value: checked })
 }

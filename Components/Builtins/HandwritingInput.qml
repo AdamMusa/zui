@@ -13,10 +13,10 @@ HandwritingInputPanel {
   z: Number(renderer.prop("z", 999))
   visible: renderer.prop("visible", true) !== false && enabled && available && active
 
-  onAvailableChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
+  onAvailableChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
     "available_change", { value: available })
-  onActiveChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
+  onActiveChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
     "active_change", { value: active })
-  onEnabledChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
+  onEnabledChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
     "enabled_change", { value: enabled })
 }

@@ -83,7 +83,7 @@ Item {
         VoiceSelector.name: String(root.renderer.prop("voice", ""))
         VoiceSelector.gender: root.genderValue()
         VoiceSelector.age: root.ageValue()
-        onStateChanged: root.renderer.bridge.sendEvent(root.renderer.surfaceName,
+        onStateChanged: if (root.renderer && root.renderer.bridge) root.renderer.bridge.sendEvent(root.renderer.surfaceName,
           root.renderer.controlId, "state", {
             value: root.stateName(nativeSpeech.state), native_state: Number(nativeSpeech.state)
           })
@@ -91,12 +91,12 @@ Item {
           root.renderer.bridge.sendEvent(root.renderer.surfaceName, root.renderer.controlId,
             "word", { word: word, utterance_id: Number(id), start: Number(start), length: Number(length) })
         }
-        onVoiceChanged: root.renderer.bridge.sendEvent(root.renderer.surfaceName,
+        onVoiceChanged: if (root.renderer && root.renderer.bridge) root.renderer.bridge.sendEvent(root.renderer.surfaceName,
           root.renderer.controlId, "voice_change", {
             name: nativeSpeech.voice.name, gender: Number(nativeSpeech.voice.gender),
             age: Number(nativeSpeech.voice.age), locale: String(nativeSpeech.voice.locale)
           })
-        onEngineChanged: root.renderer.bridge.sendEvent(root.renderer.surfaceName,
+        onEngineChanged: if (root.renderer && root.renderer.bridge) root.renderer.bridge.sendEvent(root.renderer.surfaceName,
           root.renderer.controlId, "engines", {
             current: nativeSpeech.engine, available: nativeSpeech.availableEngines()
           })

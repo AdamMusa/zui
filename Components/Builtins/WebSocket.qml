@@ -16,7 +16,7 @@ Item {
     onTextMessageReceived: function(message){renderer.bridge.sendEvent(renderer.surfaceName,renderer.controlId,"message",{value:message})}
     onBinaryMessageReceived: function(message){renderer.bridge.sendEvent(renderer.surfaceName,renderer.controlId,"binary",{value:String(message)})}
     onStatusChanged: {var name=root.statusName(status);renderer.bridge.sendEvent(renderer.surfaceName,renderer.controlId,"status",{value:name,native_status:Number(status)});if(name==="error")renderer.componentError("web_socket_failed",errorString,{native_status:Number(status)})}
-    onActiveChanged: renderer.bridge.sendEvent(renderer.surfaceName,renderer.controlId,"active_change",{value:active})
+    onActiveChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName,renderer.controlId,"active_change",{value:active})
     onErrorStringChanged: if(errorString!=="")renderer.componentError("web_socket_failed",errorString,{})
   }
   Component.onCompleted: processCommand()

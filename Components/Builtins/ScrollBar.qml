@@ -14,5 +14,5 @@ QQC.ScrollBar {
   stepSize: Number(renderer ? renderer.prop("step_size", 0.1) : 0.1); minimumSize: Number(renderer ? renderer.prop("minimum_size", 0) : 0)
   implicitWidth: Number(renderer ? renderer.prop("width", orientation === Qt.Vertical ? 12 : 160) : 12); implicitHeight: Number(renderer ? renderer.prop("height", orientation === Qt.Vertical ? 160 : 12) : 160)
   onPositionChanged: { if (pressed && scrollTarget) { if (orientation === Qt.Vertical) scrollTarget.contentY = position * Math.max(0, scrollTarget.contentHeight); else scrollTarget.contentX = position * Math.max(0, scrollTarget.contentWidth) } renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, pressed ? "input" : "change", { value: position, size: size }) }
-  onActiveChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "active_change", { value: active })
+  onActiveChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "active_change", { value: active })
 }

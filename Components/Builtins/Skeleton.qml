@@ -71,8 +71,8 @@ Item {
     running: skeletonRoot.shimmerRunning
   }
 
-  onShimmerRunningChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
+  onShimmerRunningChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
     "animation_change", { running: shimmerRunning })
-  onVisibleChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
+  onVisibleChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
     visible ? "show" : "hide", {})
 }

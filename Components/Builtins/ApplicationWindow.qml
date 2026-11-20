@@ -79,17 +79,17 @@ QQC.ApplicationWindow {
       accepted: close.accepted
     })
   }
-  onVisibleChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "visible_change", { value: visible })
-  onActiveChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "active_change", { value: active })
-  onVisibilityChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "visibility_change", { value: visibility })
-  onActiveFocusControlChanged: if (renderer.subscribed("focus_change")) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "focus_change", {
+  onVisibleChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "visible_change", { value: visible })
+  onActiveChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "active_change", { value: active })
+  onVisibilityChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "visibility_change", { value: visibility })
+  onActiveFocusControlChanged: if (renderer && renderer.subscribed("focus_change")) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "focus_change", {
     active: activeFocusControl !== null,
     object_name: activeFocusControl ? String(activeFocusControl.objectName || "") : ""
   })
-  onXChanged: if (renderer.subscribed("move")) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "move", { x: x, y: y })
-  onYChanged: if (renderer.subscribed("move")) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "move", { x: x, y: y })
-  onWidthChanged: if (renderer.subscribed("resize")) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "resize", { width: width, height: height })
-  onHeightChanged: if (renderer.subscribed("resize")) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "resize", { width: width, height: height })
+  onXChanged: if (renderer && renderer.subscribed("move")) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "move", { x: x, y: y })
+  onYChanged: if (renderer && renderer.subscribed("move")) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "move", { x: x, y: y })
+  onWidthChanged: if (renderer && renderer.subscribed("resize")) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "resize", { width: width, height: height })
+  onHeightChanged: if (renderer && renderer.subscribed("resize")) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "resize", { width: width, height: height })
 
   Item {
     anchors.fill: parent

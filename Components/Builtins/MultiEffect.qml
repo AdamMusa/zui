@@ -43,6 +43,6 @@ Item {
     maskInverted: renderer.prop("mask_inverted", false) === true
     autoPaddingEnabled: renderer.prop("auto_padding", true) !== false
     paddingRect: Qt.rect(Number(renderer.prop("padding_left", 0)), Number(renderer.prop("padding_top", 0)), Number(renderer.prop("padding_right", 0)), Number(renderer.prop("padding_bottom", 0)))
-    onShaderChanged: if (renderer.subscribed("shader_change")) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "shader_change", { fragment: fragmentShader, vertex: vertexShader })
+    onShaderChanged: if (renderer && renderer.subscribed("shader_change")) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "shader_change", { fragment: fragmentShader, vertex: vertexShader })
   }
 }
