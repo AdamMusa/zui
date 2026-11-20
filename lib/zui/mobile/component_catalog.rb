@@ -95,6 +95,10 @@ module Zui
         "MapRectangle" => :map_rectangle, "MapPolygon" => :map_polygon,
         "MapPolyline" => :map_polyline, "MapRoute" => :map_route,
         "MapQuickItem" => :map_marker, "MapItemGroup" => :map_item_group,
+        # GeoMapItemBase is isCreatable: false - it is the base every map item derives
+        # from, so its properties live on each of them. MapView is QtLocation's Map plus
+        # the standard pan, pinch and wheel handlers, which the map adapter already has.
+        "GeoMapItemBase" => :map_circle,
         "MapItemView" => :map_item_view, "Plugin" => :map,
         "PluginParameter" => :map, "GeocodeModel" => :geocode_model,
         "RouteModel" => :route_model, "RouteQuery" => :route_model,

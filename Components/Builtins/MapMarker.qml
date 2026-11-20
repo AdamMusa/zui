@@ -5,6 +5,9 @@ import QtPositioning
 MapQuickItem {
   id: root
   required property var renderer
+  function referenceSurfaceValue() {
+    return String(renderer.prop("reference_surface", "map")) === "globe" ? 1 : 0
+  }
   function parentMap() { var item=root.parent;while(item){if(typeof item["addMapItem"]==="function")return item;item=item.parent}return null }
   implicitWidth: Number(renderer.prop("width", sourceHost.childrenRect.width || 44))
   implicitHeight: Number(renderer.prop("height", sourceHost.childrenRect.height || 44))
@@ -13,6 +16,8 @@ MapQuickItem {
   anchorPoint.y: Number(renderer.prop("anchor_y", implicitHeight))
   zoomLevel: Number(renderer.prop("zoom_level", 0))
   autoFadeIn: renderer.prop("auto_fade_in", true) !== false
+  referenceSurface: root.referenceSurfaceValue()
+  lodThreshold: Number(renderer.prop("lod_threshold", 0))
   visible: renderer.prop("visible", true) !== false
   sourceItem: Item {
     id: sourceHost
