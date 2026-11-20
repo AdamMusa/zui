@@ -26,8 +26,25 @@ Item {
     }
   }
 
+  // QNetworkInformation exposes Reachability, CaptivePortal, TransportMedium and Metered
+  // as a Features flag set in C++, but supports() is not invokable from QML in 6.8.3, so
+  // an unsupported facet cannot be told apart from a genuine Unknown/false reading here.
+  property var pendingChanges: []
+
   function publish(eventName) {
     renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, eventName, payload())
+  }
+
+  function queueChange(field) {
+    if (pendingChanges.indexOf(field) < 0) pendingChanges.push(field)
+    changeTimer.restart()
+  }
+
+  function publishChange() {
+    var values = payload()
+    values.changed = pendingChanges.slice()
+    pendingChanges = []
+    renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "change", values)
   }
 
   function refresh() {
@@ -42,9 +59,12 @@ Item {
   Connections {
     target: NetworkInformation
     enabled: root.renderer.prop("watch", true) !== false
-    function onReachabilityChanged() { root.publish("change") }
-    function onIsBehindCaptivePortalChanged() { root.publish("change") }
-    function onTransportMediumChanged() { root.publish("change") }
-    function onIsMeteredChanged() { root.publish("change") }
+    function onReachabilityChanged() { root.queueChange("reachability") }
+    function onIsBehindCaptivePortalChanged() { root.queueChange("captive_portal") }
+    function onTransportMediumChanged() { root.queueChange("transport") }
+    function onIsMeteredChanged() { root.queueChange("metered") }
   }
+  // Moving between networks moves several of these at once, so coalesce the signals into
+  // one change event that names the fields that moved.
+  Timer { id: changeTimer; interval: 16; repeat: false; onTriggered: root.publishChange() }
 }
