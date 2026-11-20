@@ -399,6 +399,19 @@ module Zui
       component(:particle_system, id:, **props)
     end
 
+    PARTICLE_DIRECTION_COMPONENTS = %i[angle_direction point_direction target_direction].freeze
+    PARTICLE_DIRECTION_COMPONENTS.each do |type|
+      define_method(type) do |id: nil, **props|
+        # target_direction aims at a rendered node, referenced by control id.
+        props = props.merge(target_item: node_id(props.fetch(:target_item))) if props.key?(:target_item)
+        component(type, id:, **props)
+      end
+    end
+
+    def cumulative_direction(directions = [], id: nil, **props)
+      component(:cumulative_direction, id:, directions: Array(directions).map { |entry| node_id(entry) }, **props)
+    end
+
     def selection_rectangle(target, id: nil, **props) = component(:selection_rectangle, id:, target: node_id(target), **props)
     def scroll_bar(target = nil, id: nil, **props)
       props = props.merge(target: node_id(target)) unless target.nil?
