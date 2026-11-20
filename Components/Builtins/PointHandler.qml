@@ -17,8 +17,8 @@ Item {
     acceptedButtons: root.buttons(renderer.prop("accepted_buttons", ["all"]))
     acceptedDevices: root.devices(renderer.prop("accepted_devices", ["all"]))
     margin: Number(renderer.prop("margin", 0))
-    onPointChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "point", root.payload())
-    onActiveChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "active_change", { value: active })
-    onCanceled: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "cancel", root.payload())
+    onPointChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "point", root.payload())
+    onActiveChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "active_change", { value: active })
+    onCanceled: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "cancel", root.payload())
   }
 }

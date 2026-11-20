@@ -338,9 +338,9 @@ Rectangle {
       }
     }
 
-    onRowsChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
+    onRowsChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
       "row_count_change", { value: rows })
-    onColumnsChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
+    onColumnsChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
       "column_count_change", { value: columns })
     onContentXChanged: {
       if (moving) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
@@ -350,9 +350,9 @@ Rectangle {
       if (moving) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
         "scroll", { x: contentX, y: contentY })
     }
-    onMovementStarted: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
+    onMovementStarted: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
       "movement_start", { x: contentX, y: contentY })
-    onMovementEnded: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
+    onMovementEnded: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
       "movement_end", { x: contentX, y: contentY })
     onActiveFocusChanged: {
       if (renderer && renderer.bridge)
@@ -384,6 +384,6 @@ Rectangle {
   Component.onCompleted: rebuildModel()
   onEffectiveColumnsChanged: rebuildModel()
   onSourceRowsChanged: syncRows()
-  onVisibleChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
+  onVisibleChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
     visible ? "show" : "hide", {})
 }

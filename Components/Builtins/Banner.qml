@@ -119,15 +119,15 @@ QQC.Pane {
   }
 
   HoverHandler {
-    onHoveredChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
+    onHoveredChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
       "hover", { value: hovered })
   }
 
   onRequestedVisibleChanged: {
     if (!requestedVisible) locallyDismissed = false
   }
-  onVisibleChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
+  onVisibleChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
     visible ? "show" : "hide", {})
-  onActiveFocusChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
+  onActiveFocusChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
     activeFocus ? "focus" : "blur", {})
 }

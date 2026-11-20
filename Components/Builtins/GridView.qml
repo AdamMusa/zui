@@ -195,7 +195,7 @@ Rectangle {
       renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "current_change", payload)
       renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "highlight", payload)
     }
-    onCountChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
+    onCountChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
       "count_change", { value: count })
     onContentXChanged: {
       if (moving) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
@@ -205,11 +205,11 @@ Rectangle {
       if (moving) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
         "scroll", { x: contentX, y: contentY })
     }
-    onMovementStarted: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
+    onMovementStarted: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
       "movement_start", { x: contentX, y: contentY })
-    onMovementEnded: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
+    onMovementEnded: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
       "movement_end", { x: contentX, y: contentY })
-    onActiveFocusChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
+    onActiveFocusChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
       activeFocus ? "focus" : "blur", {})
   }
 
@@ -222,6 +222,6 @@ Rectangle {
     font.pixelSize: Number(renderer.prop("font_size", Style.font.body))
   }
 
-  onVisibleChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
+  onVisibleChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
     visible ? "show" : "hide", {})
 }

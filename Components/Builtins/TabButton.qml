@@ -105,6 +105,6 @@ QQC.TabButton {
     if (renderer.subscribed("hover"))
       renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "hover", { value: hovered })
   }
-  onActiveFocusChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
+  onActiveFocusChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
     activeFocus ? "focus" : "blur", {})
 }

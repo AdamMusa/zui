@@ -111,8 +111,8 @@ QQC.Button {
     closePolicy: QQC.Popup.CloseOnEscape | QQC.Popup.CloseOnPressOutside
     padding: Style.spacing.md
 
-    onOpened: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "open", {})
-    onClosed: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "close", {})
+    onOpened: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "open", {})
+    onClosed: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "close", {})
 
     background: Rectangle {
       color: renderer.prop("popup_background", Color.popups.background)

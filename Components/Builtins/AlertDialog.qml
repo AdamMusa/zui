@@ -180,19 +180,19 @@ QQC.Dialog {
     onRequestedOpenChanged: syncOpenState()
     onAccepted: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "accept", {
     })
-    onRejected: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "reject", {
+    onRejected: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "reject", {
     })
-    onOpened: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "open", {
+    onOpened: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "open", {
     })
-    onClosed: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "close", {
+    onClosed: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "close", {
     })
-    onAboutToShow: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "about_to_show", {
+    onAboutToShow: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "about_to_show", {
     })
-    onAboutToHide: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "about_to_hide", {
+    onAboutToHide: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "about_to_hide", {
     })
-    onVisibleChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, visible ? "show" : "hide", {
+    onVisibleChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, visible ? "show" : "hide", {
     })
-    onActiveFocusChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, activeFocus ? "focus" : "blur", {
+    onActiveFocusChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, activeFocus ? "focus" : "blur", {
     })
 
     background: Rectangle {

@@ -25,6 +25,6 @@ QQC.MenuSeparator {
     color: renderer.prop("color", renderer.foreground)
   }
 
-  onVisibleChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
+  onVisibleChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
     visible ? "show" : "hide", {})
 }

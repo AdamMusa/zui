@@ -208,6 +208,6 @@ QQC.Popup {
     dismissTimer.stop()
     renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "close", {})
   }
-  onVisibleChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
+  onVisibleChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
     visible ? "show" : "hide", {})
 }

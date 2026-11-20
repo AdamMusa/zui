@@ -11,7 +11,7 @@ InputPanel {
   visible: renderer.prop("visible", true) !== false && active
   externalLanguageSwitchEnabled: renderer.prop("external_language_switch", false) === true
 
-  onActiveChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
+  onActiveChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
     "active_change", { value: active, height: height })
   onExternalLanguageSwitch: function(localeList, currentIndex) {
     renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "language_switch",

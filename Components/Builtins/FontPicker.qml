@@ -77,15 +77,15 @@ QQC.Button {
     visible: renderer.prop("opened", false) === true
     options: renderer.prop("native_dialog", true) === false ? FontDialog.DontUseNativeDialog : 0
 
-    onSelectedFontChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
+    onSelectedFontChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
       "input", picker.fontPayload(selectedFont))
     onAccepted: {
       var payload = picker.fontPayload(selectedFont)
       renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "change", payload)
       renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "accept", payload)
     }
-    onRejected: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "reject", {})
-    onVisibleChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
+    onRejected: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "reject", {})
+    onVisibleChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
       visible ? "open" : "close", {})
   }
 }

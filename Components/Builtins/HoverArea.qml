@@ -13,7 +13,7 @@ Item {
     margin: Number(renderer ? renderer.prop("margin", 0) : 0)
     cursorShape: renderer ? renderer.cursorShape(renderer.prop("cursor", "pointing_hand"))
       : Qt.PointingHandCursor
-    onHoveredChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, hovered ? "enter" : "exit", { x: point.position.x, y: point.position.y })
+    onHoveredChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, hovered ? "enter" : "exit", { x: point.position.x, y: point.position.y })
     onPointChanged: if (hovered) { var payload = { x: point.position.x, y: point.position.y }; renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "move", payload); renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "hover", payload) }
   }
 }

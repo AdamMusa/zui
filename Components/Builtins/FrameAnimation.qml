@@ -9,6 +9,6 @@ Item {
     running: renderer && renderer.prop("running", true) !== false
     paused: renderer && renderer.prop("paused", false) === true
     onTriggered: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "frame", { frame: currentFrame, frame_time: frameTime, smooth_frame_time: smoothFrameTime, elapsed_time: elapsedTime })
-    onRunningChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, running ? "start" : "stop", {})
+    onRunningChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, running ? "start" : "stop", {})
   }
 }

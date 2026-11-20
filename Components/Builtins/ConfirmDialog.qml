@@ -13,6 +13,6 @@ ZuiControls.ConfirmDialog {
       scrim: renderer.prop("scrim", Util.alpha(Color.background, 0.7)); selectedBackground: renderer.prop("selected_background", Util.alpha(renderer.foreground, 0.08))
       selectedText: renderer.prop("selected_text", Color.accent); fontFamily: String(renderer.prop("font_family", renderer.fontFamily))
       cornerRadius: Number(renderer.prop("corner_radius", Style.cornerRadius))
-      onCanceled: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "cancel", {})
+      onCanceled: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "cancel", {})
       onConfirmed: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "confirm", {})
     }
