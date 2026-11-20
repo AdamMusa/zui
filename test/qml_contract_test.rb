@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "minitest/autorun"
+require "set"
 require_relative "../lib/zui"
 
 class QmlContractTest < Minitest::Test
@@ -21,6 +22,12 @@ class QmlContractTest < Minitest::Test
         .gsub('../../ControlNode.qml', 'ControlNode.qml')
     end
     ([contents] + extracted).join("\n")
+  end
+
+  def adapter_sources
+    Dir[File.join(ROOT, "Components", "Builtins", "**", "*.qml")].sort.to_h do |path|
+      [path.delete_prefix("#{ROOT}/"), File.read(path)]
+    end
   end
 
   def assert_dynamic_component_route(renderer, component)
@@ -139,6 +146,68 @@ class QmlContractTest < Minitest::Test
 
     assert_includes proxy, "ListModel { id: rows }"
     refute_includes proxy, "import QtQml.Models"
+  end
+
+  # An adapter reaches its node through `renderer`, which is a ControlNode. A
+  # call to something ControlNode does not define fails only when the adapter
+  # is actually on screen, and then only as one line of QML warning: every
+  # checkbox in the showcase reported "Property 'cursorShape' of object
+  # ControlNode is not a function" and silently got no cursor. The contract is
+  # checkable without a display, so it is checked here.
+  def test_adapters_only_call_functions_control_node_defines
+    router = File.read(File.join(ROOT, "ControlNode.qml"))
+    defined = router.scan(/function\s+([A-Za-z_]\w*)\s*\(/).flatten.to_set
+
+    offenders = adapter_sources.each_with_object({}) do |(name, qml), found|
+      called = qml.scan(/renderer\.([A-Za-z_]\w*)\s*\(/).flatten.uniq
+      unknown = called.reject { |function| defined.include?(function) }
+      found[name] = unknown unless unknown.empty?
+    end
+
+    assert_empty offenders,
+                 "these adapters call ControlNode functions that do not exist: #{offenders.inspect}"
+  end
+
+  # A deferred callback owns nothing. When a page is replaced, the width syncs
+  # queued for the text nodes that went away still run, against a renderer
+  # whose functions are already gone. #103 fixed one instance of this class of
+  # bug in ControlNode itself, where it made cards fail to render at all.
+  DEFERRED_WIDTH_ADAPTERS = %w[Text Label RichText Markdown SelectableText].freeze
+
+  def test_deferred_width_sync_gives_up_when_its_node_is_gone
+    DEFERRED_WIDTH_ADAPTERS.each do |adapter|
+      qml = File.read(File.join(ROOT, "Components", "Builtins", "#{adapter}.qml"))
+
+      assert_includes qml, "Qt.callLater(root.synchronizeWidth)",
+                      "#{adapter}.qml no longer defers its width sync; drop it from this list"
+      assert_match(/function synchronizeWidth\(\) \{.*?if \(!renderer \|\| typeof renderer\.hasProp !== "function"\) return/m,
+                   qml, "#{adapter}.qml runs its deferred width sync against a destroyed node")
+    end
+  end
+
+  # Replacing a page hides every delegate on the way out, drops the hover and
+  # takes the focus away, so these handlers run while the node behind them is
+  # being torn down.
+  def test_item_delegate_events_check_their_node_before_posting
+    qml = File.read(File.join(ROOT, "Components", "Builtins", "ItemDelegate.qml"))
+
+    assert_match(/function postEvent\(eventName, payload\) \{\s*if \(!renderer \|\| !renderer\.bridge \|\| !renderer\.subscribed\(eventName\)\) return/m,
+                 qml)
+    refute_match(/^\s*on[A-Z]\w*(?:Changed)?: renderer\.bridge\.sendEvent/, qml,
+                 "an ItemDelegate handler still calls the bridge without checking its node")
+  end
+
+  # A Popup reparents its contentItem and its background onto its own internal
+  # item, so `parent` inside them is not the tooltip. Every themed property
+  # resolved to undefined and the tooltip drew with Qt's defaults.
+  def test_the_panel_tooltip_theme_reaches_its_content_and_background
+    qml = File.read(File.join(ROOT, "Controls", "PanelToolTip.qml"))
+
+    refute_match(/parent\.panel(Foreground|Background|Border)/, qml)
+    refute_match(/parent\.font(Family|Size)/, qml)
+    assert_match(/id: panel\b/, qml)
+    assert_includes qml, "color: panel.panelForeground"
+    assert_includes qml, "color: panel.panelBackground"
   end
 
   def test_gpu_adapters_ship_native_effects_particles_and_precompiled_shaders
