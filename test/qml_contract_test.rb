@@ -7,11 +7,11 @@ class QmlContractTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
 
   def source(name)
-    contents = File.read(File.join(ROOT, name))
+    contents = Zui::SourceText.read(File.join(ROOT, name))
     return contents unless name == "ControlNode.qml"
 
     extracted = Dir[File.join(ROOT, "Components", "Builtins", "*.qml")].sort.map do |path|
-      File.read(path)
+      Zui::SourceText.read(path)
         .gsub(/\brenderer\./, "root.")
         .gsub("root.childDelegateComponent", "childDelegate")
         .gsub("root.rowChildDelegateComponent", "rowChildDelegate")
@@ -31,7 +31,7 @@ class QmlContractTest < Minitest::Test
   end
 
   def test_each_builtin_renderer_lives_in_its_own_qml_file
-    router = File.read(File.join(ROOT, "ControlNode.qml"))
+    router = Zui::SourceText.read(File.join(ROOT, "ControlNode.qml"))
 
     refute_includes router, 'import "Components/Builtins" as Builtins'
     refute_match(/Builtins\.\w+ \{ renderer: root \}/, router)
@@ -49,7 +49,7 @@ class QmlContractTest < Minitest::Test
       name = component_name.to_s.split("_").map(&:capitalize).join
       path = File.join(ROOT, "Components", "Builtins", "#{name}.qml")
       assert File.file?(path), "missing #{path}"
-      assert_match(/(?:(?:required\s+)?property var renderer|renderer:\s*null)/, File.read(path), "#{path} does not expose its renderer bridge")
+      assert_match(/(?:(?:required\s+)?property var renderer|renderer:\s*null)/, Zui::SourceText.read(path), "#{path} does not expose its renderer bridge")
     end
     refute_includes router, "QQC.Button {"
     refute_includes router, "OmarchyUi.WidgetButton {"
@@ -61,7 +61,7 @@ class QmlContractTest < Minitest::Test
 
     Zui::COMPONENTS.each do |component_name, (properties, _events, _container)|
       adapter_name = component_name.to_s.split("_").map(&:capitalize).join
-      qml = File.read(File.join(ROOT, "Components", "Builtins", "#{adapter_name}.qml"))
+      qml = Zui::SourceText.read(File.join(ROOT, "Components", "Builtins", "#{adapter_name}.qml"))
       property_reads = qml.scan(/(?:renderer|root)\.prop\(\s*["']([^"']+)["']/).flatten.uniq
       missing = property_reads - properties.map(&:to_s) - common
       undeclared[component_name] = missing unless missing.empty?
@@ -162,7 +162,7 @@ class QmlContractTest < Minitest::Test
   end
 
   def test_component_coverage_catalog_has_no_unimplemented_entries
-    coverage = File.read(File.join(ROOT, "docs", "component-coverage.md"))
+    coverage = Zui::SourceText.read(File.join(ROOT, "docs", "component-coverage.md"))
 
     refute_match(/^- \[ \] /, coverage)
   end
@@ -479,7 +479,7 @@ class QmlContractTest < Minitest::Test
     style = source("Theme/Style.qml")
     renderer = source("ControlNode.qml")
     framework_qml = (Dir[File.join(ROOT, "*.qml")] +
-      Dir[File.join(ROOT, "{Components,Controls,Theme}", "**", "*.qml")]).map { File.read(_1) }.join("\n")
+      Dir[File.join(ROOT, "{Components,Controls,Theme}", "**", "*.qml")]).map { Zui::SourceText.read(_1) }.join("\n")
 
     %w[RobotoMono-Regular.otf RobotoMono-Bold.otf FontAwesome-Solid.otf FontAwesome-Brands.otf].each do |name|
       assert_operator File.size(File.join(ROOT, "Fonts", name)), :>, 10_000
@@ -772,7 +772,7 @@ class QmlContractTest < Minitest::Test
   end
 
   def test_model_view_3d_loads_real_geometry_and_native_pointer_controls
-    renderer = File.read(File.join(ROOT, "ControlNode.qml"))
+    renderer = Zui::SourceText.read(File.join(ROOT, "ControlNode.qml"))
     host = source("Components/Builtins/ModelView3d.qml")
     model = source("Components/Builtins/Support/ModelView3dScene.qml")
 
@@ -908,7 +908,7 @@ class QmlContractTest < Minitest::Test
   end
 
   def test_reactive_patch_preserves_event_subscriptions
-    service = File.read(File.join(ROOT, "Service.qml"))
+    service = Zui::SourceText.read(File.join(ROOT, "Service.qml"))
 
     assert_includes service, "if (node.events !== undefined) replacement.events = node.events"
   end

@@ -69,7 +69,7 @@ class FrameworkBoundaryTest < Minitest::Test
 
   def test_model_view_is_domain_neutral
     schema = Zui::COMPONENTS.fetch(:model_view_3d).first
-    scene = File.read(File.join(ROOT, "Components/Builtins/Support/ModelView3dScene.qml"))
+    scene = Zui::SourceText.read(File.join(ROOT, "Components/Builtins/Support/ModelView3dScene.qml"))
 
     assert_empty schema & %i[bpm pulse pulse_scale fallback_source fallback_text fallback_fill_mode
                               prefer_3d fallback_while_loading]
@@ -94,8 +94,8 @@ class FrameworkBoundaryTest < Minitest::Test
     fallback_properties = Zui::COMPONENTS.flat_map do |name, (properties, _events, _container)|
       properties.grep(/\Afallback_/).map { |property| "#{name}.#{property}" }
     end
-    model_view = File.read(File.join(ROOT, "Components/Builtins/ModelView3d.qml"))
-    avatar = File.read(File.join(ROOT, "Components/Builtins/Avatar.qml"))
+    model_view = Zui::SourceText.read(File.join(ROOT, "Components/Builtins/ModelView3d.qml"))
+    avatar = Zui::SourceText.read(File.join(ROOT, "Components/Builtins/Avatar.qml"))
 
     assert_empty fallback_properties
     refute_includes model_view, "Image {"
@@ -106,7 +106,7 @@ class FrameworkBoundaryTest < Minitest::Test
 
   def test_declared_component_types_fail_instead_of_becoming_another_type
     builder = Zui::Builder.instance_method(:image).source_location
-    router = File.read(File.join(ROOT, "ControlNode.qml"))
+    router = Zui::SourceText.read(File.join(ROOT, "ControlNode.qml"))
 
     refute_nil builder
     assert_raises(ArgumentError) { Zui::Application.new { app { component(:not_a_component) } } }
@@ -119,8 +119,8 @@ class FrameworkBoundaryTest < Minitest::Test
 
 
   def test_mobile_webview_is_linked_and_initialized_only_when_tree_shaking_keeps_it
-    cmake = File.read(File.join(ROOT, "native", "CMakeLists.txt"))
-    host = File.read(File.join(ROOT, "native", "main.cpp"))
+    cmake = Zui::SourceText.read(File.join(ROOT, "native", "CMakeLists.txt"))
+    host = Zui::SourceText.read(File.join(ROOT, "native", "main.cpp"))
 
     assert_includes cmake, 'EXISTS "${ZUI_FRAMEWORK_ROOT}/Components/Builtins/WebView.qml"'
     assert_includes cmake, "target_link_libraries(zui-host PRIVATE Qt6::WebView)"
@@ -143,7 +143,7 @@ class FrameworkBoundaryTest < Minitest::Test
   end
 
   def test_mobile_shell_covers_native_startup_until_the_first_qml_frame
-    host = File.read(File.join(ROOT, "native", "main.cpp"))
+    host = Zui::SourceText.read(File.join(ROOT, "native", "main.cpp"))
 
     assert_includes host, "QQuickWindow startupWindow;"
     assert_includes host, "startupWindow.showFullScreen();"
@@ -155,7 +155,7 @@ class FrameworkBoundaryTest < Minitest::Test
   end
 
   def test_ios_simulator_capabilities_are_exposed_to_fragile_native_adapters
-    host = File.read(File.join(ROOT, "native", "main.cpp"))
+    host = Zui::SourceText.read(File.join(ROOT, "native", "main.cpp"))
 
     assert_includes host, "#include <TargetConditionals.h>"
     assert_includes host, 'QStringLiteral("zuiIosSimulator")'
@@ -163,8 +163,8 @@ class FrameworkBoundaryTest < Minitest::Test
   end
 
   def test_mruby_startup_overlaps_qml_loading_without_racing_running_state
-    host = File.read(File.join(ROOT, "native", "main.cpp"))
-    runtime = File.read(File.join(ROOT, "native", "ZuiEmbeddedRuntime.h"))
+    host = Zui::SourceText.read(File.join(ROOT, "native", "main.cpp"))
+    runtime = Zui::SourceText.read(File.join(ROOT, "native", "ZuiEmbeddedRuntime.h"))
 
     assert_includes host, "std::async(std::launch::async"
     assert_includes host, "runtimeStartup.get();"
@@ -177,8 +177,8 @@ class FrameworkBoundaryTest < Minitest::Test
   end
 
   def test_mobile_virtual_keyboard_is_linked_and_activated_only_when_tree_shaking_keeps_it
-    cmake = File.read(File.join(ROOT, "native", "CMakeLists.txt"))
-    host = File.read(File.join(ROOT, "native", "main.cpp"))
+    cmake = Zui::SourceText.read(File.join(ROOT, "native", "CMakeLists.txt"))
+    host = Zui::SourceText.read(File.join(ROOT, "native", "main.cpp"))
 
     assert_includes cmake, 'EXISTS "${ZUI_FRAMEWORK_ROOT}/Components/Builtins/VirtualKeyboard.qml"'
     assert_includes cmake, "target_link_libraries(zui-host PRIVATE Qt6::VirtualKeyboard)"
@@ -187,21 +187,21 @@ class FrameworkBoundaryTest < Minitest::Test
   end
 
   def test_mobile_permission_status_events_are_deduplicated
-    permission = File.read(File.join(ROOT, "Components", "Builtins", "Support", "PermissionBridge.qml"))
+    permission = Zui::SourceText.read(File.join(ROOT, "Components", "Builtins", "Support", "PermissionBridge.qml"))
 
     assert_includes permission, "property int lastPublishedNativeStatus: -1"
     assert_includes permission, "if (nativeStatus === lastPublishedNativeStatus) return"
   end
 
   def test_component_and_resource_failures_use_the_framework_error_channel
-    router = File.read(File.join(ROOT, "ControlNode.qml"))
-    service = File.read(File.join(ROOT, "Service.qml"))
+    router = Zui::SourceText.read(File.join(ROOT, "ControlNode.qml"))
+    service = Zui::SourceText.read(File.join(ROOT, "Service.qml"))
 
     assert_includes router, "function componentError(code, message, payload)"
     assert_includes router, "status === Loader.Error"
     assert_includes service, "function reportComponentError(surfaceName, controlId, componentType, code, message)"
     ERROR_REPORTING_RENDERERS.each do |component, renderer|
-      source = File.read(File.join(ROOT, "Components/Builtins", renderer))
+      source = Zui::SourceText.read(File.join(ROOT, "Components/Builtins", renderer))
       assert_includes source, "componentError", "#{renderer} does not report failures"
       assert_includes Zui::COMPONENTS.fetch(component)[1], :error,
                       "#{component} does not expose its failures to Ruby"

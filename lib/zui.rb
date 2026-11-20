@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require_relative "zui/source_text"
 require_relative "zui/protocol"
 require_relative "zui/value"
 require_relative "zui/state_store"
