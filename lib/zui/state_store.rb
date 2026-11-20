@@ -141,6 +141,19 @@ module Zui
       @on_change.call(changes) unless changes.empty?
     end
 
+    # `update(:items) { |items| items << x }` and `state.items << x;
+    # state.items = state.items` hand back the very object that is already
+    # stored, changed. It always compares equal to itself, so it used to be
+    # taken for "no change" and no reader ever heard of it. A mutable value that
+    # comes back as the same object may have been mutated, and there is no
+    # earlier copy to tell, so it is reported: a reader that re-runs and finds
+    # nothing new sends nothing (bindings compare against their own copy).
+    def mutated_in_place?(stored, value)
+      return false unless stored.equal?(value)
+
+      (stored.is_a?(Array) || stored.is_a?(Hash) || stored.is_a?(String)) && !stored.frozen?
+    end
+
     def write(key, value)
       change = @lock.synchronize do
         raise NoMethodError, "unknown state: #{key}" unless @values.key?(key)
@@ -151,7 +164,8 @@ module Zui
     end
 
     def store_locked(key, value)
-      return nil if @values[key] == value
+      return nil if @values[key] == value && !mutated_in_place?(@values[key], value)
+
       previous = @values[key]
       @values[key] = value
       if @transaction_depth.positive?
