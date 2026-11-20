@@ -10,6 +10,7 @@ module Zui
       shader_effect shader_effect_source multi_effect rectangular_shadow opacity_mask blur drop_shadow colorize glow
       drag_area drop_area pinch_area hover_area tap_area point_handler multi_touch_area wheel_area safe_area
       capture_session cursor_surface map map_marker map_item_group
+      rotation scale translate matrix4x4
     ].freeze
     VALUE_INPUTS = {
       text_field: :text,

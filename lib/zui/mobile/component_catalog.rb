@@ -116,6 +116,11 @@ module Zui
       PDF = %w[PdfDocument PdfMultiPageView PdfPageView PdfScrollablePageView PdfPageImage
                PdfPageNavigator PdfSearchModel PdfSelection].to_h { |name| [name, :pdf_view] }.freeze
 
+      ITEM_TRANSFORMS = {
+        "Rotation" => :rotation, "Scale" => :scale,
+        "Translate" => :translate, "Matrix4x4" => :matrix4x4
+      }.freeze
+
       TOUCH_INTERACTION = {
         "TapHandler" => :tap_area, "PointHandler" => :point_handler,
         "MultiPointTouchArea" => :multi_touch_area, "WheelHandler" => :wheel_area,
@@ -127,7 +132,7 @@ module Zui
       ALL = CORE.merge(PERMISSIONS).merge(DEVICE_INFORMATION).merge(VIRTUAL_KEYBOARD)
                 .merge(SENSORS).merge(POSITIONING).merge(LOCATION)
                 .merge(TEXT_TO_SPEECH).merge(WEB).merge(WEB_SOCKETS).merge(LOTTIE)
-                .merge(PDF).merge(TOUCH_INTERACTION).freeze
+                .merge(PDF).merge(TOUCH_INTERACTION).merge(ITEM_TRANSFORMS).freeze
     end
   end
 end

@@ -231,6 +231,13 @@ transitions, and animation groups receive Ruby APIs even though they are not vis
 - [x] scroll_bar
 - [x] scroll_indicator
 
+## Item transforms
+
+- [x] rotation
+- [x] scale
+- [x] translate
+- [x] matrix4x4
+
 ## Animation, state, and timing
 
 - [x] animation
