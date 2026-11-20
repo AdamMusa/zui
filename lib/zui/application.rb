@@ -191,9 +191,7 @@ module Zui
       @state_change_lock.synchronize do
         @patch_batch = []
         begin
-          @structures.dup.each do |structure|
-            next unless structure.reads_any?(keys)
-
+          outermost_first(@structures.select { |structure| structure.reads_any?(keys) }).each do |structure|
             reconcile_structure(structure) if @structures.include?(structure)
           end
           @bindings.dup.each { |binding| update_binding(binding) if binding.reads_any?(keys) }
@@ -203,6 +201,19 @@ module Zui
         end
         flush_patch_batch(patches)
       end
+    end
+
+    # A `dynamic` inside another `dynamic` is registered before the one around
+    # it, so registration order puts the inner one first. When both are
+    # affected the inner one used to run first and queue `set` patches for its
+    # children; the outer one then replaced them, the client no longer held
+    # those ids when the batch arrived, and it refused the whole batch,
+    # including the patches of every unrelated binding in it. Running the
+    # outer one first discards the inner one before it can queue anything.
+    def outermost_first(structures)
+      return structures if structures.length < 2
+
+      structures.each_with_index.sort_by { |structure, index| [structure.node.depth, index] }.map(&:first)
     end
 
     def flush_patch_batch(patches)
