@@ -37,7 +37,7 @@ Item {
     handledCommandRevision = revision
     if (first && revision <= 0) return
     queryRequested = true
-    Qt.callLater(nativeModel.update)
+    updateLater.restart()
   }
 
   Component { id: parameterComponent; PluginParameter {} }
@@ -49,7 +49,7 @@ Item {
     onStatusChanged: {
       var name = root.statusName(status)
       root.renderer.bridge.sendEvent(root.renderer.surfaceName, root.renderer.controlId, "status", { value: name })
-      if (name === "ready") Qt.callLater(root.publish)
+      if (name === "ready") publishLater.restart()
       else if (name === "error") root.renderer.componentError("place_categories_failed", errorString(), {})
     }
   }
@@ -63,9 +63,25 @@ Item {
       readonly property var payload: ({ category_id: String(value.categoryId), name: String(value.name),
         parent_id: parentValue ? String(parentValue.categoryId) : "" })
     }
-    onObjectAdded: Qt.callLater(root.publish)
-    onObjectRemoved: Qt.callLater(root.publish)
+    onObjectAdded: publishLater.restart()
+    onObjectRemoved: publishLater.restart()
   }
   Component.onCompleted: { configurePlugin(); processCommand() }
   Connections { target: renderer; function onNodeChanged() { root.configurePlugin(); root.processCommand() } }
+
+  // Owned by this node, so a call still pending when the node goes is dropped
+  // with it; a bare Qt.callLater runs against a destroyed object instead.
+  Timer {
+    id: updateLater
+    interval: 0
+    repeat: false
+    onTriggered: nativeModel.update()
+  }
+
+  Timer {
+    id: publishLater
+    interval: 0
+    repeat: false
+    onTriggered: root.publish()
+  }
 }

@@ -6,7 +6,7 @@ Item {
   required property var renderer
   property int handledCommandRevision: -1
   function statusName(value){return ["null","loading","ready","unloading","error"][Number(value)]||"unknown"}
-  function processCommand(){var revision=Number(renderer.prop("command_revision",0));if(revision===handledCommandRevision)return;var first=handledCommandRevision<0;handledCommandRevision=revision;if(first){var initial=Number(renderer.prop("page",0));if(initial>0)Qt.callLater(function(){nativeView.goToPage(initial)});if(revision<=0)return}var command=String(renderer.prop("command",""));if(command==="next")nativeView.goToPage(Math.min(nativeDocument.pageCount-1,nativeView.currentPage+1));else if(command==="previous")nativeView.goToPage(Math.max(0,nativeView.currentPage-1));else if(command==="page")nativeView.goToPage(Number(renderer.prop("page",0)));else if(command==="back")nativeView.back();else if(command==="forward")nativeView.forward();else if(command==="zoom_in")nativeView.renderScale*=1.2;else if(command==="zoom_out")nativeView.renderScale/=1.2;else if(command==="reset_zoom")nativeView.resetScale();else if(command==="select_all")nativeView.selectAll();else if(command==="copy")nativeView.copySelectionToClipboard()}
+  function processCommand(){var revision=Number(renderer.prop("command_revision",0));if(revision===handledCommandRevision)return;var first=handledCommandRevision<0;handledCommandRevision=revision;if(first){var initial=Number(renderer.prop("page",0));if(initial>0){initialPage=initial;initialPageLater.restart()};if(revision<=0)return}var command=String(renderer.prop("command",""));if(command==="next")nativeView.goToPage(Math.min(nativeDocument.pageCount-1,nativeView.currentPage+1));else if(command==="previous")nativeView.goToPage(Math.max(0,nativeView.currentPage-1));else if(command==="page")nativeView.goToPage(Number(renderer.prop("page",0)));else if(command==="back")nativeView.back();else if(command==="forward")nativeView.forward();else if(command==="zoom_in")nativeView.renderScale*=1.2;else if(command==="zoom_out")nativeView.renderScale/=1.2;else if(command==="reset_zoom")nativeView.resetScale();else if(command==="select_all")nativeView.selectAll();else if(command==="copy")nativeView.copySelectionToClipboard()}
   implicitWidth: Number(renderer.prop("width", 640))
   implicitHeight: Number(renderer.prop("height", 720))
   visible: renderer.prop("visible", true) !== false
@@ -31,4 +31,12 @@ Item {
   }
   Component.onCompleted: processCommand()
   Connections { target: renderer; function onNodeChanged(){root.processCommand()} }
+
+  property int initialPage: 0
+  Timer {
+    id: initialPageLater
+    interval: 0
+    repeat: false
+    onTriggered: nativeView.goToPage(initialPage)
+  }
 }

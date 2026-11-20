@@ -57,14 +57,14 @@ QQC.StackView {
       if (renderer.subscribed("push"))
         renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "push",
           { value: nextIndex, depth: depth })
-      if (!busy) Qt.callLater(syncNavigation)
+      if (!busy) syncNavigationLater.restart()
     } else if (current > target) {
       pop(operationFor(target) === QQC.StackView.PushTransition
         ? QQC.StackView.PopTransition : QQC.StackView.Immediate)
       if (renderer.subscribed("pop"))
         renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "pop",
           { value: Math.max(-1, depth - 1), depth: depth })
-      if (!busy) Qt.callLater(syncNavigation)
+      if (!busy) syncNavigationLater.restart()
     }
   }
 
@@ -78,7 +78,7 @@ QQC.StackView {
       if (oldPages[index]) oldPages[index].destroy()
     }
     rebuilding = false
-    Qt.callLater(syncNavigation)
+    syncNavigationLater.restart()
   }
 
   implicitWidth: Number(renderer.prop("width", 640))
@@ -103,7 +103,7 @@ QQC.StackView {
   onBusyChanged: {
     if (renderer.subscribed("busy_change"))
       renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "busy_change", { value: busy })
-    if (!busy) Qt.callLater(syncNavigation)
+    if (!busy) syncNavigationLater.restart()
   }
   onDepthChanged: {
     if (!initialized || rebuilding) return
@@ -119,4 +119,13 @@ QQC.StackView {
     visible ? "show" : "hide", {})
   onActiveFocusChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
     activeFocus ? "focus" : "blur", {})
+
+  // Owned by this node, so a call still pending when the node goes is dropped
+  // with it; a bare Qt.callLater runs against a destroyed object instead.
+  Timer {
+    id: syncNavigationLater
+    interval: 0
+    repeat: false
+    onTriggered: syncNavigation()
+  }
 }

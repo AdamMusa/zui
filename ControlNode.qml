@@ -311,6 +311,13 @@ Loader {
     }
   }
 
+  Timer {
+    id: transitionTimer
+    interval: 0
+    repeat: false
+    onTriggered: root.runTransition()
+  }
+
   function scheduleAdapterLoad() {
     if (adapterLoadPending) return
     adapterLoadPending = true
@@ -446,7 +453,7 @@ Loader {
   onNodeChanged: {
     if (item && !builtIn && item.hasOwnProperty("node")) item.node = node
     if (!builtIn) syncNativeProperties()
-    Qt.callLater(runTransition)
+    transitionTimer.restart()
   }
   Component.onCompleted: {
     root.synchronizeNode()

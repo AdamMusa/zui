@@ -32,7 +32,7 @@ WebViews.WebView {
     synchronizeSettings()
     processCommand()
   }
-  function scheduleSynchronize() { Qt.callLater(synchronize) }
+  function scheduleSynchronize() { synchronizeLater.restart() }
   function processCommand() {
     var revision = Number(renderer.prop("command_revision", 0))
     if (revision === handledCommandRevision) return
@@ -74,4 +74,13 @@ WebViews.WebView {
   onCookieRemoved: function(domain, name) { renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "cookie", { action: "removed", domain: domain, name: name }) }
   Component.onCompleted: scheduleSynchronize()
   Connections { target: renderer; function onNodeChanged() { root.scheduleSynchronize() } }
+
+  // Owned by this node, so a call still pending when the node goes is dropped
+  // with it; a bare Qt.callLater runs against a destroyed object instead.
+  Timer {
+    id: synchronizeLater
+    interval: 0
+    repeat: false
+    onTriggered: synchronize()
+  }
 }

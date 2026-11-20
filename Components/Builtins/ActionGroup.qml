@@ -58,8 +58,8 @@ Item {
   implicitWidth: 0
   implicitHeight: 0
   visible: renderer.prop("visible", true) !== false
-  onRequestedIdsChanged: Qt.callLater(syncActions)
-  Component.onCompleted: Qt.callLater(syncActions)
+  onRequestedIdsChanged: syncActionsLater.restart()
+  Component.onCompleted: syncActionsLater.restart()
   Component.onDestruction: {
     for (var index = 0; index < attached.length; index++) nativeGroup.removeAction(attached[index].action)
   }
@@ -77,5 +77,14 @@ Item {
       renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
         "change", groupRoot.actionPayload(checkedAction))
     }
+  }
+
+  // Owned by this node, so a call still pending when the node goes is dropped
+  // with it; a bare Qt.callLater runs against a destroyed object instead.
+  Timer {
+    id: syncActionsLater
+    interval: 0
+    repeat: false
+    onTriggered: syncActions()
   }
 }

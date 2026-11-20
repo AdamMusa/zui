@@ -129,7 +129,16 @@ Item {
     QQC.ScrollIndicator.vertical: QQC.ScrollIndicator {}
   }
 
-  onRequestedIndexChanged: Qt.callLater(revealRequestedCard)
-  onColumnsChanged: Qt.callLater(revealRequestedCard)
-  Component.onCompleted: Qt.callLater(revealRequestedCard)
+  onRequestedIndexChanged: revealRequestedCardLater.restart()
+  onColumnsChanged: revealRequestedCardLater.restart()
+  Component.onCompleted: revealRequestedCardLater.restart()
+
+  // Owned by this node, so a call still pending when the node goes is dropped
+  // with it; a bare Qt.callLater runs against a destroyed object instead.
+  Timer {
+    id: revealRequestedCardLater
+    interval: 0
+    repeat: false
+    onTriggered: revealRequestedCard()
+  }
 }
