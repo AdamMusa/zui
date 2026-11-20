@@ -474,6 +474,17 @@ Loader {
       Layout.maximumWidth: layoutProps.maximum_width === undefined ? Infinity : Number(layoutProps.maximum_width)
       Layout.maximumHeight: layoutProps.maximum_height === undefined ? Infinity : Number(layoutProps.maximum_height)
       Layout.alignment: root.layoutAlignment(layoutProps.layout_alignment, root.prop("alignment", "center"))
+      Layout.row: layoutProps.layout_row === undefined ? -1 : Number(layoutProps.layout_row)
+      Layout.column: layoutProps.layout_column === undefined ? -1 : Number(layoutProps.layout_column)
+      Layout.rowSpan: layoutProps.row_span === undefined ? 1 : Number(layoutProps.row_span)
+      Layout.columnSpan: layoutProps.column_span === undefined ? 1 : Number(layoutProps.column_span)
+      Layout.horizontalStretchFactor: layoutProps.horizontal_stretch === undefined ? -1 : Number(layoutProps.horizontal_stretch)
+      Layout.verticalStretchFactor: layoutProps.vertical_stretch === undefined ? -1 : Number(layoutProps.vertical_stretch)
+      Layout.margins: layoutProps.layout_margins === undefined ? 0 : Number(layoutProps.layout_margins)
+      Layout.leftMargin: layoutProps.layout_left_margin === undefined ? Layout.margins : Number(layoutProps.layout_left_margin)
+      Layout.topMargin: layoutProps.layout_top_margin === undefined ? Layout.margins : Number(layoutProps.layout_top_margin)
+      Layout.rightMargin: layoutProps.layout_right_margin === undefined ? Layout.margins : Number(layoutProps.layout_right_margin)
+      Layout.bottomMargin: layoutProps.layout_bottom_margin === undefined ? Layout.margins : Number(layoutProps.layout_bottom_margin)
       source: Qt.resolvedUrl("ControlNode.qml")
       onLoaded: {
         item.renderDepth = root.renderDepth + 1

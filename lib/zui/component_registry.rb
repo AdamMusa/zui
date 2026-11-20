@@ -44,6 +44,8 @@ module Zui
       visible enabled opacity scale rotation z width height
       fill_width fill_height preferred_width preferred_height
       minimum_width minimum_height maximum_width maximum_height layout_alignment
+      layout_row layout_column row_span column_span horizontal_stretch vertical_stretch
+      layout_margins layout_left_margin layout_top_margin layout_right_margin layout_bottom_margin
     ].freeze
 
     def initialize
