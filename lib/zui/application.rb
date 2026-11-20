@@ -31,8 +31,9 @@ module Zui
       @builder.extend(*builder_extensions) unless builder_extensions.empty?
       @state = StateStore.new(method(:state_changed))
       @scheduler = Scheduler.new(evaluator: method(:evaluate), on_error: method(:report_internal_error))
-      @builder.instance_eval(&definition) if definition
+      Trace.measure("build-tree") { @builder.instance_eval(&definition) } if definition
       raise ArgumentError, "plugin defines no surfaces" if @surfaces.empty?
+      Trace.mark("tree-built", "nodes=#{@nodes.size}")
     end
 
     def define_state(name, initial) = @state.define(name, initial)
@@ -131,8 +132,10 @@ module Zui
       @running = true
       pid = Object.const_defined?(:Process) && Process.respond_to?(:pid) ? Process.pid : 0
       emit("v" => PROTOCOL_VERSION, "type" => "ready", "pid" => pid, "surfaces" => @surfaces.keys)
-      emit("v" => PROTOCOL_VERSION, "type" => "render", "components" => @components.protocol_schema,
-           "surfaces" => tree, "surface_options" => @surface_options)
+      Trace.measure("send-render") do
+        emit("v" => PROTOCOL_VERSION, "type" => "render", "components" => @components.protocol_schema,
+             "surfaces" => tree, "surface_options" => @surface_options)
+      end
       @scheduler.start
       self
     end

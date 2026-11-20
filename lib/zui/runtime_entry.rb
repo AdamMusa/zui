@@ -5,6 +5,10 @@ module Zui
   FRAMEWORK_ROOT = File.expand_path("../..", __dir__)
 end
 
+require_relative "trace"
+
+Zui::Trace.mark("runtime-load-begin")
+
 require_relative "protocol"
 require_relative "value"
 require_relative "state_store"
@@ -15,6 +19,8 @@ require_relative "component_registry"
 require_relative "components"
 require_relative "builder"
 require_relative "application"
+
+Zui::Trace.mark("runtime-load-end")
 
 module Zui
   def self.app(&definition)
