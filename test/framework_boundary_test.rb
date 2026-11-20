@@ -172,6 +172,39 @@ class FrameworkBoundaryTest < Minitest::Test
     assert_includes host, 'qputenv("QT_IM_MODULE", QByteArrayLiteral("qtvirtualkeyboard"));'
   end
 
+  def test_mobile_quick3d_links_every_gpu_submodule_when_tree_shaking_keeps_it
+    cmake = File.read(File.join(ROOT, "native", "CMakeLists.txt"))
+
+    assert_includes cmake, "set(ZUI_USES_QUICK3D OFF)"
+    assert_includes cmake, 'EXISTS "${ZUI_FRAMEWORK_ROOT}/Components/Builtins/${zui_quick3d_adapter}"'
+    assert_includes cmake, "find_package(Qt6 6.8 REQUIRED COMPONENTS Quick3D)"
+    assert_includes cmake, "target_link_libraries(zui-host PRIVATE Qt6::Quick3D)"
+    %w[
+      Qt6::qquick3dplugin Qt6::qtquick3dassetutilsplugin Qt6::qtquick3deffectplugin
+      Qt6::qtquick3dhelpersplugin Qt6::qtquick3dhelpersimplplugin
+      Qt6::qtquick3dparticles3dplugin Qt6::qtquick3dparticleeffectsplugin
+      Qt6::quick3dspatialaudioplugin
+    ].each { |plugin| assert_includes cmake, plugin }
+    assert_includes cmake, "INCLUDE_BY_TYPE assetimporters ${zui_asset_importer}"
+    %w[ios android].each do |platform|
+      template = File.read(File.join(ROOT, "lib", "zui", "mobile", "templates", platform, "Zui.cmake"))
+      assert_includes template, "ZUI_USES_QUICK3D"
+    end
+    assert_includes File.read(File.join(ROOT, "lib", "zui", "mobile", "templates", "android", "zui.gradle")),
+                    "Qt Quick 3D"
+  end
+
+  def test_quick3d_qml_submodules_are_retained_together
+    assert_includes Zui::QtBundleConfiguration::QUICK3D_QML_MODULES, "QtQuick3D"
+    assert_includes Zui::QtBundleConfiguration::QUICK3D_QML_MODULES, "QtQuick3D.Helpers"
+    assert_includes Zui::QtBundleConfiguration::QUICK3D_QML_MODULES, "QtQuick3D.Particles3D"
+    assert_includes Zui::QtBundleConfiguration::QUICK3D_QML_MODULES, "QtQuick3D.AssetUtils"
+    assert_includes Zui::QtBundleConfiguration::QUICK3D_QML_MODULES, "QtQuick3D.Effects"
+    assert_includes Zui::QtBundleConfiguration::QUICK3D_QML_MODULES, "QtQuick3D.SpatialAudio"
+    assert_includes File.read(File.join(ROOT, "lib", "zui", "tree_shaker.rb")),
+                    "QtBundleConfiguration::QUICK3D_QML_MODULES"
+  end
+
   def test_mobile_permission_status_events_are_deduplicated
     permission = File.read(File.join(ROOT, "Components", "Builtins", "Support", "PermissionBridge.qml"))
 

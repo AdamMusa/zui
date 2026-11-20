@@ -15,3 +15,14 @@
 //         maxSdkVersion 35
 //     }
 // }
+//
+// Qt Quick 3D draws through OpenGL ES 3 or Vulkan, which Qt selects at runtime,
+// so a GPU 3D scene needs no extra Gradle dependency. Declare the requirement
+// here when the application is 3D-only and should not install on a device
+// without it:
+//
+// android {
+//     defaultConfig {
+//         minSdkVersion 23
+//     }
+// }

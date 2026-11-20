@@ -277,8 +277,11 @@ module Zui
       end
       explicitly_required = @configuration.qml_modules.dup
       explicitly_required << style_module if modules.key?(style_module)
-      required = Set.new((BASE_QML_MODULES + framework_imports.to_a + explicitly_required)
-                           .select { |name| modules.key?(name) })
+      requested = BASE_QML_MODULES + framework_imports.to_a + explicitly_required
+      if requested.any? { |name| QtBundleConfiguration::QUICK3D_QML_MODULES.include?(name) }
+        requested += QtBundleConfiguration::QUICK3D_QML_MODULES
+      end
+      required = Set.new(requested.select { |name| modules.key?(name) })
       queue = required.to_a
       until queue.empty?
         name = queue.shift

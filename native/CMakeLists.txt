@@ -59,6 +59,30 @@ if(ZUI_EMBEDDED_RUNTIME AND EXISTS "${ZUI_FRAMEWORK_ROOT}/Components/Builtins/Vi
   set(ZUI_USES_VIRTUAL_KEYBOARD ON)
 endif()
 
+# Qt Quick 3D is the GPU scene stack behind view_3d and model_view_3d. A static
+# mobile build resolves QML imports at link time, so the module and the QML
+# plugins of every retained QtQuick3D submodule have to be linked in, not just
+# discovered on disk.
+set(ZUI_USES_QUICK3D OFF)
+set(zui_quick3d_adapters
+  View3d.qml
+  ModelView3d.qml
+)
+foreach(zui_quick3d_adapter IN LISTS zui_quick3d_adapters)
+  if(EXISTS "${ZUI_FRAMEWORK_ROOT}/Components/Builtins/${zui_quick3d_adapter}")
+    set(ZUI_USES_QUICK3D ON)
+  endif()
+endforeach()
+if(ZUI_EMBEDDED_RUNTIME AND ZUI_USES_QUICK3D)
+  find_package(Qt6 6.8 REQUIRED COMPONENTS Quick3D)
+  foreach(zui_quick3d_component Quick3DAssetUtils Quick3DEffects Quick3DHelpers
+                                Quick3DParticles Quick3DParticleEffects)
+    find_package(Qt6 6.8 QUIET COMPONENTS ${zui_quick3d_component})
+  endforeach()
+else()
+  set(ZUI_USES_QUICK3D OFF)
+endif()
+
 set(zui_host_sources
   main.cpp
   ZuiClipboard.cpp
@@ -171,6 +195,34 @@ endif()
 if(ZUI_USES_VIRTUAL_KEYBOARD)
   target_link_libraries(zui-host PRIVATE Qt6::VirtualKeyboard)
   target_compile_definitions(zui-host PRIVATE ZUI_USES_VIRTUAL_KEYBOARD=1)
+endif()
+
+if(ZUI_USES_QUICK3D)
+  target_link_libraries(zui-host PRIVATE Qt6::Quick3D)
+  target_compile_definitions(zui-host PRIVATE ZUI_USES_QUICK3D=1)
+  # Every QtQuick3D submodule the framework imports needs its QML plugin and
+  # backing library on iOS and Android, where nothing is loaded from disk.
+  set(zui_quick3d_qml_plugins
+    Qt6::qquick3dplugin
+    Qt6::qtquick3dassetutilsplugin
+    Qt6::qtquick3deffectplugin
+    Qt6::qtquick3dhelpersplugin
+    Qt6::qtquick3dhelpersimplplugin
+    Qt6::qtquick3dparticles3dplugin
+    Qt6::qtquick3dparticleeffectsplugin
+    Qt6::quick3dspatialaudioplugin
+  )
+  foreach(zui_quick3d_qml_plugin IN LISTS zui_quick3d_qml_plugins)
+    if(TARGET ${zui_quick3d_qml_plugin})
+      target_link_libraries(zui-host PRIVATE ${zui_quick3d_qml_plugin})
+    endif()
+  endforeach()
+  foreach(zui_quick3d_library Qt6::Quick3DAssetUtils Qt6::Quick3DEffects Qt6::Quick3DHelpers
+                              Qt6::Quick3DParticles Qt6::Quick3DParticleEffects)
+    if(TARGET ${zui_quick3d_library})
+      target_link_libraries(zui-host PRIVATE ${zui_quick3d_library})
+    endif()
+  endforeach()
 endif()
 
 if(ZUI_EMBEDDED_RUNTIME)
@@ -395,6 +447,15 @@ endif()
 
 if(IOS OR ANDROID)
   qt_import_qml_plugins(zui-host)
+  # RuntimeLoader reads glTF, OBJ and FBX assets through Qt's asset importer
+  # plugins. A static mobile build drops every plugin it is not told to keep.
+  if(ZUI_USES_QUICK3D)
+    foreach(zui_asset_importer Qt6::QAssimpImporterPlugin Qt6::QGltfXAssetImporterPlugin)
+      if(TARGET ${zui_asset_importer})
+        qt_import_plugins(zui-host INCLUDE_BY_TYPE assetimporters ${zui_asset_importer})
+      endif()
+    endforeach()
+  endif()
 endif()
 
 # Static Qt packages otherwise link every plugin found for a module. Keep iOS on

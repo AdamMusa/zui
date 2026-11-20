@@ -80,6 +80,29 @@ class ClientBuilderTest < Minitest::Test
     end
   end
 
+  def test_linux_qml_payload_ships_the_quick3d_gpu_submodules
+    # Every QtQuick3D submodule a Zui 3D component imports has to reach the
+    # released client. Qt's own tooling, XR and the lightmap viewer are not
+    # application surface and stay out.
+    shipped = %w[
+      QtQuick3D/AssetUtils QtQuick3D/Effects QtQuick3D/Helpers QtQuick3D/ParticleEffects
+      QtQuick3D/Particles3D QtQuick3D/SpatialAudio
+    ]
+    withheld = %w[
+      QtQuick3D/MaterialEditor QtQuick3D/Xr QtQuick3D/designer QtQuick3D/lightmapviewer
+    ]
+
+    assert_includes Zui::ClientBuilder::LINUX_QML_ROOTS, "QtQuick3D"
+    shipped.each do |relative|
+      refute_includes Zui::ClientBuilder::LINUX_QML_EXCLUSIONS, relative
+    end
+    withheld.each do |relative|
+      assert_includes Zui::ClientBuilder::LINUX_QML_EXCLUSIONS, relative
+    end
+    # The backing libraries travel with them through the ldd walk.
+    assert_includes Zui::ClientBuilder::LINUX_PRIVATE_LIBRARY_PREFIXES, "libQt6"
+  end
+
   def test_linux_plugin_payload_excludes_designer_and_pdf_plugins
     Dir.mktmpdir do |directory|
       plugins = File.join(directory, "qt", "plugins")
