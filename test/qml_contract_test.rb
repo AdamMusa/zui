@@ -161,6 +161,61 @@ class QmlContractTest < Minitest::Test
     end
   end
 
+  ANIMATOR_COMPONENTS = %i[
+    opacity_animator rotation_animator scale_animator x_animator y_animator uniform_animator
+  ].freeze
+
+  def test_every_animator_exposes_the_inherited_abstract_animation_surface
+    driver = File.read(File.join(ROOT, "Components", "Builtins", "Support", "AnimationDriver.qml"))
+
+    assert_includes driver, 'renderer.prop("always_run", false) === true'
+    (ANIMATOR_COMPONENTS + %i[vector_animation path_animation]).each do |component|
+      assert_includes Zui::COMPONENTS.fetch(component).first, :always_run,
+                      "#{component} does not expose alwaysRunToEnd"
+    end
+    assert_equal 8, driver.scan("alwaysRunToEnd: driver.alwaysRunValue()").length
+  end
+
+  def test_rotation_animator_exposes_qts_rotation_direction
+    driver = File.read(File.join(ROOT, "Components", "Builtins", "Support", "AnimationDriver.qml"))
+
+    assert_includes driver, "direction: driver.rotationDirectionValue()"
+    %w[RotationAnimator.Clockwise RotationAnimator.Counterclockwise
+       RotationAnimator.Shortest RotationAnimator.Numerical].each do |value|
+      assert_includes driver, value
+    end
+    assert_includes Zui::COMPONENTS.fetch(:rotation_animator).first, :direction
+  end
+
+  def test_path_animation_exposes_its_orientation_timing_and_end_rotation
+    driver = File.read(File.join(ROOT, "Components", "Builtins", "Support", "AnimationDriver.qml"))
+    schema = Zui::COMPONENTS.fetch(:path_animation).first
+
+    assert_includes driver, 'orientationEntryDuration: Number(renderer.prop("orientation_entry_duration", 0))'
+    assert_includes driver, 'orientationExitDuration: Number(renderer.prop("orientation_exit_duration", 0))'
+    assert_includes driver, 'endRotation: Number(renderer.prop("end_rotation", 0))'
+    %i[orientation_entry_duration orientation_exit_duration end_rotation].each do |property|
+      assert_includes schema, property
+    end
+  end
+
+  def test_the_shared_animation_driver_never_hands_qt_a_scalar_for_a_vector
+    driver = File.read(File.join(ROOT, "Components", "Builtins", "Support", "AnimationDriver.qml"))
+
+    assert_includes driver, "return Qt.vector3d(scalar, scalar, scalar)"
+    assert_includes driver, "if (isNaN(scalar)) return Qt.vector3d(0, 0, 0)"
+    refute_match(/function vectorValue\(value\) \{\s*return Array\.isArray\(value\) \? Qt\.vector3d\([^)]*\)[^:]*: value/, driver)
+  end
+
+  def test_the_abstract_animator_base_gets_no_component_of_its_own
+    refute Zui::COMPONENTS.key?(:animator)
+    refute Zui::COMPONENTS.key?(:vector3d_animation)
+    refute File.file?(File.join(ROOT, "Components", "Builtins", "Animator.qml"))
+    # Vector3dAnimation is already the native type behind vector_animation.
+    driver = File.read(File.join(ROOT, "Components", "Builtins", "Support", "AnimationDriver.qml"))
+    assert_includes driver, "Vector3dAnimation { id: vectorAnimation;"
+  end
+
   def test_component_coverage_catalog_has_no_unimplemented_entries
     coverage = File.read(File.join(ROOT, "docs", "component-coverage.md"))
 

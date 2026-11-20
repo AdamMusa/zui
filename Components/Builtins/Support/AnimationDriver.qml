@@ -14,8 +14,29 @@ Item {
     var value = renderer.prop("loops", 1)
     return String(value) === "infinite" || Number(value) < 0 ? Animation.Infinite : Math.max(1, Number(value))
   }
+  // This driver instantiates every animation Qt ships, so the unused
+  // Vector3dAnimation sees whatever from/to the active animation was given. A
+  // scalar from a number animation or an animator must still become a vector,
+  // or Qt logs "Unable to assign int to QVector3D" for every such node.
   function vectorValue(value) {
-    return Array.isArray(value) ? Qt.vector3d(Number(value[0] || 0), Number(value[1] || 0), Number(value[2] || 0)) : value
+    if (Array.isArray(value))
+      return Qt.vector3d(Number(value[0] || 0), Number(value[1] || 0), Number(value[2] || 0))
+    if (value !== null && typeof value === "object" && value.x !== undefined) return value
+    var scalar = Number(value)
+    if (isNaN(scalar)) return Qt.vector3d(0, 0, 0)
+    return Qt.vector3d(scalar, scalar, scalar)
+  }
+  // QQuickAbstractAnimation.alwaysRunToEnd, inherited by every animation and
+  // animator Qt ships, so stopping one lets it finish instead of cutting it.
+  function alwaysRunValue() {
+    return renderer.prop("always_run", false) === true
+  }
+  function rotationDirectionValue() {
+    var direction = String(renderer.prop("direction", "numerical"))
+    if (direction === "clockwise") return RotationAnimator.Clockwise
+    if (direction === "counterclockwise") return RotationAnimator.Counterclockwise
+    if (direction === "shortest") return RotationAnimator.Shortest
+    return RotationAnimator.Numerical
   }
   function currentAnimation() {
     if (animationType === "number") return numberAnimation
@@ -63,17 +84,17 @@ Item {
   NumberAnimation { id: numberAnimation; target: driver.targetItem; property: String(renderer.prop("property", "opacity")); from: Number(renderer.prop("from", 0)); to: Number(renderer.prop("to", 1)); duration: Number(renderer.prop("duration", 250)); easing.type: renderer.easingType(renderer.prop("easing", "in_out_quad")); loops: driver.loopsValue() }
   ColorAnimation { id: colorAnimation; target: driver.targetItem; property: String(renderer.prop("property", "color")); from: renderer.prop("from", "transparent"); to: renderer.prop("to", "white"); duration: Number(renderer.prop("duration", 250)); easing.type: renderer.easingType(renderer.prop("easing", "in_out_quad")); loops: driver.loopsValue() }
   RotationAnimation { id: rotationAnimation; target: driver.targetItem; property: String(renderer.prop("property", "rotation")); from: Number(renderer.prop("from", 0)); to: Number(renderer.prop("to", 360)); duration: Number(renderer.prop("duration", 250)); easing.type: renderer.easingType(renderer.prop("easing", "in_out_quad")); direction: { var d=String(renderer.prop("direction","numerical"));if(d==="clockwise")return RotationAnimation.Clockwise;if(d==="counterclockwise")return RotationAnimation.Counterclockwise;if(d==="shortest")return RotationAnimation.Shortest;return RotationAnimation.Numerical } loops: driver.loopsValue() }
-  Vector3dAnimation { id: vectorAnimation; target: driver.targetItem; property: String(renderer.prop("property", "scale3d")); from: driver.vectorValue(renderer.prop("from", [0,0,0])); to: driver.vectorValue(renderer.prop("to", [1,1,1])); duration: Number(renderer.prop("duration", 250)); easing.type: renderer.easingType(renderer.prop("easing", "in_out_quad")); loops: driver.loopsValue() }
-  PathAnimation { id: pathAnimation; target: driver.targetItem; duration: Number(renderer.prop("duration", 250)); easing.type: renderer.easingType(renderer.prop("easing", "in_out_quad")); loops: driver.loopsValue(); anchorPoint: Qt.point(Number(renderer.prop("anchor_x", 0)), Number(renderer.prop("anchor_y", 0))); orientation: { var o=String(renderer.prop("orientation","fixed"));if(o==="right_first")return PathAnimation.RightFirst;if(o==="left_first")return PathAnimation.LeftFirst;if(o==="bottom_first")return PathAnimation.BottomFirst;if(o==="top_first")return PathAnimation.TopFirst;return PathAnimation.Fixed } path: Path { PathSvg { path: String(renderer.prop("path", "")) } } }
+  Vector3dAnimation { id: vectorAnimation; target: driver.targetItem; property: String(renderer.prop("property", "scale3d")); from: driver.vectorValue(renderer.prop("from", [0,0,0])); to: driver.vectorValue(renderer.prop("to", [1,1,1])); duration: Number(renderer.prop("duration", 250)); easing.type: renderer.easingType(renderer.prop("easing", "in_out_quad")); loops: driver.loopsValue(); alwaysRunToEnd: driver.alwaysRunValue() }
+  PathAnimation { id: pathAnimation; target: driver.targetItem; duration: Number(renderer.prop("duration", 250)); easing.type: renderer.easingType(renderer.prop("easing", "in_out_quad")); loops: driver.loopsValue(); alwaysRunToEnd: driver.alwaysRunValue(); anchorPoint: Qt.point(Number(renderer.prop("anchor_x", 0)), Number(renderer.prop("anchor_y", 0))); orientation: { var o=String(renderer.prop("orientation","fixed"));if(o==="right_first")return PathAnimation.RightFirst;if(o==="left_first")return PathAnimation.LeftFirst;if(o==="bottom_first")return PathAnimation.BottomFirst;if(o==="top_first")return PathAnimation.TopFirst;return PathAnimation.Fixed } orientationEntryDuration: Number(renderer.prop("orientation_entry_duration", 0)); orientationExitDuration: Number(renderer.prop("orientation_exit_duration", 0)); endRotation: Number(renderer.prop("end_rotation", 0)); path: Path { PathSvg { path: String(renderer.prop("path", "")) } } }
   SpringAnimation { id: springAnimation; target: driver.targetItem; property: String(renderer.prop("property", "opacity")); from: Number(renderer.prop("from", 0)); to: Number(renderer.prop("to", 1)); spring: Number(renderer.prop("spring", 2)); damping: Number(renderer.prop("damping", 0.2)); epsilon: Number(renderer.prop("epsilon", 0.01)); mass: Number(renderer.prop("mass", 1)); modulus: Number(renderer.prop("modulus", 0)); velocity: Number(renderer.prop("velocity", 0)); loops: driver.loopsValue() }
   SmoothedAnimation { id: smoothedAnimation; target: driver.targetItem; property: String(renderer.prop("property", "opacity")); from: Number(renderer.prop("from", 0)); to: Number(renderer.prop("to", 1)); velocity: Number(renderer.prop("velocity", 200)); duration: Number(renderer.prop("duration", -1)); reversingMode: { var m=String(renderer.prop("reversing_mode","eased"));if(m==="immediate")return SmoothedAnimation.Immediate;if(m==="sync")return SmoothedAnimation.Sync;return SmoothedAnimation.Eased } loops: driver.loopsValue() }
   AnchorAnimation { id: anchorAnimation; targets: driver.targetItem ? [driver.targetItem] : []; duration: Number(renderer.prop("duration", 250)); easing.type: renderer.easingType(renderer.prop("easing", "in_out_quad")); loops: driver.loopsValue() }
   ParentAnimation { id: parentAnimation; target: driver.targetItem; newParent: renderer.findRenderedItem(renderer.prop("new_parent", "")); via: renderer.findRenderedItem(renderer.prop("via", "")); loops: driver.loopsValue(); NumberAnimation { properties: "x,y,width,height,scale,rotation"; duration: Number(renderer.prop("duration", 250)); easing.type: renderer.easingType(renderer.prop("easing", "in_out_quad")) } }
-  OpacityAnimator { id: opacityAnimator; target: driver.targetItem; from: Number(renderer.prop("from", 0)); to: Number(renderer.prop("to", 1)); duration: Number(renderer.prop("duration", 250)); easing.type: renderer.easingType(renderer.prop("easing", "in_out_quad")); loops: driver.loopsValue() }
-  RotationAnimator { id: rotationAnimator; target: driver.targetItem; from: Number(renderer.prop("from", 0)); to: Number(renderer.prop("to", 360)); duration: Number(renderer.prop("duration", 250)); easing.type: renderer.easingType(renderer.prop("easing", "in_out_quad")); loops: driver.loopsValue() }
-  ScaleAnimator { id: scaleAnimator; target: driver.targetItem; from: Number(renderer.prop("from", 0)); to: Number(renderer.prop("to", 1)); duration: Number(renderer.prop("duration", 250)); easing.type: renderer.easingType(renderer.prop("easing", "in_out_quad")); loops: driver.loopsValue() }
-  XAnimator { id: xAnimator; target: driver.targetItem; from: Number(renderer.prop("from", 0)); to: Number(renderer.prop("to", 100)); duration: Number(renderer.prop("duration", 250)); easing.type: renderer.easingType(renderer.prop("easing", "in_out_quad")); loops: driver.loopsValue() }
-  YAnimator { id: yAnimator; target: driver.targetItem; from: Number(renderer.prop("from", 0)); to: Number(renderer.prop("to", 100)); duration: Number(renderer.prop("duration", 250)); easing.type: renderer.easingType(renderer.prop("easing", "in_out_quad")); loops: driver.loopsValue() }
-  UniformAnimator { id: uniformAnimator; target: driver.targetItem; uniform: String(renderer.prop("uniform", "progress")); from: Number(renderer.prop("from", 0)); to: Number(renderer.prop("to", 1)); duration: Number(renderer.prop("duration", 250)); easing.type: renderer.easingType(renderer.prop("easing", "in_out_quad")); loops: driver.loopsValue() }
+  OpacityAnimator { id: opacityAnimator; target: driver.targetItem; from: Number(renderer.prop("from", 0)); to: Number(renderer.prop("to", 1)); duration: Number(renderer.prop("duration", 250)); easing.type: renderer.easingType(renderer.prop("easing", "in_out_quad")); loops: driver.loopsValue(); alwaysRunToEnd: driver.alwaysRunValue() }
+  RotationAnimator { id: rotationAnimator; target: driver.targetItem; direction: driver.rotationDirectionValue(); from: Number(renderer.prop("from", 0)); to: Number(renderer.prop("to", 360)); duration: Number(renderer.prop("duration", 250)); easing.type: renderer.easingType(renderer.prop("easing", "in_out_quad")); loops: driver.loopsValue(); alwaysRunToEnd: driver.alwaysRunValue() }
+  ScaleAnimator { id: scaleAnimator; target: driver.targetItem; from: Number(renderer.prop("from", 0)); to: Number(renderer.prop("to", 1)); duration: Number(renderer.prop("duration", 250)); easing.type: renderer.easingType(renderer.prop("easing", "in_out_quad")); loops: driver.loopsValue(); alwaysRunToEnd: driver.alwaysRunValue() }
+  XAnimator { id: xAnimator; target: driver.targetItem; from: Number(renderer.prop("from", 0)); to: Number(renderer.prop("to", 100)); duration: Number(renderer.prop("duration", 250)); easing.type: renderer.easingType(renderer.prop("easing", "in_out_quad")); loops: driver.loopsValue(); alwaysRunToEnd: driver.alwaysRunValue() }
+  YAnimator { id: yAnimator; target: driver.targetItem; from: Number(renderer.prop("from", 0)); to: Number(renderer.prop("to", 100)); duration: Number(renderer.prop("duration", 250)); easing.type: renderer.easingType(renderer.prop("easing", "in_out_quad")); loops: driver.loopsValue(); alwaysRunToEnd: driver.alwaysRunValue() }
+  UniformAnimator { id: uniformAnimator; target: driver.targetItem; uniform: String(renderer.prop("uniform", "progress")); from: Number(renderer.prop("from", 0)); to: Number(renderer.prop("to", 1)); duration: Number(renderer.prop("duration", 250)); easing.type: renderer.easingType(renderer.prop("easing", "in_out_quad")); loops: driver.loopsValue(); alwaysRunToEnd: driver.alwaysRunValue() }
   PauseAnimation { id: pauseAnimation; duration: Number(renderer.prop("duration", 0)); loops: driver.loopsValue() }
 }
