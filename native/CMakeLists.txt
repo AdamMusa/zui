@@ -59,6 +59,30 @@ if(ZUI_EMBEDDED_RUNTIME AND EXISTS "${ZUI_FRAMEWORK_ROOT}/Components/Builtins/Vi
   set(ZUI_USES_VIRTUAL_KEYBOARD ON)
 endif()
 
+# QtCharts and QtGraphs are optional module surfaces. Tree-shaking deletes the
+# adapters an application never renders, so link a module only when at least
+# one of its adapters survived into the packaged framework. Every QtCharts
+# adapter is named Chart*/PolarChartView and every QtGraphs adapter Graph*,
+# which keeps this gate a pure file-system question.
+set(ZUI_USES_CHARTS OFF)
+file(GLOB zui_chart_adapters CONFIGURE_DEPENDS
+  "${ZUI_FRAMEWORK_ROOT}/Components/Builtins/Chart*.qml"
+  "${ZUI_FRAMEWORK_ROOT}/Components/Builtins/PolarChartView.qml"
+)
+if(ZUI_EMBEDDED_RUNTIME AND zui_chart_adapters)
+  find_package(Qt6 6.8 REQUIRED COMPONENTS Charts ChartsQml)
+  set(ZUI_USES_CHARTS ON)
+endif()
+
+set(ZUI_USES_GRAPHS OFF)
+file(GLOB zui_graph_adapters CONFIGURE_DEPENDS
+  "${ZUI_FRAMEWORK_ROOT}/Components/Builtins/Graph*.qml"
+)
+if(ZUI_EMBEDDED_RUNTIME AND zui_graph_adapters)
+  find_package(Qt6 6.8 REQUIRED COMPONENTS Graphs Quick3D)
+  set(ZUI_USES_GRAPHS ON)
+endif()
+
 set(zui_host_sources
   main.cpp
   ZuiClipboard.cpp
@@ -171,6 +195,16 @@ endif()
 if(ZUI_USES_VIRTUAL_KEYBOARD)
   target_link_libraries(zui-host PRIVATE Qt6::VirtualKeyboard)
   target_compile_definitions(zui-host PRIVATE ZUI_USES_VIRTUAL_KEYBOARD=1)
+endif()
+
+if(ZUI_USES_CHARTS)
+  target_link_libraries(zui-host PRIVATE Qt6::Charts Qt6::ChartsQml)
+  target_compile_definitions(zui-host PRIVATE ZUI_USES_CHARTS=1)
+endif()
+
+if(ZUI_USES_GRAPHS)
+  target_link_libraries(zui-host PRIVATE Qt6::Graphs Qt6::Quick3D)
+  target_compile_definitions(zui-host PRIVATE ZUI_USES_GRAPHS=1)
 endif()
 
 if(ZUI_EMBEDDED_RUNTIME)

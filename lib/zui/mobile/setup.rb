@@ -15,7 +15,8 @@ module Zui
       QT_COMMON_MODULES = %w[
         qt3d qt5compat qtcharts qtconnectivity qtdatavis3d qtgraphs qtgrpc qtlocation qtlottie
         qtmultimedia qtnetworkauth qtpositioning qtquick3d qtquick3dphysics qtquicktimeline
-        qtremoteobjects qtscxml qtsensors qtspeech qtvirtualkeyboard qtwebchannel qtwebsockets qtwebview
+        qtremoteobjects qtscxml qtsensors qtshadertools qtspeech qtvirtualkeyboard qtwebchannel
+        qtwebsockets qtwebview
       ].freeze
       QT_HOST_MODULES = (QT_COMMON_MODULES + %w[qtpdf]).freeze
       QT_IOS_MODULES = QT_HOST_MODULES
@@ -30,7 +31,8 @@ module Zui
         "qtpositioning" => "Qt6Positioning", "qtquick3d" => "Qt6Quick3D",
         "qtquick3dphysics" => "Qt6Quick3DPhysics", "qtquicktimeline" => "Qt6QuickTimeline",
         "qtremoteobjects" => "Qt6RemoteObjects", "qtscxml" => "Qt6Scxml",
-        "qtsensors" => "Qt6Sensors", "qtspeech" => "Qt6TextToSpeech",
+        "qtsensors" => "Qt6Sensors", "qtshadertools" => "Qt6ShaderTools",
+        "qtspeech" => "Qt6TextToSpeech",
         "qtvirtualkeyboard" => "Qt6VirtualKeyboard", "qtwebchannel" => "Qt6WebChannel",
         "qtwebsockets" => "Qt6WebSockets", "qtwebview" => "Qt6WebView"
       }.freeze

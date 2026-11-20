@@ -8,8 +8,14 @@ require_relative "macos_qml_payload"
 module Zui
   # Internal CI/release builder. It is deliberately not used by `zui configure`.
   class ClientBuilder
-    LINUX_QML_ROOTS = %w[QML Qt QtCore QtMultimedia QtQml QtQuick QtQuick3D].freeze
+    # The released client is one prebuilt payload: an application never brings
+    # its own Qt. A module the framework imports and the client omits fails to
+    # load at run time, so QtCharts and QtGraphs are required roots like the
+    # rest, and a Qt build without them is a build error rather than a client
+    # whose chart components quietly do nothing.
+    LINUX_QML_ROOTS = %w[QML Qt QtCharts QtCore QtGraphs QtMultimedia QtQml QtQuick QtQuick3D].freeze
     LINUX_QML_EXCLUSIONS = %w[
+      QtCharts/designer QtGraphs/designer
       Qt/labs/StyleKit Qt/labs/animation Qt/labs/settings Qt/labs/sharedimage Qt/labs/synchronizer
       Qt/labs/wavefrontmesh Qt/test QtQuick/Controls/FluentWinUI3 QtQuick/Controls/Imagine
       QtQuick/Controls/Material QtQuick/Controls/Universal QtQuick/Controls/designer QtQuick/LocalStorage
