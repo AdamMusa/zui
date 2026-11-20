@@ -53,29 +53,44 @@ module Zui
       @environment = environment
     end
 
+    # A client build takes minutes, so it says where they went. Nobody waiting
+    # on one wants to guess, and the numbers are the only way to tell a slow
+    # compile from a slow deployment.
+    def phase(name)
+      started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      result = yield
+      elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
+      warn format("zui client: %-22s %7.1fs", name, elapsed)
+      result
+    end
+
     def build!(output:)
       Dir.mktmpdir("zui-client-build-") do |temporary|
         build = File.join(temporary, "build")
         stage = File.join(temporary, "stage")
         qml_scan_root = File.join(temporary, "qml-scan")
-        Runtime.install_qml(qml_scan_root, framework_root: @framework_root)
+        phase("install qml") { Runtime.install_qml(qml_scan_root, framework_root: @framework_root) }
         cmake = command!("cmake")
-        run!([cmake, "-S", File.join(@framework_root, "native"), "-B", build,
-              "-DCMAKE_BUILD_TYPE=Release", "-DCMAKE_INSTALL_PREFIX=#{stage}",
-              "-DZUI_QML_SCAN_ROOT=#{qml_scan_root}"], timeout: 240)
-        run!([cmake, "--build", build, "--config", "Release", "--parallel"], timeout: 900)
-        run!([cmake, "--install", build, "--config", "Release"], timeout: 900)
+        phase("cmake configure") do
+          run!([cmake, "-S", File.join(@framework_root, "native"), "-B", build,
+                "-DCMAKE_BUILD_TYPE=Release", "-DCMAKE_INSTALL_PREFIX=#{stage}",
+                "-DZUI_QML_SCAN_ROOT=#{qml_scan_root}"], timeout: 240)
+        end
+        phase("cmake build") { run!([cmake, "--build", build, "--config", "Release", "--parallel"], timeout: 900) }
+        phase("cmake install") { run!([cmake, "--install", build, "--config", "Release"], timeout: 900) }
 
         qt = qt_installation
-        install_catalog_runtime(stage, qt)
-        ClientPackager.new(
-          platform: @platform, source_date_epoch: @environment["SOURCE_DATE_EPOCH"]
-        ).package(
-          source: stage,
-          output:,
-          executable: executable_relative_path,
-          qt_version: qt.fetch("QT_VERSION")
-        )
+        phase("catalog runtime") { install_catalog_runtime(stage, qt) }
+        phase("package") do
+          ClientPackager.new(
+            platform: @platform, source_date_epoch: @environment["SOURCE_DATE_EPOCH"]
+          ).package(
+            source: stage,
+            output:,
+            executable: executable_relative_path,
+            qt_version: qt.fetch("QT_VERSION")
+          )
+        end
       end
     end
 
