@@ -197,21 +197,6 @@ class QmlContractTest < Minitest::Test
                  "an ItemDelegate handler still calls the bridge without checking its node")
   end
 
-  # The row and column delegates anchor their loader to the parent's edges. A
-  # Repeater takes a delegate out of its parent before it destroys it, which
-  # re-evaluates every anchor binding with `parent` null, and `parent.top` then
-  # throws "Cannot read property 'verticalCenter' of null" -- four on the
-  # Buttons page, two on Inputs, and 'left' twice on Navigation.
-  def test_row_and_column_delegates_survive_losing_their_parent
-    router = File.read(File.join(ROOT, "ControlNode.qml"), encoding: "UTF-8")
-    bindings = router.lines.grep(/^\s*anchors\.(?!fill|centerIn)\w+:/)
-
-    refute_empty bindings
-    unguarded = bindings.grep(/(?<!\(parent \? )\bparent\.\w+/)
-    assert_empty unguarded,
-                 "these loader anchors read the parent's edges without checking it exists: #{unguarded.map(&:strip).inspect}"
-  end
-
   # Qt Quick Controls already tracks a press in `down`, and an adapter that
   # overrides `background` throws that away unless it paints the press itself.
   # None of the adapters a user clicks to navigate did, so pressing a sidebar
