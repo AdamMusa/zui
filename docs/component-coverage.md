@@ -296,6 +296,9 @@ transitions, and animation groups receive Ruby APIs even though they are not vis
 - [x] list_model
 - [x] delegate_model
 - [x] delegate_model_group
+- [x] object_model
+- [x] instantiator
+- [x] item_selection_model
 - [x] sort_filter_proxy_model
 - [x] folder_list_model
 - [x] settings

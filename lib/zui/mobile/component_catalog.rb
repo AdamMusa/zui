@@ -52,6 +52,17 @@ module Zui
         "MicrophonePermission" => :microphone_permission
       }.freeze
 
+      # QtQml.Models. The abstract model bases and ListElement are not separate Zui
+      # components: ListModel rows are plain Ruby hashes, so they resolve to the
+      # concrete adapters that realise them.
+      QML_MODELS = {
+        "ListModel" => :list_model, "ListElement" => :list_model,
+        "AbstractItemModel" => :list_model, "AbstractListModel" => :list_model,
+        "DelegateModel" => :delegate_model, "DelegateModelGroup" => :delegate_model_group,
+        "ObjectModel" => :object_model, "Instantiator" => :instantiator,
+        "ItemSelectionModel" => :item_selection_model
+      }.freeze
+
       DEVICE_INFORMATION = {
         "SystemInformation" => :system_info,
         "NetworkInformation" => :network_status
@@ -124,7 +135,7 @@ module Zui
       }.freeze
 
       CORE = QUICK_CONTROLS.merge(QUICK_DIALOGS).merge(QUICK_LAYOUTS).freeze
-      ALL = CORE.merge(PERMISSIONS).merge(DEVICE_INFORMATION).merge(VIRTUAL_KEYBOARD)
+      ALL = CORE.merge(QML_MODELS).merge(PERMISSIONS).merge(DEVICE_INFORMATION).merge(VIRTUAL_KEYBOARD)
                 .merge(SENSORS).merge(POSITIONING).merge(LOCATION)
                 .merge(TEXT_TO_SPEECH).merge(WEB).merge(WEB_SOCKETS).merge(LOTTIE)
                 .merge(PDF).merge(TOUCH_INTERACTION).freeze
