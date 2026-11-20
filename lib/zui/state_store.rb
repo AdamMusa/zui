@@ -48,13 +48,14 @@ module Zui
       @values = {}
       @on_change = on_change
       @lock = Mutex.new
+      @owner = nil
       @transaction_depth = 0
       @pending = {}
     end
 
     def define(name, initial)
       key = name.to_sym
-      @lock.synchronize do
+      locked do
         raise ArgumentError, "state already defined: #{key}" if @values.key?(key)
         @values[key] = initial
       end
@@ -63,7 +64,7 @@ module Zui
     def [](name)
       key = name.to_sym
       self.class.record(key)
-      @lock.synchronize { @values.fetch(key) }
+      locked { @values.fetch(key) }
     end
 
     def []=(name, value)
@@ -74,7 +75,7 @@ module Zui
       raise ArgumentError, "update requires a block" unless block_given?
       key = name.to_sym
       self.class.record(key)
-      change, value = @lock.synchronize do
+      change, value = locked do
         raise NoMethodError, "unknown state: #{key}" unless @values.key?(key)
         next_value = yield(@values[key])
         [store_locked(key, next_value), next_value]
@@ -91,7 +92,7 @@ module Zui
         return write(raw.delete_suffix("=").to_sym, arguments.first)
       end
       if arguments.empty?
-        found, value = @lock.synchronize { [@values.key?(name), @values[name]] }
+        found, value = locked { [@values.key?(name), @values[name]] }
         if found
           self.class.record(name)
           return value
@@ -103,13 +104,13 @@ module Zui
 
     def respond_to_missing?(name, include_private = false)
       key = name.to_s.delete_suffix("=").to_sym
-      @lock.synchronize { @values.key?(key) } || super
+      locked { @values.key?(key) } || super
     end
 
     def transaction
       raise ArgumentError, "transaction requires a block" unless block_given?
 
-      @lock.synchronize { @transaction_depth += 1 }
+      locked { @transaction_depth += 1 }
       begin
         yield self
       ensure
@@ -118,6 +119,24 @@ module Zui
     end
 
     private
+
+    # The store's lock, reentrant for the thread that holds it. `update` runs
+    # its block under the lock so the read-modify-write is atomic, and the
+    # natural block reads another key (`update(:a) { |a| a + state.b }`); with a
+    # plain Mutex that read raised "deadlock; recursive locking".
+    def locked
+      current = defined?(Thread) ? Thread.current : :main
+      return yield if @owner.equal?(current)
+
+      @lock.synchronize do
+        @owner = current
+        begin
+          yield
+        ensure
+          @owner = nil
+        end
+      end
+    end
 
     # Closes one level of `transaction`. Only the outermost level reports, and
     # it reports once for the whole transaction, not once per key: the readers
@@ -130,7 +149,7 @@ module Zui
     # from then on no transaction was ever the outermost one again: every write
     # in it was reported on its own.
     def flush_transaction
-      changes = @lock.synchronize do
+      changes = locked do
         @transaction_depth -= 1
         next [] unless @transaction_depth.zero?
 
@@ -155,7 +174,7 @@ module Zui
     end
 
     def write(key, value)
-      change = @lock.synchronize do
+      change = locked do
         raise NoMethodError, "unknown state: #{key}" unless @values.key?(key)
         store_locked(key, value)
       end
