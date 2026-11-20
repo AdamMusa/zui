@@ -71,8 +71,7 @@ module Zui
     end
 
     def register_structure(node, renderer, reads: [])
-      @structures << StructuralBinding.new(node:, renderer:,
-                                           last_children: node.children.map(&:to_h), reads:)
+      @structures << StructuralBinding.new(node:, renderer:, reads:)
     end
 
     def register_handler(control_id, event, handler)
@@ -187,23 +186,56 @@ module Zui
     # Without this every write re-evaluated every binding and rebuilt every
     # `dynamic` in the application, so switching a page in a large interface
     # cost as much as building the whole of it again.
+    #
+    # One reader that raises must not take the others down with it. Every
+    # binding that read a changed key still runs, and the patches the earlier
+    # ones produced are still sent: their `last_value` and the node's props
+    # have already moved on, so a patch that is dropped here is never sent
+    # again and that part of the interface stays stale until the same key
+    # happens to change again. The first failure is raised once everything else
+    # has been delivered, so the writer still hears about it.
     def state_changed(changes)
       keys = changes.map(&:first)
+      failure = nil
       @state_change_lock.synchronize do
         @patch_batch = []
         begin
-          @structures.dup.each do |structure|
-            next unless structure.reads_any?(keys)
-
-            reconcile_structure(structure) if @structures.include?(structure)
+          outermost_first(@structures.select { |structure| structure.reads_any?(keys) }).each do |structure|
+            begin
+              reconcile_structure(structure) if @structures.include?(structure)
+            rescue StandardError => exception
+              failure ||= exception
+            end
           end
-          @bindings.dup.each { |binding| update_binding(binding) if binding.reads_any?(keys) }
+          @bindings.dup.each do |binding|
+            next unless binding.reads_any?(keys)
+
+            begin
+              update_binding(binding)
+            rescue StandardError => exception
+              failure ||= exception
+            end
+          end
         ensure
           patches = @patch_batch
           @patch_batch = nil
         end
         flush_patch_batch(patches)
       end
+      raise failure if failure
+    end
+
+    # A `dynamic` inside another `dynamic` is registered before the one around
+    # it, so registration order puts the inner one first. When both are
+    # affected the inner one used to run first and queue `set` patches for its
+    # children; the outer one then replaced them, the client no longer held
+    # those ids when the batch arrived, and it refused the whole batch,
+    # including the patches of every unrelated binding in it. Running the
+    # outer one first discards the inner one before it can queue anything.
+    def outermost_first(structures)
+      return structures if structures.length < 2
+
+      structures.each_with_index.sort_by { |structure, index| [structure.node.depth, index] }.map(&:first)
     end
 
     def flush_patch_batch(patches)
@@ -243,23 +275,31 @@ module Zui
     end
 
     def reconcile_structure(structure)
-      previous_children = structure.last_children
+      # What the client holds under this node is what the node holds now, read
+      # before anything is torn down. It used to be a copy taken the last time
+      # this structure itself changed, which goes stale the moment a `dynamic`
+      # nested inside it changes on its own: the copy still described the
+      # nested part as it was, so a rebuild that put it back the way it was
+      # compared equal, sent nothing, and left the client showing the change.
+      # A structure whose last attempt did not reach the client has no such
+      # view and is replaced outright.
+      previous_children = structure.diverged ? nil : structure.node.children.map(&:to_h)
       structure.node.children.dup.each { |child| unregister_subtree(child) }
       structure.node.children.clear
+      structure.diverged = true
       _, reads = StateStore.capture { @builder.rebuild(structure.node, &structure.renderer) }
       structure.reads = reads
       children = structure.node.children.map(&:to_h)
-      return if children == structure.last_children
-
-      check_node_budget!("replace_children for #{structure.node.id}")
-      if patchable_trees?(previous_children, children)
+      if children == previous_children
+        # nothing to tell the client
+      elsif previous_children && patchable_trees?(previous_children, children)
         emit_property_patches(previous_children, children)
-        structure.last_children = children
-        return
+      else
+        check_node_budget!("replace_children for #{structure.node.id}")
+        emit("v" => PROTOCOL_VERSION, "type" => "patch", "op" => "replace_children",
+             "id" => structure.node.id, "children" => children)
       end
-      structure.last_children = children
-      emit("v" => PROTOCOL_VERSION, "type" => "patch", "op" => "replace_children",
-           "id" => structure.node.id, "children" => children)
+      structure.diverged = false
     end
 
     # The client counts every live node of every surface against one budget and

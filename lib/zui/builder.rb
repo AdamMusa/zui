@@ -893,6 +893,7 @@ module Zui
 
     def append(node)
       raise ArgumentError, "#{node.type} must be inside a surface or container" if @stack.empty?
+      node.parent = @stack.last
       @stack.last.children << node
     end
 

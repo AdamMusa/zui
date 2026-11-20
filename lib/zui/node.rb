@@ -3,6 +3,9 @@
 module Zui
   class Node
     attr_reader :type, :id, :props, :children, :events
+    # Set by the builder when the node is appended. Only used to tell which of
+    # two structural bindings sits inside the other.
+    attr_accessor :parent
 
     def initialize(type:, id:, props: {})
       @type = type.to_s
@@ -18,6 +21,16 @@ module Zui
       result["children"] = children.map(&:to_h) unless children.empty?
       result["events"] = events unless events.empty?
       result
+    end
+
+    def depth
+      depth = 0
+      node = parent
+      while node
+        depth += 1
+        node = node.parent
+      end
+      depth
     end
 
     def subscribe(event)
@@ -50,14 +63,16 @@ module Zui
   end
 
   class StructuralBinding
-    attr_accessor :last_children, :reads
+    # `diverged` is set while a rebuild is under way and cleared once the client
+    # has been told its result, so it is still set after a rebuild that raised.
+    attr_accessor :reads, :diverged
     attr_reader :node, :renderer
 
-    def initialize(node:, renderer:, last_children:, reads: [])
+    def initialize(node:, renderer:, reads: [])
       @node = node
       @renderer = renderer
-      @last_children = last_children
       @reads = reads
+      @diverged = false
     end
 
     def reads_any?(keys)
