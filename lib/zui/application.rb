@@ -125,6 +125,7 @@ module Zui
     def normalize_value(value, property = nil) = Value.normalize(value, property:)
 
     def start(output: $stdout, error: $stderr)
+      check_node_budget!("render")
       @output = output
       @error = error
       @output.sync = true if @output.respond_to?(:sync=)
@@ -249,6 +250,8 @@ module Zui
       structure.reads = reads
       children = structure.node.children.map(&:to_h)
       return if children == structure.last_children
+
+      check_node_budget!("replace_children for #{structure.node.id}")
       if patchable_trees?(previous_children, children)
         emit_property_patches(previous_children, children)
         structure.last_children = children
@@ -257,6 +260,18 @@ module Zui
       structure.last_children = children
       emit("v" => PROTOCOL_VERSION, "type" => "patch", "op" => "replace_children",
            "id" => structure.node.id, "children" => children)
+    end
+
+    # The client counts every live node of every surface against one budget and
+    # refuses the render, or the replace_children, that goes past it. It tells
+    # Ruby nothing, and by then Ruby has moved on and never resends, so the page
+    # stays blank or stale. Building a bigger tree is allowed (script/verify.rb
+    # builds every page of the showcase at once to validate it); sending one is
+    # not.
+    def check_node_budget!(what)
+      return if @nodes.size <= MAX_LIVE_NODES
+
+      raise ProtocolError, "#{what} would leave #{@nodes.size} live nodes, the client takes #{MAX_LIVE_NODES}"
     end
 
     def patchable_trees?(previous, current)
