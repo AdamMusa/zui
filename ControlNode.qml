@@ -199,6 +199,39 @@ Loader {
     return defaulted === undefined ? Qt.ArrowCursor : defaulted
   }
 
+  // Qt Quick Controls already knows the control is pressed; an adapter that
+  // overrides `background` is what throws that away. The pressed appearance has
+  // to be resolved locally, because waiting for Ruby to answer the click is the
+  // whole of the delay the user feels -- Ruby turns a sidebar activation into a
+  // complete set of page patches in 3-12 ms, and the client then spends 85 ms
+  // to several seconds building the new page before anything repaints.
+  //
+  // These two resolve it in one place: the protocol's `pressed_background` and
+  // `pressed_foreground` when an application declares them, otherwise a value
+  // derived from what the control is already painting. Only the fill is
+  // derived. A tinted or darkened fill keeps the resting label legible, so
+  // `pressed_foreground` is what moves the label as well.
+  function pressedBackground(resting) {
+    return prop("pressed_background", Style.pressedFillFor(
+      resolvedColor(resting, Qt.rgba(0, 0, 0, 0)),
+      resolvedColor(prop("accent", ""), Color.accent)))
+  }
+
+  function pressedForeground(resting) {
+    return prop("pressed_foreground", resting)
+  }
+
+  // A protocol colour arrives as a string and an adapter's resting colour may
+  // be either, so the shared derivation above takes neither on trust. Qt.color
+  // throws on anything it cannot read, including the empty string.
+  function resolvedColor(value, fallback) {
+    try {
+      return Qt.color(value)
+    } catch (error) {
+      return fallback
+    }
+  }
+
   function borderImageTileMode(value) {
     var mode = String(value || "stretch")
     if (mode === "repeat") return BorderImage.Repeat

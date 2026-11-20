@@ -13,7 +13,10 @@ Rectangle {
       implicitWidth: chipRow.implicitWidth + Number(renderer.prop("horizontal_padding", 12)) * 2
       implicitHeight: Number(renderer.prop("height", 30))
       radius: Number(renderer.prop("radius", height / 2))
-      color: selected ? renderer.prop("selected_background", Color.accent) : renderer.prop("background", Color.popups.background)
+      readonly property color restingColor: selected
+        ? renderer.prop("selected_background", Color.accent)
+        : renderer.prop("background", Color.popups.background)
+      color: chipTap.pressed ? renderer.pressedBackground(restingColor) : restingColor
       border.width: Style.normalBorderWidth
       border.color: selected ? renderer.prop("accent", Color.accent) : renderer.foreground
       opacity: interactive ? 1 : 0.5
@@ -30,9 +33,12 @@ Rectangle {
           font.pixelSize: Number(renderer.prop("icon_size", Style.font.icon))
         }
         Text {
+          readonly property color restingColor: chipRoot.selected
+            ? renderer.prop("selected_foreground", Color.background)
+            : renderer.prop("foreground", renderer.foreground)
           text: String(renderer.prop("text", ""))
           textFormat: Text.PlainText
-          color: chipRoot.selected ? renderer.prop("selected_foreground", Color.background) : renderer.prop("foreground", renderer.foreground)
+          color: chipTap.pressed ? renderer.pressedForeground(restingColor) : restingColor
           font.family: renderer.fontFamily
           font.pixelSize: Number(renderer.prop("font_size", Style.font.body))
         }
@@ -54,6 +60,7 @@ Rectangle {
         }
       }
       TapHandler {
+        id: chipTap
         enabled: chipRoot.interactive
         onTapped: {
           renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "click", {})

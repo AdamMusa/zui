@@ -6,6 +6,7 @@ import "../../Controls" as ZuiControls
 
 ZuiControls.WidgetButton {
   required property var renderer
+      pressedBackground: renderer.prop("pressed_background", Style.pressedTintFor(Color.accent))
       text: renderer.escapeAutoText(renderer.prop("text", "")); tooltipText: renderer.escapeAutoText(renderer.prop("tooltip", "")); active: renderer.prop("active", false) === true
       dimmed: renderer.prop("dimmed", false) === true; concealed: renderer.prop("concealed", false) === true
       interactive: renderer.prop("interactive", true) !== false; pressable: renderer.prop("pressable", true) !== false

@@ -35,11 +35,12 @@ QQC.RadioDelegate {
   Accessible.name: String(renderer.prop("accessible_name", text))
 
   background: Rectangle {
-    color: radioRoot.highlighted
+    readonly property color restingColor: radioRoot.highlighted
       ? renderer.prop("highlighted_background", renderer.prop("selected_background", Color.popups.background))
       : (radioRoot.selected
         ? renderer.prop("selected_background", Color.popups.background)
         : renderer.prop("background", "transparent"))
+    color: radioRoot.down ? renderer.pressedBackground(restingColor) : restingColor
     radius: Number(renderer.prop("radius", Style.cornerRadius))
     border.width: Number(renderer.prop("border_width",
       String(renderer.prop("border_color", "")).length > 0 ? Style.normalBorderWidth : 0))
@@ -51,11 +52,12 @@ QQC.RadioDelegate {
 
     Text {
       Layout.fillWidth: true
-      text: radioRoot.text
-      textFormat: Text.PlainText
-      color: radioRoot.selected
+      readonly property color restingColor: radioRoot.selected
         ? renderer.prop("selected_foreground", renderer.prop("foreground", renderer.foreground))
         : renderer.prop("foreground", renderer.foreground)
+      text: radioRoot.text
+      textFormat: Text.PlainText
+      color: radioRoot.down ? renderer.pressedForeground(restingColor) : restingColor
       font: radioRoot.font
       elide: Text.ElideRight
     }
