@@ -12,10 +12,15 @@ module Zui
       BUILD_TOOLS_VERSION = "35.0.1"
       MRUBY_REVISION = "831da26b9021de0369d17b71b5667e2941a1a32d"
       MRUBY_JSON_REVISION = "f99d9428025469f2400f93c53b185f65f963e507"
+      # qtshadertools is not optional tooling here: Qt6Quick3DRuntimeRender, the Qt 5 compatibility
+      # graphical effects and Qt 3D's RHI renderer all declare Qt6ShaderTools as a dependency, and
+      # aqt installs only what it is handed, so without it find_package(Qt6 COMPONENTS Quick3D)
+      # fails and QtQuick3D cannot load - which is why model_view_3d could not work on a device.
       QT_COMMON_MODULES = %w[
         qt3d qt5compat qtcharts qtconnectivity qtdatavis3d qtgraphs qtgrpc qtlocation qtlottie
         qtmultimedia qtnetworkauth qtpositioning qtquick3d qtquick3dphysics qtquicktimeline
-        qtremoteobjects qtscxml qtsensors qtspeech qtvirtualkeyboard qtwebchannel qtwebsockets qtwebview
+        qtremoteobjects qtscxml qtsensors qtshadertools qtspeech qtvirtualkeyboard qtwebchannel
+        qtwebsockets qtwebview
       ].freeze
       QT_HOST_MODULES = (QT_COMMON_MODULES + %w[qtpdf]).freeze
       QT_IOS_MODULES = QT_HOST_MODULES
@@ -30,7 +35,8 @@ module Zui
         "qtpositioning" => "Qt6Positioning", "qtquick3d" => "Qt6Quick3D",
         "qtquick3dphysics" => "Qt6Quick3DPhysics", "qtquicktimeline" => "Qt6QuickTimeline",
         "qtremoteobjects" => "Qt6RemoteObjects", "qtscxml" => "Qt6Scxml",
-        "qtsensors" => "Qt6Sensors", "qtspeech" => "Qt6TextToSpeech",
+        "qtsensors" => "Qt6Sensors", "qtshadertools" => "Qt6ShaderTools",
+        "qtspeech" => "Qt6TextToSpeech",
         "qtvirtualkeyboard" => "Qt6VirtualKeyboard", "qtwebchannel" => "Qt6WebChannel",
         "qtwebsockets" => "Qt6WebSockets", "qtwebview" => "Qt6WebView"
       }.freeze
