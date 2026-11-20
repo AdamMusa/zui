@@ -82,19 +82,41 @@ QQC.Button {
     }
   }
 
+  Binding {
+    target: fileDialog
+    property: "currentFile"
+    value: picker.fileUrl(renderer.prop("path", ""))
+    when: String(renderer.prop("path", "")).length > 0
+  }
+
+  Binding {
+    target: fileDialog
+    property: "currentFiles"
+    when: Array.isArray(renderer.prop("paths", [])) && renderer.prop("paths", []).length > 0
+    value: {
+      var result = []
+      var paths = renderer.prop("paths", [])
+      for (var index = 0; index < paths.length; index++) result.push(picker.fileUrl(paths[index]))
+      return result
+    }
+  }
+
+  Binding {
+    target: fileDialog
+    property: "currentFolder"
+    value: picker.fileUrl(renderer.prop("current_folder", ""))
+    when: String(renderer.prop("current_folder", "")).length > 0
+  }
+
   FileDialog {
     id: fileDialog
     title: String(renderer.prop("title", mode === "save" ? "Save file" : "Choose file"))
     fileMode: mode === "save" ? FileDialog.SaveFile
       : (renderer.prop("multiple", false) === true ? FileDialog.OpenFiles : FileDialog.OpenFile)
-    currentFile: picker.fileUrl(renderer.prop("path", ""))
-    currentFiles: {
-      var result = []
-      var paths = renderer.prop("paths", [])
-      if (Array.isArray(paths)) for (var index = 0; index < paths.length; index++) result.push(picker.fileUrl(paths[index]))
-      return result
-    }
-    currentFolder: picker.fileUrl(renderer.prop("current_folder", ""))
+    // Nothing is selected until the application says so. Binding an empty
+    // path anyway hands the dialog an empty URL, and Qt answers each time with
+    // "Cannot set  as a selected file because it doesn't exist" -- twice per
+    // file picker, every time the picker is created.
     nameFilters: renderer.prop("filters", [])
     defaultSuffix: String(renderer.prop("default_suffix", ""))
     acceptLabel: String(renderer.prop("accept_text", ""))

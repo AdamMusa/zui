@@ -197,6 +197,22 @@ class QmlContractTest < Minitest::Test
                  "an ItemDelegate handler still calls the bridge without checking its node")
   end
 
+  # A FileDialog told about an empty path complains that it "cannot set  as a
+  # selected file because it doesn't exist", twice per file picker, each time
+  # one is created. It has to be told only about a path that exists.
+  def test_file_picker_does_not_hand_its_dialog_empty_paths
+    qml = File.read(File.join(ROOT, "Components", "Builtins", "FilePicker.qml"), encoding: "UTF-8")
+    dialog = qml[/^  FileDialog \{.*?^  \}/m]
+
+    refute_nil dialog
+    refute_match(/^\s*current(?:File|Files|Folder):/, dialog,
+                 "FileDialog binds a selection unconditionally; bind it through a Binding with `when`")
+    %w[currentFile currentFiles currentFolder].each do |property|
+      assert_match(/target: fileDialog\s+property: "#{property}"\s+(?:.*\n){0,12}?\s*when:/, qml,
+                   "#{property} is not guarded by a `when` condition")
+    end
+  end
+
   # Qt Quick Controls already tracks a press in `down`, and an adapter that
   # overrides `background` throws that away unless it paints the press itself.
   # None of the adapters a user clicks to navigate did, so pressing a sidebar
