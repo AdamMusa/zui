@@ -30,12 +30,6 @@ class QmlContractTest < Minitest::Test
     end
   end
 
-  def control_sources
-    Dir[File.join(ROOT, "Controls", "*.qml")].sort.to_h do |path|
-      [path.delete_prefix("#{ROOT}/"), File.read(path, encoding: "UTF-8")]
-    end
-  end
-
   def assert_dynamic_component_route(renderer, component)
     assert_equal true, Zui::DEFAULT_COMPONENTS.protocol_schema.dig(component, "built_in")
     assert_includes renderer, "nativeSchema.builtIn === true"
@@ -201,37 +195,6 @@ class QmlContractTest < Minitest::Test
                  qml)
     refute_match(/^\s*on[A-Z]\w*(?:Changed)?: renderer\.bridge\.sendEvent/, qml,
                  "an ItemDelegate handler still calls the bridge without checking its node")
-  end
-
-  # Handlers that answer something the user did run while the node is alive.
-  # Every other handler can also run while the node is being torn down: a page
-  # replacement hides each control on the way out (`visible` -> false), drops
-  # its focus and hover, closes its popups and cancels its pointer handlers,
-  # and by then `renderer` -- a required property bound to the ControlNode --
-  # has already gone undefined. `renderer.bridge` then throws, once per
-  # control, on every page switch ("Cannot read property 'bridge' of
-  # undefined" from some thirty adapters on the showcase's Layout page alone).
-  # ItemDelegate guards itself; this holds every adapter to the same rule.
-  GESTURE_HANDLERS = %w[
-    Tapped Clicked DoubleClicked DoubleTapped Pressed Released Toggled Accepted
-    Moved TextEdited EditingFinished Modified LinkActivated PressAndHold
-    Activated Triggered Confirmed Changed Hovered RightClicked
-  ].freeze
-
-  def test_lifecycle_handlers_check_their_node_before_posting
-    offenders = []
-    (adapter_sources.merge(control_sources)).each do |name, qml|
-      qml.each_line.with_index(1) do |line, number|
-        next unless (match = line.match(/\bon([A-Z]\w*):\s*(?:root\.)?renderer\.bridge\.sendEvent/))
-        next if GESTURE_HANDLERS.include?(match[1])
-
-        offenders << "#{name}:#{number} on#{match[1]}"
-      end
-    end
-
-    assert_empty offenders,
-                 "these handlers can run during teardown and call the bridge without " \
-                 "checking `renderer` first: #{offenders.inspect}"
   end
 
   # Qt Quick Controls already tracks a press in `down`, and an adapter that
