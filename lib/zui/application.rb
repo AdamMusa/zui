@@ -71,8 +71,7 @@ module Zui
     end
 
     def register_structure(node, renderer, reads: [])
-      @structures << StructuralBinding.new(node:, renderer:,
-                                           last_children: node.children.map(&:to_h), reads:)
+      @structures << StructuralBinding.new(node:, renderer:, reads:)
     end
 
     def register_handler(control_id, event, handler)
@@ -275,21 +274,30 @@ module Zui
     end
 
     def reconcile_structure(structure)
-      previous_children = structure.last_children
+      # What the client holds under this node is what the node holds now, read
+      # before anything is torn down. It used to be a copy taken the last time
+      # this structure itself changed, which goes stale the moment a `dynamic`
+      # nested inside it changes on its own: the copy still described the
+      # nested part as it was, so a rebuild that put it back the way it was
+      # compared equal, sent nothing, and left the client showing the change.
+      # A structure whose last attempt did not reach the client has no such
+      # view and is replaced outright.
+      previous_children = structure.diverged ? nil : structure.node.children.map(&:to_h)
       structure.node.children.dup.each { |child| unregister_subtree(child) }
       structure.node.children.clear
+      structure.diverged = true
       _, reads = StateStore.capture { @builder.rebuild(structure.node, &structure.renderer) }
       structure.reads = reads
       children = structure.node.children.map(&:to_h)
-      return if children == structure.last_children
-      if patchable_trees?(previous_children, children)
+      if children == previous_children
+        # nothing to tell the client
+      elsif previous_children && patchable_trees?(previous_children, children)
         emit_property_patches(previous_children, children)
-        structure.last_children = children
-        return
+      else
+        emit("v" => PROTOCOL_VERSION, "type" => "patch", "op" => "replace_children",
+             "id" => structure.node.id, "children" => children)
       end
-      structure.last_children = children
-      emit("v" => PROTOCOL_VERSION, "type" => "patch", "op" => "replace_children",
-           "id" => structure.node.id, "children" => children)
+      structure.diverged = false
     end
 
     def patchable_trees?(previous, current)
