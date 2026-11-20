@@ -39,6 +39,20 @@ module Zui
       current = Thread.current
       return @shared_stack unless current.respond_to?(:[]) && current.respond_to?(:[]=)
 
+      # Thread#[] is fiber-local: a reader that touches state inside an
+      # Enumerator#next, a Fiber or a lazy chain would record into a stack of
+      # its own that nothing ever reads, and the binding would be left with a
+      # partial set of keys. Thread variables are shared by every fiber of the
+      # thread, which is the scope a capture frame has.
+      if current.respond_to?(:thread_variable_get) && current.respond_to?(:thread_variable_set)
+        stack = current.thread_variable_get(:zui_state_reads)
+        unless stack
+          stack = []
+          current.thread_variable_set(:zui_state_reads, stack)
+        end
+        return stack
+      end
+
       current[:zui_state_reads] ||= []
     rescue StandardError
       @shared_stack
