@@ -19,8 +19,8 @@ Item {
     onPlaybackStateChanged:{var name=playbackState===Multimedia.MediaPlayer.PlayingState?"play":(playbackState===Multimedia.MediaPlayer.PausedState?"pause":"stop");playerRoot.send(name,{})}
     onMediaStatusChanged:playerRoot.send("media_status",{value:mediaStatus})
     onErrorOccurred:function(error,message){renderer.componentError("media_playback_failed",message,{native_code:error,source:String(source)})}
-    onPositionChanged:playerRoot.send("position",{value:position,duration:duration})
-    onDurationChanged:playerRoot.send("duration",{value:duration})
+    onPositionChanged:playerRoot.send("position",{value:nativePlayer.position,duration:nativePlayer.duration})
+    onDurationChanged:playerRoot.send("duration",{value:nativePlayer.duration})
     onBufferProgressChanged:playerRoot.send("buffer",{value:bufferProgress})
     onTracksChanged:playerRoot.send("tracks",{audio:audioTracks.length,video:videoTracks.length,subtitles:subtitleTracks.length})
   }

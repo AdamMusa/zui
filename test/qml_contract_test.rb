@@ -197,6 +197,20 @@ class QmlContractTest < Minitest::Test
                  "an ItemDelegate handler still calls the bridge without checking its node")
   end
 
+  # Qt 6 deprecates reading a signal's parameter by its bare name inside a
+  # handler and says so on every instantiation ("Parameter "volume" is not
+  # declared. Injection of parameters into signal handlers is deprecated"),
+  # which is two lines for an AudioOutput and three for an AudioInput. The
+  # handlers read the property off the object that owns them instead.
+  def test_audio_device_handlers_do_not_rely_on_injected_parameters
+    %w[AudioOutput AudioInput MediaPlayer].each do |adapter|
+      qml = File.read(File.join(ROOT, "Components", "Builtins", "#{adapter}.qml"), encoding: "UTF-8")
+
+      refute_match(/\{value:(?:muted|volume|duration)\}|duration:duration/, qml,
+                   "#{adapter}.qml reads a signal parameter by its bare name")
+    end
+  end
+
   # Qt Quick Controls already tracks a press in `down`, and an adapter that
   # overrides `background` throws that away unless it paints the press itself.
   # None of the adapters a user clicks to navigate did, so pressing a sidebar
