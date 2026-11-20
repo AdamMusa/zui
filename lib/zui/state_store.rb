@@ -108,23 +108,38 @@ module Zui
 
     def transaction
       raise ArgumentError, "transaction requires a block" unless block_given?
+
       @lock.synchronize { @transaction_depth += 1 }
-      yield self
-    ensure
+      begin
+        yield self
+      ensure
+        flush_transaction
+      end
+    end
+
+    private
+
+    # Closes one level of `transaction`. Only the outermost level reports, and
+    # it reports once for the whole transaction, not once per key: the readers
+    # that depend on several of these keys must see them all at once, and their
+    # patches have to reach the client as a single atomic batch.
+    #
+    # This used to be the method's own `ensure`, which also runs when the
+    # argument check above raises, before the depth was ever raised. A
+    # `transaction` called without a block therefore left the depth at -1, and
+    # from then on no transaction was ever the outermost one again: every write
+    # in it was reported on its own.
+    def flush_transaction
       changes = @lock.synchronize do
         @transaction_depth -= 1
         next [] unless @transaction_depth.zero?
+
         flushed = @pending.values
         @pending.clear
         flushed
       end
-      # One call for the whole transaction, not one per key: the readers that
-      # depend on several of these keys must see them all at once, and their
-      # patches have to reach the client as a single atomic batch.
       @on_change.call(changes) unless changes.empty?
     end
-
-    private
 
     # `update(:items) { |items| items << x }` and `state.items << x;
     # state.items = state.items` hand back the very object that is already
