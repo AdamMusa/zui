@@ -186,23 +186,45 @@ module Zui
     # Without this every write re-evaluated every binding and rebuilt every
     # `dynamic` in the application, so switching a page in a large interface
     # cost as much as building the whole of it again.
+    #
+    # One reader that raises must not take the others down with it. Every
+    # binding that read a changed key still runs, and the patches the earlier
+    # ones produced are still sent: their `last_value` and the node's props
+    # have already moved on, so a patch that is dropped here is never sent
+    # again and that part of the interface stays stale until the same key
+    # happens to change again. The first failure is raised once everything else
+    # has been delivered, so the writer still hears about it.
     def state_changed(changes)
       keys = changes.map(&:first)
+      failure = nil
       @state_change_lock.synchronize do
         @patch_batch = []
         begin
           @structures.dup.each do |structure|
             next unless structure.reads_any?(keys)
 
-            reconcile_structure(structure) if @structures.include?(structure)
+            begin
+              reconcile_structure(structure) if @structures.include?(structure)
+            rescue StandardError => exception
+              failure ||= exception
+            end
           end
-          @bindings.dup.each { |binding| update_binding(binding) if binding.reads_any?(keys) }
+          @bindings.dup.each do |binding|
+            next unless binding.reads_any?(keys)
+
+            begin
+              update_binding(binding)
+            rescue StandardError => exception
+              failure ||= exception
+            end
+          end
         ensure
           patches = @patch_batch
           @patch_batch = nil
         end
         flush_patch_batch(patches)
       end
+      raise failure if failure
     end
 
     def flush_patch_batch(patches)
