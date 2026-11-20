@@ -1,7 +1,7 @@
 import QtQuick
-import QtWebView
+import QtWebView as WebViews
 
-WebView {
+WebViews.WebView {
   id: root
   required property var renderer
   property int handledCommandRevision: -1

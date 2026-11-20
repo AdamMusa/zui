@@ -1,5 +1,6 @@
 import QtQuick
 import QtTextToSpeech
+import QtTextToSpeech as Speech
 
 Item {
   id: root
@@ -68,7 +69,7 @@ Item {
     active: root.nativeRequested && !zuiIosSimulator
     asynchronous: true
     sourceComponent: Component {
-      TextToSpeech {
+      Speech.TextToSpeech {
         id: nativeSpeech
         engine: String(root.renderer.prop("engine", ""))
         engineParameters: root.renderer.prop("engine_parameters", {}) || {}

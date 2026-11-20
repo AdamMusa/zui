@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick as Quick
 
 Item {
   id: actionRoot
@@ -9,7 +10,7 @@ Item {
     var revision = Number(renderer.prop("revision", 0)); if (revision === handledRevision || renderer.prop("trigger", true) === false) return
     handledRevision = revision; nativeAction.start()
   }
-  ScriptAction { id: nativeAction; script: function() { renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "trigger", { action: renderer.prop("action", null), revision: actionRoot.handledRevision }); renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "finish", {}) } }
+  Quick.ScriptAction { id: nativeAction; script: function() { renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "trigger", { action: renderer.prop("action", null), revision: actionRoot.handledRevision }); renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "finish", {}) } }
   Component.onCompleted: run()
   Connections { target: renderer; function onNodeChanged() { actionRoot.run() } }
 }

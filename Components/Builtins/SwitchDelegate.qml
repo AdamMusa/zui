@@ -35,11 +35,12 @@ QQC.SwitchDelegate {
   Accessible.name: String(renderer.prop("accessible_name", text))
 
   background: Rectangle {
-    color: switchRoot.highlighted
+    readonly property color restingColor: switchRoot.highlighted
       ? renderer.prop("highlighted_background", renderer.prop("selected_background", Color.popups.background))
       : (switchRoot.selected
         ? renderer.prop("selected_background", Color.popups.background)
         : renderer.prop("background", "transparent"))
+    color: switchRoot.down ? renderer.pressedBackground(restingColor) : restingColor
     radius: Number(renderer.prop("radius", Style.cornerRadius))
     border.width: Number(renderer.prop("border_width",
       String(renderer.prop("border_color", "")).length > 0 ? Style.normalBorderWidth : 0))
@@ -51,11 +52,12 @@ QQC.SwitchDelegate {
 
     Text {
       Layout.fillWidth: true
-      text: switchRoot.text
-      textFormat: Text.PlainText
-      color: switchRoot.selected
+      readonly property color restingColor: switchRoot.selected
         ? renderer.prop("selected_foreground", renderer.prop("foreground", renderer.foreground))
         : renderer.prop("foreground", renderer.foreground)
+      text: switchRoot.text
+      textFormat: Text.PlainText
+      color: switchRoot.down ? renderer.pressedForeground(restingColor) : restingColor
       font: switchRoot.font
       elide: Text.ElideRight
     }

@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick as Quick
 import QtQuick.Controls as QQC
 import QtQuick.Layouts
 import "../../Theme"
@@ -8,7 +9,7 @@ Item {
   required property var renderer
       implicitWidth: 0
       implicitHeight: 0
-      TextMetrics {
+      Quick.TextMetrics {
         id: nativeTextMetrics
         text: String(renderer.prop("text", ""))
         font.family: String(renderer.prop("font_family", renderer.fontFamily))

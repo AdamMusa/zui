@@ -1,5 +1,6 @@
 import QtQuick
 import QtLocation
+import QtLocation as Location
 import QtPositioning
 
 Item {
@@ -33,7 +34,7 @@ Item {
   function processCommand(){var revision=Number(renderer.prop("command_revision",0));if(revision===handledCommandRevision)return;var first=handledCommandRevision<0;handledCommandRevision=revision;if(first&&revision<=0)return;var command=String(renderer.prop("command","update"));if(command==="cancel")nativeModel.cancel();else if(command==="reset")nativeModel.reset();else nativeModel.update()}
   Component { id: parameterComponent; PluginParameter {} }
   Plugin { id: nativePlugin }
-  GeocodeModel {
+  Location.GeocodeModel {
     id: nativeModel
     plugin: nativePlugin
     query: root.queryValue()

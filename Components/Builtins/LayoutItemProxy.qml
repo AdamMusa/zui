@@ -1,7 +1,8 @@
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Layouts as Layouts
 
-LayoutItemProxy {
+Layouts.LayoutItemProxy {
   id: proxy
 
   required property var renderer

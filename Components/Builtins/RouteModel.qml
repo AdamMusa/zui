@@ -1,5 +1,6 @@
 import QtQuick
 import QtLocation
+import QtLocation as Location
 import QtPositioning
 
 Item {
@@ -127,7 +128,7 @@ Item {
     maneuverDetail: root.maneuverDetail()
     excludedAreas: root.excludedAreas()
   }
-  RouteModel {
+  Location.RouteModel {
     id: nativeModel
     plugin: nativePlugin
     query: nativeQuery

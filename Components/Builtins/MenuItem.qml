@@ -32,15 +32,17 @@ QQC.MenuItem {
     : renderer.prop("foreground", renderer.foreground))
   font.family: String(renderer.prop("font_family", renderer.fontFamily))
   font.pixelSize: Number(renderer.prop("font_size", Style.font.body))
-  palette.buttonText: highlighted
+  readonly property color restingForeground: highlighted
     ? renderer.prop("highlighted_foreground", renderer.prop("accent", Color.accent))
     : (enabled ? renderer.prop("foreground", renderer.foreground)
       : renderer.prop("muted", Color.muted))
+  palette.buttonText: down ? renderer.pressedForeground(restingForeground) : restingForeground
 
   background: Rectangle {
-    color: itemRoot.highlighted
+    readonly property color restingColor: itemRoot.highlighted
       ? renderer.prop("highlighted_background", renderer.prop("background", "transparent"))
       : renderer.prop("background", "transparent")
+    color: itemRoot.down ? renderer.pressedBackground(restingColor) : restingColor
     radius: Number(renderer.prop("radius", Style.cornerRadius))
     border.width: String(renderer.prop("border_color", "")).length > 0 ? Style.normalBorderWidth : 0
     border.color: renderer.prop("border_color", "transparent")
