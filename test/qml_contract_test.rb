@@ -197,6 +197,19 @@ class QmlContractTest < Minitest::Test
                  "an ItemDelegate handler still calls the bridge without checking its node")
   end
 
+  # SelectionRectangle only accepts a view that implements Qt's selectable
+  # interface. The node it is pointed at renders as the adapter around the view,
+  # so the view is handed over explicitly or Qt answers "the assigned target is
+  # not supported by the control" and the rubber band never works.
+  def test_selection_rectangle_attaches_to_the_view_inside_its_target
+    rectangle = File.read(File.join(ROOT, "Components", "Builtins", "SelectionRectangle.qml"), encoding: "UTF-8")
+    table = File.read(File.join(ROOT, "Components", "Builtins", "TableView.qml"), encoding: "UTF-8")
+
+    assert_includes rectangle, "target: selectableTarget()"
+    assert_includes rectangle, "found.selectableView"
+    assert_includes table, "readonly property var selectableView: tableControl"
+  end
+
   # Qt Quick Controls already tracks a press in `down`, and an adapter that
   # overrides `background` throws that away unless it paints the press itself.
   # None of the adapters a user clicks to navigate did, so pressing a sidebar
