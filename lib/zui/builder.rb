@@ -673,6 +673,12 @@ module Zui
       end
     end
 
+    def sensor_manager(id: nil, **props, &handler)
+      node = component(:sensor_manager, id:, **props)
+      @application.register_handler(node.id, :sensors, handler) if handler
+      node
+    end
+
     def position_source(id: nil, **props, &handler)
       node = component(:position_source, id:, **props)
       @application.register_handler(node.id, :position, handler) if handler

@@ -12,6 +12,20 @@
     <uses-permission android:name="android.permission.CAMERA" />
     -->
 
+    <!-- Sensor components (accelerometer, gyroscope, compass, magnetometer, ...) need no
+         permission at the default data rate. Declare these only when the app asks for them:
+    <uses-permission android:name="android.permission.HIGH_SAMPLING_RATE_SENSORS" />
+    <uses-permission android:name="android.permission.BODY_SENSORS" />
+    -->
+    <!-- Declare the hardware a sensor component depends on so the Play Store filters correctly:
+    <uses-feature android:name="android.hardware.sensor.accelerometer" android:required="false" />
+    <uses-feature android:name="android.hardware.sensor.gyroscope" android:required="false" />
+    <uses-feature android:name="android.hardware.sensor.compass" android:required="false" />
+    <uses-feature android:name="android.hardware.sensor.light" android:required="false" />
+    <uses-feature android:name="android.hardware.sensor.proximity" android:required="false" />
+    <uses-feature android:name="android.hardware.sensor.barometer" android:required="false" />
+    -->
+
     <supports-screens
         android:anyDensity="true"
         android:largeScreens="true"
