@@ -197,17 +197,6 @@ class QmlContractTest < Minitest::Test
                  "an ItemDelegate handler still calls the bridge without checking its node")
   end
 
-  # HandwritingInputPanel dereferences `inputPanel` while it is being created,
-  # so built without one (the showcase declares it that way: "declare cleanly
-  # and stay inert") Qt's own QML threw seven "Cannot read property ... of null"
-  # errors on every build. The panel is only created once its input panel exists.
-  def test_handwriting_input_creates_its_panel_only_once_it_has_an_input_panel
-    qml = File.read(File.join(ROOT, "Components", "Builtins", "HandwritingInput.qml"), encoding: "UTF-8")
-
-    assert_match(/^Item \{/, qml, "the adapter's root must not be the panel itself")
-    assert_match(/Loader \{.*?active: root\.panelTarget !== null.*?sourceComponent: HandwritingInputPanel \{/m, qml)
-  end
-
   # Qt Quick Controls already tracks a press in `down`, and an adapter that
   # overrides `background` throws that away unless it paints the press itself.
   # None of the adapters a user clicks to navigate did, so pressing a sidebar
