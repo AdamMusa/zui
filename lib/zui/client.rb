@@ -147,6 +147,25 @@ module Zui
       source.is_a?(URI) ? URI("#{source}.sha256") : "#{source}.sha256"
     end
 
+    # Public because ClientBuilder keeps its deployment cache beside the
+    # installed clients, and one definition of where Zui caches things is
+    # better than two that can drift.
+    def cache_root
+      return File.expand_path(@cache_root) if @cache_root
+
+      override = @environment["ZUI_CACHE_HOME"]
+      return File.expand_path(override) if override && !override.empty?
+
+      home = @environment["HOME"] || @environment["USERPROFILE"] || Dir.home
+      if platform.windows?
+        @environment["LOCALAPPDATA"] || @environment["APPDATA"] || File.join(home, "AppData", "Local")
+      elsif platform.macos?
+        File.join(home, "Library", "Caches")
+      else
+        @environment["XDG_CACHE_HOME"] || File.join(home, ".cache")
+      end
+    end
+
     private
 
     def install_download!
@@ -349,21 +368,6 @@ module Zui
         "https://github.com/AdamMusa/zui/releases/download/v#{version}"
     end
 
-    def cache_root
-      return File.expand_path(@cache_root) if @cache_root
-
-      override = @environment["ZUI_CACHE_HOME"]
-      return File.expand_path(override) if override && !override.empty?
-
-      home = @environment["HOME"] || @environment["USERPROFILE"] || Dir.home
-      if platform.windows?
-        @environment["LOCALAPPDATA"] || @environment["APPDATA"] || File.join(home, "AppData", "Local")
-      elsif platform.macos?
-        File.join(home, "Library", "Caches")
-      else
-        @environment["XDG_CACHE_HOME"] || File.join(home, ".cache")
-      end
-    end
 
     def client_root_override?
       value = @environment["ZUI_CLIENT_ROOT"]

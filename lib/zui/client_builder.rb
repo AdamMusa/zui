@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
+require "digest"
 require "fileutils"
+require "json"
 require "tmpdir"
 require_relative "client_packager"
 require_relative "macos_qml_payload"
@@ -8,6 +10,10 @@ require_relative "macos_qml_payload"
 module Zui
   # Internal CI/release builder. It is deliberately not used by `zui configure`.
   class ClientBuilder
+    # Bumped when the shape of a cached deployment changes, so an entry written
+    # by an older build is ignored rather than misread.
+    CACHE_LAYOUT_VERSION = 1
+
     LINUX_QML_ROOTS = %w[QML Qt QtCore QtMultimedia QtQml QtQuick QtQuick3D].freeze
     LINUX_QML_EXCLUSIONS = %w[
       Qt/labs/StyleKit Qt/labs/animation Qt/labs/settings Qt/labs/sharedimage Qt/labs/synchronizer
@@ -70,17 +76,22 @@ module Zui
         stage = File.join(temporary, "stage")
         qml_scan_root = File.join(temporary, "qml-scan")
         phase("install qml") { Runtime.install_qml(qml_scan_root, framework_root: @framework_root) }
-        cmake = command!("cmake")
-        phase("cmake configure") do
-          run!([cmake, "-S", File.join(@framework_root, "native"), "-B", build,
-                "-DCMAKE_BUILD_TYPE=Release", "-DCMAKE_INSTALL_PREFIX=#{stage}",
-                "-DZUI_QML_SCAN_ROOT=#{qml_scan_root}"], timeout: 240)
-        end
-        phase("cmake build") { run!([cmake, "--build", build, "--config", "Release", "--parallel"], timeout: 900) }
-        phase("cmake install") { run!([cmake, "--install", build, "--config", "Release"], timeout: 900) }
 
         qt = qt_installation
-        phase("catalog runtime") { install_catalog_runtime(stage, qt) }
+        key = client_cache_key(qt, qml_scan_root)
+        unless phase("restore client") { restore_client(stage, key) }
+          cmake = command!("cmake")
+          phase("cmake configure") do
+            run!([cmake, "-S", File.join(@framework_root, "native"), "-B", build,
+                  "-DCMAKE_BUILD_TYPE=Release", "-DCMAKE_INSTALL_PREFIX=#{stage}",
+                  "-DZUI_QML_SCAN_ROOT=#{qml_scan_root}"], timeout: 240)
+          end
+          phase("cmake build") { run!([cmake, "--build", build, "--config", "Release", "--parallel"], timeout: 900) }
+          phase("cmake install") { run!([cmake, "--install", build, "--config", "Release"], timeout: 900) }
+          phase("catalog runtime") { install_catalog_runtime(stage, qt) }
+          phase("save client") { save_client(stage, key) }
+        end
+
         phase("package") do
           ClientPackager.new(
             platform: @platform, source_date_epoch: @environment["SOURCE_DATE_EPOCH"]
@@ -251,6 +262,108 @@ module Zui
         relative = path.delete_prefix("#{stage}#{File::SEPARATOR}").tr(File::SEPARATOR, "/")
         relative.match?(BROWSER_PAYLOAD_PATTERN)
       end
+    end
+
+    # Deploying Qt is 92% of a client build — 232 of 256 seconds on macOS,
+    # where `cmake --install` runs macdeployqt and copies ~140 MB of
+    # frameworks. Compiling the client itself is under two seconds. So what is
+    # worth keeping between builds is the staged client, and the key is what
+    # makes keeping it honest.
+    #
+    # Everything that decides what that staging directory contains is in the
+    # key: the native sources and CMake file the client is compiled from, the
+    # Qt it is deployed against, the QML tree that -qmldir scans, this file,
+    # which chooses what is installed and what is purged, and the platform. If
+    # all of those match, a rebuild produces the same client — which is the
+    # same assumption Client#runtime_contract already makes when it reuses a
+    # downloaded client rather than building one.
+    def client_cache_root
+      override = @environment["ZUI_CLIENT_CACHE_DIR"]
+      return File.expand_path(override) if override && !override.empty?
+
+      File.join(Client.new(platform: @platform, environment: @environment).cache_root,
+                "zui", "client-builds")
+    end
+
+    def client_cache_enabled?
+      value = @environment["ZUI_CLIENT_CACHE"].to_s
+      value.empty? || !%w[0 no off false].include?(value.downcase)
+    end
+
+    def client_cache_key(qt, qml_scan_root)
+      digest = Digest::SHA256.new
+      digest << "zui-client/#{CACHE_LAYOUT_VERSION}\0"
+      digest << @platform.id.to_s << "\0"
+      %w[QT_VERSION QT_INSTALL_QML QT_INSTALL_PLUGINS QT_INSTALL_TRANSLATIONS].each do |field|
+        digest << field << "=" << qt[field].to_s << "\0"
+      end
+      digest << Client.runtime_contract(framework_root: @framework_root) << "\0"
+      digest << Digest::SHA256.file(__FILE__).hexdigest << "\0"
+      digest << tree_digest(qml_scan_root) << "\0"
+      digest.hexdigest
+    end
+
+    def tree_digest(root)
+      digest = Digest::SHA256.new
+      Dir.glob("**/*", File::FNM_DOTMATCH, base: root).sort.each do |relative|
+        path = File.join(root, relative)
+        next unless File.file?(path) && !File.symlink?(path)
+
+        digest << relative << "\0" << Digest::SHA256.file(path).hexdigest << "\0"
+      end
+      digest.hexdigest
+    end
+
+    def client_cache_entry(key) = File.join(client_cache_root, key)
+
+    def restore_client(stage, key)
+      return false unless client_cache_enabled?
+
+      entry = client_cache_entry(key)
+      manifest_path = File.join(entry, "manifest.json")
+      payload = File.join(entry, "client.tar")
+      return false unless File.file?(manifest_path) && File.file?(payload)
+      return false unless JSON.parse(File.read(manifest_path, encoding: "UTF-8"))["layout"] == CACHE_LAYOUT_VERSION
+
+      FileUtils.mkdir_p(stage)
+      run!([command!("tar"), "-xpf", payload, "-C", stage], timeout: 900)
+      raise ArgumentError, "the cached client has no executable" unless File.file?(File.join(stage, executable_relative_path))
+
+      # Every client that is packaged is checked for the forbidden browser
+      # payload, and one assembled from a cache is no exception. The entry was
+      # purged before it was written, so this only fires on an entry that has
+      # been corrupted or tampered with — which is when it should.
+      purge_browser_payload!(stage)
+      true
+    rescue ArgumentError, JSON::ParserError, SystemCallError => error
+      # A cache that cannot be trusted is not worth a failed build.
+      warn "zui client: ignoring the cached client (#{error.message})"
+      FileUtils.rm_rf(stage)
+      false
+    end
+
+    def save_client(stage, key)
+      return unless client_cache_enabled?
+
+      entry = client_cache_entry(key)
+      FileUtils.mkdir_p(File.dirname(entry))
+      staging = "#{entry}.tmp-#{Process.pid}"
+      FileUtils.rm_rf(staging)
+      FileUtils.mkdir_p(staging)
+      begin
+        run!([command!("tar"), "-cpf", File.join(staging, "client.tar"), "-C", stage, "."], timeout: 900)
+        manifest = { "layout" => CACHE_LAYOUT_VERSION, "platform" => @platform.id.to_s,
+                     "executable" => executable_relative_path }
+        File.write(File.join(staging, "manifest.json"), "#{JSON.pretty_generate(manifest)}\n")
+        FileUtils.rm_rf(entry)
+        File.rename(staging, entry)
+      ensure
+        FileUtils.rm_rf(staging)
+      end
+    rescue ArgumentError, SystemCallError => error
+      # The client is already built. A cache that cannot be written is a
+      # slower next build, not a failed this one.
+      warn "zui client: could not keep the built client (#{error.message})"
     end
 
     def qt_installation
