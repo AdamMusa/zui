@@ -695,6 +695,11 @@ module Zui
       @application.register_handler(node.id, :click, handler) if handler
       node
     end
+    def map_plugin(id: nil, **props, &handler)
+      node = component(:map_plugin, id:, **props)
+      @application.register_handler(node.id, :providers, handler) if handler
+      node
+    end
     def map_copyright(id: nil, **props, &handler)
       node = component(:map_copyright, id:, **props)
       @application.register_handler(node.id, :link, handler) if handler

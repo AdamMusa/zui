@@ -347,6 +347,7 @@ transitions, and animation groups receive Ruby APIs even though they are not vis
 
 ## Mobile maps
 
+- [x] map_plugin
 - [x] map
 - [x] map_circle
 - [x] map_rectangle
