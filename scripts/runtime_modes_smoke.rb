@@ -77,7 +77,7 @@ def launch_for_smoke(path, log_path, windows:, macos:)
     nil
   end
 
-  log = File.read(log_path)
+  log = File.read(log_path, encoding: "UTF-8")
   fatal = [
     /Zui runtime crashed/i,
     /QQmlApplicationEngine failed/i,
@@ -126,7 +126,7 @@ Dir.mktmpdir("zui-runtime-modes-") do |directory|
     elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
     runtime_root = macos ? File.join(destination, "Contents", "Resources", "runtime", "ruby") :
                            File.join(destination, "runtime", "ruby")
-    descriptor = JSON.parse(File.read(File.join(runtime_root, "runtime.json")))
+    descriptor = JSON.parse(File.read(File.join(runtime_root, "runtime.json"), encoding: "UTF-8"))
     expected_engine = mode == "lite" ? "mruby" : "cruby"
     abort "#{mode} bundle embedded #{descriptor['engine'].inspect}" unless descriptor["engine"] == expected_engine
     launcher = macos ? File.join(destination, "Contents", "MacOS", "run") :

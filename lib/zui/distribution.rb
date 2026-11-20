@@ -387,7 +387,7 @@ module Zui
                       else
                         File.join(destination, "zui-bundle.json")
                       end
-      manifest = JSON.parse(File.read(manifest_path))
+      manifest = JSON.parse(File.read(manifest_path, encoding: "UTF-8"))
       manifest["payload_sha256"] = ReproducibleBuild.tree_digest(destination, exclude: [manifest_path])
       File.write(manifest_path, "#{JSON.pretty_generate(manifest)}\n")
       ReproducibleBuild.normalize_tree(destination, epoch: @source_date_epoch)

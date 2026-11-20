@@ -166,7 +166,7 @@ class TreeShakerTest < Minitest::Test
   def test_keeps_only_sqlite_driver_for_qml_local_storage
     with_payload("Zui.app { app { text 'stored' } }\n") do |project, framework, native, platform|
       text_adapter = File.join(framework, "Components", "Builtins", "Text.qml")
-      File.write(text_adapter, "import QtQuick.LocalStorage\n#{File.read(text_adapter)}")
+      File.write(text_adapter, "import QtQuick.LocalStorage\n#{File.read(text_adapter, encoding: "UTF-8")}")
       drivers = File.join(native, "plugins", "sqldrivers")
       File.write(File.join(drivers, "libqsqlite.so"), "sqlite")
       File.write(File.join(drivers, "libqmysql.so"), "mysql")

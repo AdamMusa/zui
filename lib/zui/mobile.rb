@@ -480,7 +480,7 @@ module Zui
         ensure_cruby_load_paths(root)
 
         manifest_path = File.join(root, "gems.json")
-        manifest = JSON.parse(File.read(manifest_path))
+        manifest = JSON.parse(File.read(manifest_path, encoding: "UTF-8"))
         manifest["tree_shake"] = @runtime_tree_shake_report.to_h
         manifest.delete("digest")
         manifest["digest"] = mobile_gem_digest(root, manifest)

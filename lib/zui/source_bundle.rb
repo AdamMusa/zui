@@ -30,7 +30,7 @@ module Zui
       raise ArgumentError, "required Ruby file not found: #{relative(path)}" unless File.file?(path)
 
       @loading << path
-      source = File.readlines(path, chomp: true).map do |line|
+      source = File.readlines(path, chomp: true, encoding: "UTF-8").map do |line|
         match = REQUIRE_RELATIVE.match(line)
         if match
           expand(File.expand_path(match[1], File.dirname(path)))

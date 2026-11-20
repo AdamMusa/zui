@@ -52,7 +52,7 @@ rescue Errno::ESRCH, Errno::ECHILD
 end
 
 if status
-  warn File.read(log_path)
+  warn File.read(log_path, encoding: "UTF-8")
   abort "installed Zui runtime exited before the smoke window deadline (status #{status.exitstatus})"
 end
 

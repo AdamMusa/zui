@@ -8,11 +8,11 @@ class QmlContractTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
 
   def source(name)
-    contents = File.read(File.join(ROOT, name))
+    contents = File.read(File.join(ROOT, name), encoding: "UTF-8")
     return contents unless name == "ControlNode.qml"
 
     extracted = Dir[File.join(ROOT, "Components", "Builtins", "*.qml")].sort.map do |path|
-      File.read(path)
+      File.read(path, encoding: "UTF-8")
         .gsub(/\brenderer\./, "root.")
         .gsub("root.childDelegateComponent", "childDelegate")
         .gsub("root.rowChildDelegateComponent", "rowChildDelegate")
@@ -26,7 +26,7 @@ class QmlContractTest < Minitest::Test
 
   def adapter_sources
     Dir[File.join(ROOT, "Components", "Builtins", "**", "*.qml")].sort.to_h do |path|
-      [path.delete_prefix("#{ROOT}/"), File.read(path)]
+      [path.delete_prefix("#{ROOT}/"), File.read(path, encoding: "UTF-8")]
     end
   end
 
@@ -38,7 +38,7 @@ class QmlContractTest < Minitest::Test
   end
 
   def test_each_builtin_renderer_lives_in_its_own_qml_file
-    router = File.read(File.join(ROOT, "ControlNode.qml"))
+    router = File.read(File.join(ROOT, "ControlNode.qml"), encoding: "UTF-8")
 
     refute_includes router, 'import "Components/Builtins" as Builtins'
     refute_match(/Builtins\.\w+ \{ renderer: root \}/, router)
@@ -56,7 +56,7 @@ class QmlContractTest < Minitest::Test
       name = component_name.to_s.split("_").map(&:capitalize).join
       path = File.join(ROOT, "Components", "Builtins", "#{name}.qml")
       assert File.file?(path), "missing #{path}"
-      assert_match(/(?:(?:required\s+)?property var renderer|renderer:\s*null)/, File.read(path), "#{path} does not expose its renderer bridge")
+      assert_match(/(?:(?:required\s+)?property var renderer|renderer:\s*null)/, File.read(path, encoding: "UTF-8"), "#{path} does not expose its renderer bridge")
     end
     refute_includes router, "QQC.Button {"
     refute_includes router, "OmarchyUi.WidgetButton {"
@@ -68,7 +68,7 @@ class QmlContractTest < Minitest::Test
 
     Zui::COMPONENTS.each do |component_name, (properties, _events, _container)|
       adapter_name = component_name.to_s.split("_").map(&:capitalize).join
-      qml = File.read(File.join(ROOT, "Components", "Builtins", "#{adapter_name}.qml"))
+      qml = File.read(File.join(ROOT, "Components", "Builtins", "#{adapter_name}.qml"), encoding: "UTF-8")
       property_reads = qml.scan(/(?:renderer|root)\.prop\(\s*["']([^"']+)["']/).flatten.uniq
       missing = property_reads - properties.map(&:to_s) - common
       undeclared[component_name] = missing unless missing.empty?
@@ -90,7 +90,7 @@ class QmlContractTest < Minitest::Test
       assert_includes properties, "alignment", "#{component} cannot align its content"
 
       adapter = component.split("_").map(&:capitalize).join
-      qml = File.read(File.join(ROOT, "Components", "Builtins", "#{adapter}.qml"))
+      qml = File.read(File.join(ROOT, "Components", "Builtins", "#{adapter}.qml"), encoding: "UTF-8")
 
       assert_includes qml, 'renderer.prop("alignment", "center")'
       assert_match(/anchors\.top:[^\n]*"start"/, qml)
@@ -106,10 +106,10 @@ class QmlContractTest < Minitest::Test
   def test_an_application_can_set_the_inset_the_shell_leaves_around_it
     assert_includes Zui::Builder::APP_OPTIONS, :padding
 
-    shell = File.read(File.join(ROOT, "Desktop.qml"))
+    shell = File.read(File.join(ROOT, "Desktop.qml"), encoding: "UTF-8")
 
     assert_includes shell, 'window.option("padding", 20)'
-    assert_match(/max_height: true, padding: true/, File.read(File.join(ROOT, "Service.qml")))
+    assert_match(/max_height: true, padding: true/, File.read(File.join(ROOT, "Service.qml"), encoding: "UTF-8"))
 
     application = Zui::Application.new { app(:main, padding: 0) { text "fits" } }
 
@@ -131,18 +131,18 @@ class QmlContractTest < Minitest::Test
 
   def test_adapters_for_absent_types_do_not_resolve_to_themselves
     SELF_NAMING_ADAPTERS.each_key do |adapter|
-      qml = File.read(File.join(ROOT, "Components", "Builtins", "#{adapter}.qml"))
+      qml = File.read(File.join(ROOT, "Components", "Builtins", "#{adapter}.qml"), encoding: "UTF-8")
 
       refute_match(/^\s+#{adapter}\s*\{/, qml,
                    "#{adapter}.qml instantiates #{adapter}, which resolves to itself")
     end
 
-    shadow = File.read(File.join(ROOT, "Components", "Builtins", "RectangularShadow.qml"))
+    shadow = File.read(File.join(ROOT, "Components", "Builtins", "RectangularShadow.qml"), encoding: "UTF-8")
 
     assert_includes shadow, "MultiEffect"
     assert_includes shadow, "blurMax"
 
-    proxy = File.read(File.join(ROOT, "Components", "Builtins", "SortFilterProxyModel.qml"))
+    proxy = File.read(File.join(ROOT, "Components", "Builtins", "SortFilterProxyModel.qml"), encoding: "UTF-8")
 
     assert_includes proxy, "ListModel { id: rows }"
     refute_includes proxy, "import QtQml.Models"
@@ -155,7 +155,7 @@ class QmlContractTest < Minitest::Test
   # ControlNode is not a function" and silently got no cursor. The contract is
   # checkable without a display, so it is checked here.
   def test_adapters_only_call_functions_control_node_defines
-    router = File.read(File.join(ROOT, "ControlNode.qml"))
+    router = File.read(File.join(ROOT, "ControlNode.qml"), encoding: "UTF-8")
     defined = router.scan(/function\s+([A-Za-z_]\w*)\s*\(/).flatten.to_set
 
     offenders = adapter_sources.each_with_object({}) do |(name, qml), found|
@@ -176,7 +176,7 @@ class QmlContractTest < Minitest::Test
 
   def test_deferred_width_sync_gives_up_when_its_node_is_gone
     DEFERRED_WIDTH_ADAPTERS.each do |adapter|
-      qml = File.read(File.join(ROOT, "Components", "Builtins", "#{adapter}.qml"))
+      qml = File.read(File.join(ROOT, "Components", "Builtins", "#{adapter}.qml"), encoding: "UTF-8")
 
       assert_includes qml, "Qt.callLater(root.synchronizeWidth)",
                       "#{adapter}.qml no longer defers its width sync; drop it from this list"
@@ -189,7 +189,7 @@ class QmlContractTest < Minitest::Test
   # takes the focus away, so these handlers run while the node behind them is
   # being torn down.
   def test_item_delegate_events_check_their_node_before_posting
-    qml = File.read(File.join(ROOT, "Components", "Builtins", "ItemDelegate.qml"))
+    qml = File.read(File.join(ROOT, "Components", "Builtins", "ItemDelegate.qml"), encoding: "UTF-8")
 
     assert_match(/function postEvent\(eventName, payload\) \{\s*if \(!renderer \|\| !renderer\.bridge \|\| !renderer\.subscribed\(eventName\)\) return/m,
                  qml)
@@ -201,7 +201,7 @@ class QmlContractTest < Minitest::Test
   # item, so `parent` inside them is not the tooltip. Every themed property
   # resolved to undefined and the tooltip drew with Qt's defaults.
   def test_the_panel_tooltip_theme_reaches_its_content_and_background
-    qml = File.read(File.join(ROOT, "Controls", "PanelToolTip.qml"))
+    qml = File.read(File.join(ROOT, "Controls", "PanelToolTip.qml"), encoding: "UTF-8")
 
     refute_match(/parent\.panel(Foreground|Background|Border)/, qml)
     refute_match(/parent\.font(Family|Size)/, qml)
@@ -291,7 +291,7 @@ class QmlContractTest < Minitest::Test
   # Windows drive letter was taken for a URL scheme, so "C:/..." was passed
   # through as a "c:" URL and never opened.
   def test_asset_resolution_emits_a_file_url_and_knows_a_drive_letter
-    router = File.read(File.join(ROOT, "ControlNode.qml"))
+    router = File.read(File.join(ROOT, "ControlNode.qml"), encoding: "UTF-8")
 
     assert_includes router, "function assetUrl(value)"
     assert_includes router, "function fileUrl(value)"
@@ -322,7 +322,7 @@ class QmlContractTest < Minitest::Test
   end
 
   def test_component_coverage_catalog_has_no_unimplemented_entries
-    coverage = File.read(File.join(ROOT, "docs", "component-coverage.md"))
+    coverage = File.read(File.join(ROOT, "docs", "component-coverage.md"), encoding: "UTF-8")
 
     refute_match(/^- \[ \] /, coverage)
   end
@@ -639,7 +639,7 @@ class QmlContractTest < Minitest::Test
     style = source("Theme/Style.qml")
     renderer = source("ControlNode.qml")
     framework_qml = (Dir[File.join(ROOT, "*.qml")] +
-      Dir[File.join(ROOT, "{Components,Controls,Theme}", "**", "*.qml")]).map { File.read(_1) }.join("\n")
+      Dir[File.join(ROOT, "{Components,Controls,Theme}", "**", "*.qml")]).map { File.read(_1, encoding: "UTF-8") }.join("\n")
 
     %w[RobotoMono-Regular.otf RobotoMono-Bold.otf FontAwesome-Solid.otf FontAwesome-Brands.otf].each do |name|
       assert_operator File.size(File.join(ROOT, "Fonts", name)), :>, 10_000
@@ -932,7 +932,7 @@ class QmlContractTest < Minitest::Test
   end
 
   def test_model_view_3d_loads_real_geometry_and_native_pointer_controls
-    renderer = File.read(File.join(ROOT, "ControlNode.qml"))
+    renderer = File.read(File.join(ROOT, "ControlNode.qml"), encoding: "UTF-8")
     host = source("Components/Builtins/ModelView3d.qml")
     model = source("Components/Builtins/Support/ModelView3dScene.qml")
 
@@ -1068,7 +1068,7 @@ class QmlContractTest < Minitest::Test
   end
 
   def test_reactive_patch_preserves_event_subscriptions
-    service = File.read(File.join(ROOT, "Service.qml"))
+    service = File.read(File.join(ROOT, "Service.qml"), encoding: "UTF-8")
 
     assert_includes service, "if (node.events !== undefined) replacement.events = node.events"
   end

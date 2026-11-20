@@ -47,8 +47,15 @@ module Zui
       [stdin, stdout, stderr].each { |stream| stream&.close unless stream&.closed? }
     end
 
+    # A command's output is read as bytes and handed back as UTF-8, because the
+    # tooling scans it with regular expressions. Left to Ruby it would carry
+    # Encoding.default_external, which is US-ASCII when the caller's locale is
+    # unset, and one non-ASCII byte in a linker's diagnostic would abort the
+    # scan with "invalid byte sequence in US-ASCII". A byte that is not UTF-8
+    # is replaced rather than raised on: this is a tool's chatter, not data.
     def bounded_read(stream, limit)
-      output = +""
+      stream.binmode
+      output = +"".b
       exceeded = false
       loop do
         chunk = stream.readpartial(16_384)
@@ -61,7 +68,7 @@ module Zui
         end
       end
     rescue EOFError
-      [output, exceeded]
+      [output.force_encoding(Encoding::UTF_8).scrub, exceeded]
     end
     private_class_method :bounded_read
 

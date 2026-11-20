@@ -28,7 +28,7 @@ module Zui
         path = File.join(@framework_root, "lib", "zui", name)
         raise ArgumentError, "lite runtime source is missing: #{path}" unless File.file?(path)
 
-        source = File.readlines(path).reject { |line| REQUIRE.match?(line) }.join
+        source = File.readlines(path, encoding: "UTF-8").reject { |line| REQUIRE.match?(line) }.join
         "# runtime: #{name}\n#{source}"
       end
       runtime << "module Zui\n  VERSION = #{VERSION.dump}\nend"

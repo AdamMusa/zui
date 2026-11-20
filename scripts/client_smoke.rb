@@ -76,7 +76,7 @@ Dir.mktmpdir("zui-client-smoke-") do |cache|
     nil
   end
 
-  log = File.read(log_path)
+  log = File.read(log_path, encoding: "UTF-8")
   fatal_runtime_error = [
     /QQmlApplicationEngine failed to load component/i,
     /module ".+" plugin ".+" not found/i,

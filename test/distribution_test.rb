@@ -53,7 +53,7 @@ class DistributionTest < Minitest::Test
       refute File.exist?(File.join(destination, "runtime", "lib", "zui", "client_builder.rb"))
       refute File.exist?(File.join(destination, "runtime", "lib", "zui", "client_packager.rb"))
       assert File.file?(File.join(destination, "runtime", "qml", "Desktop.qml"))
-      manifest = JSON.parse(File.read(File.join(destination, "zui-bundle.json")))
+      manifest = JSON.parse(File.read(File.join(destination, "zui-bundle.json"), encoding: "UTF-8"))
       assert_equal "linux", manifest.fetch("platform")
       assert_equal Zui::VERSION, manifest.fetch("client_version")
       assert_equal true, manifest.fetch("tree_shaken")
@@ -61,10 +61,10 @@ class DistributionTest < Minitest::Test
       assert_includes manifest.fetch("tree_shake").fetch("components"), "text"
       refute File.exist?(File.join(destination, "runtime", "qml", "Components", "Builtins", "Camera.qml"))
       assert_equal 1, Dir[File.join(destination, "share", "applications", "*.desktop")].length
-      desktop = File.read(Dir[File.join(destination, "share", "applications", "*.desktop")].first)
+      desktop = File.read(Dir[File.join(destination, "share", "applications", "*.desktop")].first, encoding: "UTF-8")
       assert_includes desktop, "Exec=./run"
       refute_includes desktop, destination
-      launcher = File.read(File.join(destination, "run"))
+      launcher = File.read(File.join(destination, "run"), encoding: "UTF-8")
       assert_includes launcher, "export ZUI_QT_STYLE='Fusion'"
       assert_includes launcher, 'ruby_command="$ruby_root/bin/mruby"'
       assert_includes launcher, '--program "$bundle_dir/runtime/ruby/app.rb"'
@@ -86,8 +86,8 @@ class DistributionTest < Minitest::Test
       assert File.file?(File.join(contents, "Info.plist"))
       assert File.file?(File.join(contents, "Resources", "app", "main.rb"))
       assert File.file?(File.join(contents, "Resources", "runtime", "qml", "Desktop.qml"))
-      assert_includes File.read(File.join(contents, "Info.plist")), "CFBundlePackageType"
-      launcher = File.read(File.join(contents, "MacOS", "run"))
+      assert_includes File.read(File.join(contents, "Info.plist"), encoding: "UTF-8"), "CFBundlePackageType"
+      launcher = File.read(File.join(contents, "MacOS", "run"), encoding: "UTF-8")
       assert_includes launcher, "export ZUI_QT_STYLE='Fusion'"
       assert_includes launcher, 'ruby_command="$ruby_root/bin/mruby"'
       assert_includes launcher, '--program "$resources/runtime/ruby/app.rb"'
@@ -209,8 +209,8 @@ class DistributionTest < Minitest::Test
 
         assert_equal Zui::ReproducibleBuild.tree_digest(first), Zui::ReproducibleBuild.tree_digest(second)
         manifest = platform.macos? ? File.join("Contents", "Resources", "zui-bundle.json") : "zui-bundle.json"
-        first_manifest = JSON.parse(File.read(File.join(first, manifest)))
-        second_manifest = JSON.parse(File.read(File.join(second, manifest)))
+        first_manifest = JSON.parse(File.read(File.join(first, manifest), encoding: "UTF-8"))
+        second_manifest = JSON.parse(File.read(File.join(second, manifest), encoding: "UTF-8"))
         assert_equal first_manifest.fetch("payload_sha256"), second_manifest.fetch("payload_sha256")
         assert_equal epoch, first_manifest.fetch("source_date_epoch")
         assert_equal epoch, second_manifest.fetch("source_date_epoch")
@@ -231,8 +231,8 @@ class DistributionTest < Minitest::Test
       assert File.file?(File.join(destination, "app", "main.rb"))
       assert File.file?(File.join(destination, "runtime", "lib", "zui.rb"))
       assert File.file?(File.join(destination, "runtime", "qml", "Desktop.qml"))
-      assert_equal "windows", JSON.parse(File.read(File.join(destination, "zui-bundle.json"))).fetch("platform")
-      launcher = File.read(File.join(destination, "run.cmd"))
+      assert_equal "windows", JSON.parse(File.read(File.join(destination, "zui-bundle.json"), encoding: "UTF-8")).fetch("platform")
+      launcher = File.read(File.join(destination, "run.cmd"), encoding: "UTF-8")
       assert_includes launcher, 'set "ZUI_QT_STYLE=Fusion"'
       assert_includes launcher, "%ruby_root%\\bin\\mruby.exe"
       assert_includes launcher, "%ruby_root%\\app.rb"
@@ -250,7 +250,7 @@ class DistributionTest < Minitest::Test
       assert_raises(ArgumentError) do
         lite_distribution(client:, platform:).bundle(project, destination:)
       end
-      assert_equal "keep", File.read(File.join(destination, "personal.txt"))
+      assert_equal "keep", File.read(File.join(destination, "personal.txt"), encoding: "UTF-8")
     end
   end
 
@@ -261,7 +261,7 @@ class DistributionTest < Minitest::Test
         client:, platform:, runtime_mode: :full, runtime_builder: FakeRuntimeBuilder.new(platform, "cruby")
       ).bundle(project)
 
-      launcher = File.read(File.join(destination, "run"))
+      launcher = File.read(File.join(destination, "run"), encoding: "UTF-8")
       assert_includes launcher, 'ruby_root="$bundle_dir/runtime/ruby"'
       assert_includes launcher, 'ruby_command="$ruby_root/bin/ruby"'
       assert_includes launcher, 'export GEM_HOME="${ruby_root}/gems"'
@@ -269,7 +269,7 @@ class DistributionTest < Minitest::Test
       refute_includes launcher, "command -v ruby"
       assert File.file?(File.join(destination, "runtime", "ruby", "runtime.json"))
       refute File.exist?(File.join(destination, "runtime", "lib"))
-      manifest = JSON.parse(File.read(File.join(destination, "zui-bundle.json")))
+      manifest = JSON.parse(File.read(File.join(destination, "zui-bundle.json"), encoding: "UTF-8"))
       assert_equal "full", manifest.fetch("ruby_runtime")
     end
   end
@@ -281,7 +281,7 @@ class DistributionTest < Minitest::Test
         client:, platform:, runtime_mode: :full, runtime_builder: FakeRuntimeBuilder.new(platform, "cruby")
       ).bundle(project)
 
-      launcher = File.read(File.join(destination, "run.cmd"))
+      launcher = File.read(File.join(destination, "run.cmd"), encoding: "UTF-8")
       assert_includes launcher, "%ruby_root%\\bin\\ruby.exe"
       assert_includes launcher, "runtime\\native\\bin\\zui-host.exe"
       assert_includes launcher, "--ruby"
@@ -299,7 +299,7 @@ class DistributionTest < Minitest::Test
       distribution.bundle(project, destination:)
 
       assert_nil distribution.tree_shake_report
-      manifest = JSON.parse(File.read(File.join(destination, "zui-bundle.json")))
+      manifest = JSON.parse(File.read(File.join(destination, "zui-bundle.json"), encoding: "UTF-8"))
       assert_equal false, manifest.fetch("tree_shaken")
       assert File.file?(File.join(destination, "runtime", "qml", "Components", "Builtins", "Camera.qml"))
     end
@@ -317,7 +317,7 @@ class DistributionTest < Minitest::Test
       argument_log = File.join(project, "native-arguments.log")
 
       if Gem.win_platform?
-        launcher = File.read(File.join(destination, "run"))
+        launcher = File.read(File.join(destination, "run"), encoding: "UTF-8")
         assert_includes launcher, 'ruby_command="$ruby_root/bin/mruby"'
         next
       end
@@ -328,7 +328,7 @@ class DistributionTest < Minitest::Test
       )
 
       assert launched
-      arguments = File.readlines(argument_log, chomp: true)
+      arguments = File.readlines(argument_log, chomp: true, encoding: "UTF-8")
       assert_equal File.join(destination, "runtime", "ruby", "bin", "mruby"),
                    arguments.fetch(arguments.index("--ruby") + 1)
     end
@@ -367,7 +367,7 @@ class DistributionTest < Minitest::Test
     Dir.mktmpdir do |directory|
       project = File.join(directory, "demo")
       FileUtils.mkdir_p(project)
-      File.write(File.join(project, "main.rb"), File.read(File.join(__dir__, "fixtures", "smoke_app.rb")))
+      File.write(File.join(project, "main.rb"), File.read(File.join(__dir__, "fixtures", "smoke_app.rb"), encoding: "UTF-8"))
       File.write(File.join(project, "asset.txt"), "owned by app")
       client_root = ClientFixture.create(File.join(directory, "client"), platform:)
       client = Zui::Client.new(platform:, environment: { "ZUI_CLIENT_ROOT" => client_root })

@@ -26,7 +26,7 @@ class ClientPackagerTest < Minitest::Test
       )
 
       assert_equal File.binread(first), File.binread(second)
-      assert_equal File.read("#{first}.sha256").split.first, File.read("#{second}.sha256").split.first
+      assert_equal File.read("#{first}.sha256", encoding: "UTF-8").split.first, File.read("#{second}.sha256", encoding: "UTF-8").split.first
     end
   end
 

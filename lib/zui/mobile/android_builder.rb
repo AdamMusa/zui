@@ -283,14 +283,14 @@ module Zui
 
         template = File.join(@qt_android, "src", "android", "templates", "build.gradle")
         validate_file!(template, "Qt Android Gradle template")
-        contents = File.read(template).rstrip
+        contents = File.read(template, encoding: "UTF-8").rstrip
         File.write(File.join(package, "build.gradle"), "#{contents}\n\napply from: 'zui.gradle'\n")
       end
 
       def validate_android_manifest!(manifest_path)
         raise ArgumentError, "android/AndroidManifest.xml is missing" unless File.file?(manifest_path)
 
-        manifest = File.read(manifest_path)
+        manifest = File.read(manifest_path, encoding: "UTF-8")
         requirements = {
           "Qt activity" => "org.qtproject.qt.android.bindings.QtActivity",
           "application library marker" => "%%INSERT_APP_LIB_NAME%%",

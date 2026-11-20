@@ -65,7 +65,7 @@ module Zui
     def read_document(path)
       return {} unless File.file?(path)
 
-      document = JSON.parse(File.read(path))
+      document = JSON.parse(File.read(path, encoding: "UTF-8"))
       raise ArgumentError, "#{CONFIG_FILE} must contain a JSON object" unless document.is_a?(Hash)
 
       document

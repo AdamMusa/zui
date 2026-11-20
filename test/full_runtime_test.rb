@@ -107,11 +107,12 @@ class FullRuntimeTest < Minitest::Test
       assert File.file?(File.join(destination, "lib", "libpaint.so"))
       assert File.file?(File.join(destination, "gems", "gems", "zui-#{Zui::VERSION}", "lib", "zui.rb"))
       assert_includes File.read(
-        File.join(destination, "gems", "gems", "zui-#{Zui::VERSION}", "lib", "zui.rb")
+        File.join(destination, "gems", "gems", "zui-#{Zui::VERSION}", "lib", "zui.rb"),
+        encoding: "UTF-8"
       ), 'require_relative "zui/runtime_entry"'
       refute File.exist?(File.join(destination, "gems", "gems", "zui-#{Zui::VERSION}", "mobile"))
       refute File.exist?(File.join(destination, "gems", "gems", "json-2.0.0"))
-      manifest = JSON.parse(File.read(File.join(destination, "runtime.json")))
+      manifest = JSON.parse(File.read(File.join(destination, "runtime.json"), encoding: "UTF-8"))
       assert_equal "cruby", manifest.fetch("engine")
       assert_equal ["gems"], manifest.fetch("environment").fetch("GEM_HOME")
       assert_includes manifest.fetch("environment").fetch("RUBYLIB"),

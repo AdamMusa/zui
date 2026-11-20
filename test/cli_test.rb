@@ -86,9 +86,9 @@ class CLITest < Minitest::Test
         assert_equal 0, Zui::CLI.run(["new", "signal_board"], out: output, err: StringIO.new)
       end
       project = File.join(directory, "signal-board")
-      main = File.read(File.join(project, "main.rb"))
-      component = File.read(File.join(project, "components", "welcome.rb"))
-      config = File.read(File.join(project, "config.rb"))
+      main = File.read(File.join(project, "main.rb"), encoding: "UTF-8")
+      component = File.read(File.join(project, "components", "welcome.rb"), encoding: "UTF-8")
+      config = File.read(File.join(project, "config.rb"), encoding: "UTF-8")
       assets = File.join(project, "assets")
       assert_includes main, 'require "zui"'
       assert_includes main, "module SignalBoard"
@@ -98,7 +98,7 @@ class CLITest < Minitest::Test
       refute_match(/Omarchy|Quickshell/, main)
       refute_includes component, "Zui::Builder.include"
       assert_equal %w[Gemfile README.md assets components config.rb main.rb], Dir.children(project).sort
-      gemfile = File.read(File.join(project, "Gemfile"))
+      gemfile = File.read(File.join(project, "Gemfile"), encoding: "UTF-8")
       assert_includes gemfile, 'gem "zui"'
       assert_includes gemfile, "zui bundle --full"
       assert_includes config, "Zui::Dist.configure"

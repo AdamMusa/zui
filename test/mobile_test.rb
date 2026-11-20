@@ -79,17 +79,17 @@ class MobileTest < Minitest::Test
       config = Zui::Dist.load(project:, platform: Zui::Mobile::IOSBuilder::IOS_PLATFORM)
       stage = builder.send(:prepare_stage, config)
 
-      application = File.read(File.join(stage, "app.rb"))
-      manifest = JSON.parse(File.read(File.join(stage, "Assets.xcassets", "AppIcon.appiconset", "Contents.json")))
+      application = File.read(File.join(stage, "app.rb"), encoding: "UTF-8")
+      manifest = JSON.parse(File.read(File.join(stage, "Assets.xcassets", "AppIcon.appiconset", "Contents.json"), encoding: "UTF-8"))
       assert_includes application, "class EmbeddedOutput"
       assert_includes application, 'text "Touch ready"'
       refute File.exist?(File.join(stage, "assets", "ruby.png"))
       refute File.exist?(File.join(stage, "assets", "release.ico"))
-      assert_equal "runtime asset", File.read(File.join(stage, "assets", "runtime.txt"))
+      assert_equal "runtime asset", File.read(File.join(stage, "assets", "runtime.txt"), encoding: "UTF-8")
       assert_equal "AppIcon.png", manifest.dig("images", 0, "filename")
       assert File.file?(File.join(stage, "Assets.xcassets", "AppIcon.appiconset", "AppIcon.png"))
       assert File.file?(File.join(stage, "Assets.xcassets", "ZuiSplash.imageset", "ZuiSplash.png"))
-      assert_includes File.read(File.join(stage, "LaunchScreen.storyboard")), "ZuiSplash"
+      assert_includes File.read(File.join(stage, "LaunchScreen.storyboard"), encoding: "UTF-8"), "ZuiSplash"
     end
   end
 
@@ -110,8 +110,8 @@ class MobileTest < Minitest::Test
         )
       end
 
-      first_manifest = JSON.parse(File.read(File.join(first, Zui::Mobile::PAYLOAD_MANIFEST)))
-      second_manifest = JSON.parse(File.read(File.join(second, Zui::Mobile::PAYLOAD_MANIFEST)))
+      first_manifest = JSON.parse(File.read(File.join(first, Zui::Mobile::PAYLOAD_MANIFEST), encoding: "UTF-8"))
+      second_manifest = JSON.parse(File.read(File.join(second, Zui::Mobile::PAYLOAD_MANIFEST), encoding: "UTF-8"))
       assert_equal first_manifest, second_manifest
       assert_equal Zui::ReproducibleBuild.tree_digest(first), Zui::ReproducibleBuild.tree_digest(second)
       assert_equal epoch, first_manifest.fetch("source_date_epoch")
@@ -226,19 +226,19 @@ class MobileTest < Minitest::Test
       builder.send(:copy_cruby_support, stage)
       builder.send(:configure_xcode, config, stage, "unused", sdk: "/Simulator.sdk")
 
-      assert_equal "json common", File.read(File.join(stage, "cruby", "json", "common.rb"))
-      assert_equal "json state", File.read(File.join(stage, "cruby", "json", "ext", "generator", "state.rb"))
-      assert_equal "uri support", File.read(File.join(stage, "cruby", "stdlib", "source", "uri.rb"))
-      assert_equal "target rbconfig", File.read(File.join(stage, "cruby", "stdlib", "generated", "rbconfig.rb"))
+      assert_equal "json common", File.read(File.join(stage, "cruby", "json", "common.rb"), encoding: "UTF-8")
+      assert_equal "json state", File.read(File.join(stage, "cruby", "json", "ext", "generator", "state.rb"), encoding: "UTF-8")
+      assert_equal "uri support", File.read(File.join(stage, "cruby", "stdlib", "source", "uri.rb"), encoding: "UTF-8")
+      assert_equal "target rbconfig", File.read(File.join(stage, "cruby", "stdlib", "generated", "rbconfig.rb"), encoding: "UTF-8")
       %w[version.rb common.rb ext.rb ext/generator/state.rb].each do |relative|
         refute File.exist?(File.join(stage, "cruby", "stdlib", "generated", "json", relative))
       end
       assert_equal "require 'uri'\nmodule Paint; def self.label = 'Paint ready'; end\n",
-                   File.read(File.join(stage, "cruby", "gems", "paint-1.2.3", "lib", "paint.rb"))
+                   File.read(File.join(stage, "cruby", "gems", "paint-1.2.3", "lib", "paint.rb"), encoding: "UTF-8")
       assert File.file?(File.join(stage, "cruby", "specifications", "paint-1.2.3.gemspec"))
       refute File.exist?(File.join(stage, "cruby", "gems", "paint-1.2.3", "dist"))
-      assert_includes File.read(File.join(stage, "app.rb")), 'require "paint"'
-      gem_manifest = JSON.parse(File.read(File.join(stage, "cruby", "gems.json")))
+      assert_includes File.read(File.join(stage, "app.rb"), encoding: "UTF-8"), 'require "paint"'
+      gem_manifest = JSON.parse(File.read(File.join(stage, "cruby", "gems.json"), encoding: "UTF-8"))
       assert_match(/\A[0-9a-f]{64}\z/, gem_manifest.fetch("digest"))
       assert_equal %w[stdlib/generated stdlib/source], gem_manifest.fetch("standard_library_paths")
       assert_equal ["gems/paint-1.2.3/lib"], gem_manifest.dig("gems", 0, "load_paths")
