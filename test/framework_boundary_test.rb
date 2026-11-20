@@ -76,6 +76,20 @@ class FrameworkBoundaryTest < Minitest::Test
     refute_match(/\b(?:bpm|beatAmount|pulse_scale|heart)\b/i, scene)
   end
 
+  def test_each_component_name_is_declared_exactly_once
+    # COMPONENTS is a Hash literal, so a repeated key replaces the component
+    # that was there instead of failing. ComponentRegistry#register never sees
+    # the collision, and the replaced adapter keeps its file while answering to
+    # another component's schema.
+    source = File.read(File.join(ROOT, "lib", "zui", "components.rb"))
+    body = source[/COMPONENTS = \{(.*?)\n  \}\.freeze/m, 1]
+    declared = body.to_s.scan(/^    ([a-z0-9_]+):/).flatten
+
+    refute_nil body
+    assert_empty declared.tally.select { |_name, count| count > 1 }.keys
+    assert_equal declared.length, Zui::COMPONENTS.length
+  end
+
   def test_components_never_expose_or_render_silent_fallbacks
     fallback_properties = Zui::COMPONENTS.flat_map do |name, (properties, _events, _container)|
       properties.grep(/\Afallback_/).map { |property| "#{name}.#{property}" }
