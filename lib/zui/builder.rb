@@ -74,7 +74,13 @@ module Zui
       @application.define_state(name, initial)
     end
 
-    APP_OPTIONS = %i[title width height min_width min_height max_width max_height color visible maximized fullscreen].freeze
+    # `padding` is the inset the desktop shell leaves around the root control
+    # (Desktop.qml). It has always been read from the surface options and has
+    # always defaulted to 20, but no application could set it, so forty points
+    # of every window were reserved for a margin the application never asked
+    # for and could not measure.
+    APP_OPTIONS = %i[title width height min_width min_height max_width max_height padding color
+                     visible maximized fullscreen].freeze
 
     def bar_widget(&block) = surface("bar", id: "bar", &block)
     def panel(name, &block) = surface(name.to_s, id: "panel.#{name}", &block)

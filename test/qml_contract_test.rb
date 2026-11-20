@@ -70,6 +70,77 @@ class QmlContractTest < Minitest::Test
     assert_empty undeclared
   end
 
+  # A surface larger than its content has to put that content somewhere. The
+  # default is still the centre, which is what padding looks like when the
+  # surface is sized by its content, but a card, container or rectangle given
+  # an explicit size can now hold its content at the padding origin instead.
+  # Without that, a grid of equal-height cards centres every heading at a
+  # different depth and opens dead space above and below the short ones.
+  def test_content_surfaces_can_align_their_content_to_the_padding_origin
+    %w[card container rectangle].each do |component|
+      properties = Zui::DEFAULT_COMPONENTS.protocol_schema.fetch(component).fetch("properties")
+
+      assert_includes properties, "alignment", "#{component} cannot align its content"
+
+      adapter = component.split("_").map(&:capitalize).join
+      qml = File.read(File.join(ROOT, "Components", "Builtins", "#{adapter}.qml"))
+
+      assert_includes qml, 'renderer.prop("alignment", "center")'
+      assert_match(/anchors\.top:[^\n]*"start"/, qml)
+      assert_match(/anchors\.bottom:[^\n]*"end"/, qml)
+      assert_match(/anchors\.verticalCenter: \w+\.centred/, qml)
+      assert_match(/anchors\.topMargin: \w+\.(pad|innerPadding)/, qml)
+    end
+  end
+
+  # The shell insets the root control by a margin the application pays for in
+  # layout space. It could be read from the surface options but never set, so
+  # every desktop window silently lost forty points in each axis.
+  def test_an_application_can_set_the_inset_the_shell_leaves_around_it
+    assert_includes Zui::Builder::APP_OPTIONS, :padding
+
+    shell = File.read(File.join(ROOT, "Desktop.qml"))
+
+    assert_includes shell, 'window.option("padding", 20)'
+    assert_match(/max_height: true, padding: true/, File.read(File.join(ROOT, "Service.qml")))
+
+    application = Zui::Application.new { app(:main, padding: 0) { text "fits" } }
+
+    assert_equal 0, application.surface_options.fetch("main").fetch("padding")
+  end
+
+  # An adapter is named after the type it adapts, and QML resolves a type name
+  # against the file's own directory as well as its imports. That is harmless
+  # while the imported module really provides the type. When it does not — a
+  # type added in a later Qt, or one that was never Qt's at all — the name
+  # resolves to the adapter file itself and the adapter instantiates itself
+  # without end. The window stops answering and the process pins a core, and
+  # the only trace is a single QML warning. Neither of these two may name
+  # itself again.
+  SELF_NAMING_ADAPTERS = {
+    "RectangularShadow" => "QtQuick.Effects gained RectangularShadow in 6.9",
+    "SortFilterProxyModel" => "QtQml.Models has never provided SortFilterProxyModel"
+  }.freeze
+
+  def test_adapters_for_absent_types_do_not_resolve_to_themselves
+    SELF_NAMING_ADAPTERS.each_key do |adapter|
+      qml = File.read(File.join(ROOT, "Components", "Builtins", "#{adapter}.qml"))
+
+      refute_match(/^\s+#{adapter}\s*\{/, qml,
+                   "#{adapter}.qml instantiates #{adapter}, which resolves to itself")
+    end
+
+    shadow = File.read(File.join(ROOT, "Components", "Builtins", "RectangularShadow.qml"))
+
+    assert_includes shadow, "MultiEffect"
+    assert_includes shadow, "blurMax"
+
+    proxy = File.read(File.join(ROOT, "Components", "Builtins", "SortFilterProxyModel.qml"))
+
+    assert_includes proxy, "ListModel { id: rows }"
+    refute_includes proxy, "import QtQml.Models"
+  end
+
   def test_gpu_adapters_ship_native_effects_particles_and_precompiled_shaders
     shader = source("Components/Builtins/ShaderEffect.qml")
     effect = source("Components/Builtins/MultiEffect.qml")

@@ -5,8 +5,14 @@ import "../../Theme"
 import "../../Controls" as ZuiControls
 
 ZuiControls.BorderSurface {
+  id: surface
   required property var renderer
       readonly property int innerPadding: Number(renderer.prop("padding", 0))
+      // See Card.qml: `alignment` decides where the content sits when the
+      // surface is larger than the content, instead of always centring it.
+      readonly property string contentAlignment: String(renderer.prop("alignment", "center"))
+      readonly property bool centred: contentAlignment !== "start" && contentAlignment !== "top"
+        && contentAlignment !== "end" && contentAlignment !== "bottom"
       implicitWidth: content.implicitWidth + innerPadding * 2
       implicitHeight: content.implicitHeight + innerPadding * 2
       color: "transparent"
@@ -17,7 +23,16 @@ ZuiControls.BorderSurface {
 
       Column {
         id: content
-        anchors.centerIn: parent
+        anchors.horizontalCenter: surface.centred ? surface.horizontalCenter : undefined
+        anchors.left: surface.centred ? undefined : surface.left
+        anchors.leftMargin: surface.innerPadding
+        anchors.verticalCenter: surface.centred ? surface.verticalCenter : undefined
+        anchors.top: surface.contentAlignment === "start" || surface.contentAlignment === "top"
+          ? surface.top : undefined
+        anchors.topMargin: surface.innerPadding
+        anchors.bottom: surface.contentAlignment === "end" || surface.contentAlignment === "bottom"
+          ? surface.bottom : undefined
+        anchors.bottomMargin: surface.innerPadding
         spacing: Number(renderer.prop("spacing", Style.spacing.panelGap))
 
         Repeater {
