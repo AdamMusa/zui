@@ -607,6 +607,17 @@ module Zui
     def screen_capture(id: nil, **props) = component(:screen_capture, id:, **props)
     def window_capture(id: nil, **props) = component(:window_capture, id:, **props)
 
+    # QtQml.StateMachine's hierarchical machine. Named apart from state,
+    # state_group and transition, which are QtQuick's simpler state system.
+    def state_machine(id: nil, **props, &block) = component(:state_machine, id:, **props, &block)
+    def machine_state(name = "", id: nil, **props, &block)
+      component(:machine_state, id:, name: name.to_s, **props, &block)
+    end
+    def final_state(name = "", id: nil, **props) = component(:final_state, id:, name: name.to_s, **props)
+    def history_state(name = "", id: nil, **props) = component(:history_state, id:, name: name.to_s, **props)
+    def signal_transition(id: nil, **props) = component(:signal_transition, id:, **props)
+    def timeout_transition(id: nil, **props) = component(:timeout_transition, id:, **props)
+
     def list_model(items = [], id: nil, **props) = component(:list_model, id:, items: Array(items), **props)
     def delegate_model(items = [], id: nil, **props) = component(:delegate_model, id:, items: Array(items), **props)
     def delegate_model_group(items = [], id: nil, **props) = component(:delegate_model_group, id:, items: Array(items), **props)

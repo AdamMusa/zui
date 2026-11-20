@@ -52,6 +52,17 @@ module Zui
         "MicrophonePermission" => :microphone_permission
       }.freeze
 
+      # QtQml.StateMachine. QAbstractState, QState and QSignalTransition are
+      # uninstantiable bases, so they resolve to the concrete adapters.
+      QML_STATE_MACHINE = {
+        "StateMachine" => :state_machine, "State" => :machine_state,
+        "QAbstractState" => :machine_state, "QState" => :machine_state,
+        "FinalState" => :final_state, "HistoryState" => :history_state,
+        "SignalTransition" => :signal_transition,
+        "QSignalTransition" => :signal_transition,
+        "TimeoutTransition" => :timeout_transition
+      }.freeze
+
       DEVICE_INFORMATION = {
         "SystemInformation" => :system_info,
         "NetworkInformation" => :network_status
@@ -140,7 +151,7 @@ module Zui
       }.freeze
 
       CORE = QUICK_CONTROLS.merge(QUICK_DIALOGS).merge(QUICK_LAYOUTS).freeze
-      ALL = CORE.merge(PERMISSIONS).merge(DEVICE_INFORMATION).merge(VIRTUAL_KEYBOARD)
+      ALL = CORE.merge(QML_STATE_MACHINE).merge(PERMISSIONS).merge(DEVICE_INFORMATION).merge(VIRTUAL_KEYBOARD)
                 .merge(SENSORS).merge(POSITIONING).merge(LOCATION)
                 .merge(TEXT_TO_SPEECH).merge(WEB).merge(WEB_SOCKETS).merge(LOTTIE)
                 .merge(PDF).merge(TOUCH_INTERACTION).merge(PLATFORM_INTEGRATION).freeze
