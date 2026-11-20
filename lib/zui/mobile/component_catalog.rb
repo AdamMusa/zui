@@ -117,6 +117,15 @@ module Zui
         "VoiceSelector" => :text_to_speech
       }.freeze
 
+      # Qt.labs.platform's ColorDialog, FileDialog, FolderDialog and FontDialog are the
+      # deprecated native duplicates of the QtQuick.Dialogs types the pickers already use,
+      # so they are deliberately absent. MenuItemGroup groups native MenuItems, which only
+      # exist inside the tray menu.
+      PLATFORM_INTEGRATION = {
+        "SystemTrayIcon" => :system_tray_icon,
+        "MenuItemGroup" => :system_tray_icon
+      }.freeze
+
       WEB = { "WebView" => :web_view }.freeze
       WEB_SOCKETS = { "WebSocket" => :web_socket, "WebSocketServer" => :web_socket_server }.freeze
       LOTTIE = { "LottieAnimation" => :lottie_animation }.freeze
@@ -134,7 +143,7 @@ module Zui
       ALL = CORE.merge(PERMISSIONS).merge(DEVICE_INFORMATION).merge(VIRTUAL_KEYBOARD)
                 .merge(SENSORS).merge(POSITIONING).merge(LOCATION)
                 .merge(TEXT_TO_SPEECH).merge(WEB).merge(WEB_SOCKETS).merge(LOTTIE)
-                .merge(PDF).merge(TOUCH_INTERACTION).freeze
+                .merge(PDF).merge(TOUCH_INTERACTION).merge(PLATFORM_INTEGRATION).freeze
     end
   end
 end
