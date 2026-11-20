@@ -1,10 +1,11 @@
 import QtQuick
+import QtQuick as Quick
 import QtQuick.Controls as QQC
 import QtQuick.Layouts
 import "../../Theme"
 import "../../Controls" as ZuiControls
 
-Rectangle {
+Quick.Rectangle {
   id: surface
   required property var renderer
       readonly property int pad: Number(renderer.prop("padding", 0))

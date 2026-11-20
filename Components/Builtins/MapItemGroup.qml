@@ -1,7 +1,7 @@
 import QtQuick
-import QtLocation
+import QtLocation as Location
 
-MapItemGroup {
+Location.MapItemGroup {
   id: root
   required property var renderer
   function parentMap() { var item=root.parent;while(item){if(typeof item["addMapItemGroup"]==="function")return item;item=item.parent}return null }

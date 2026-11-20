@@ -1,10 +1,11 @@
 import QtQuick
+import QtQuick as Quick
 import QtQuick.Controls as QQC
 import QtQuick.Layouts
 import "../../Theme"
 import "../../Controls" as ZuiControls
 
-Flipable {
+Quick.Flipable {
   required property var renderer
       id: nativeFlipable
       implicitWidth: Number(renderer.prop("width", Math.max(frontFace.implicitWidth, backFace.implicitWidth)))

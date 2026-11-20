@@ -1,4 +1,4 @@
 import QtQuick
-import QtSensors
+import QtSensors as Sensors
 import "Support" as Support
-Item { id: root; required property var renderer; visible: false; LidSensor { id: nativeSensor } Support.SensorBridge { renderer: root.renderer; sensor: nativeSensor; fields: ["backLidClosed", "frontLidClosed"] } }
+Item { id: root; required property var renderer; visible: false; Sensors.LidSensor { id: nativeSensor } Support.SensorBridge { renderer: root.renderer; sensor: nativeSensor; fields: ["backLidClosed", "frontLidClosed"] } }

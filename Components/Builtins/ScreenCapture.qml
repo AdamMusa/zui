@@ -1,5 +1,5 @@
 import QtQuick
-import QtMultimedia
+import QtMultimedia as Multimedia
 
 Item {
     id: screenRoot
@@ -49,7 +49,7 @@ Item {
 
     Component.onCompleted: command()
 
-    ScreenCapture {
+    Multimedia.ScreenCapture {
         id: nativeCapture
 
         screen: screenRoot.selectedScreen()

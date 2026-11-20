@@ -1,5 +1,6 @@
 import QtQuick
 import QtWebSockets
+import QtWebSockets as WebSockets
 
 Item {
   id: root
@@ -8,7 +9,7 @@ Item {
   visible: false
   function statusName(value){return ["connecting","open","closing","closed","error"][Number(value)]||"unknown"}
   function processCommand(){var revision=Number(renderer.prop("command_revision",0));if(revision===handledCommandRevision)return;var first=handledCommandRevision<0;handledCommandRevision=revision;if(first&&revision<=0)return;var command=String(renderer.prop("command","send"));if(command==="send")nativeSocket.sendTextMessage(String(renderer.prop("message","")));else if(command==="open")nativeSocket.active=true;else if(command==="close")nativeSocket.active=false}
-  WebSocket {
+  WebSockets.WebSocket {
     id: nativeSocket
     url: String(root.renderer.prop("url", ""))
     active: root.renderer.prop("active", true) !== false
