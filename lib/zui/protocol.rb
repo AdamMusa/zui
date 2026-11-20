@@ -7,6 +7,9 @@ module Zui
   # (Service.qml, applyPatch) and rejects the whole batch past it, so a larger
   # flush has to be split rather than sent and dropped.
   MAX_PATCH_BATCH = 256
+  # The most live nodes the native client holds across all surfaces
+  # (Service.qml, validateNode).
+  MAX_LIVE_NODES = 2000
   class AsciiPattern
     def initialize(min:, max:, first: nil, rest:)
       @min = min
