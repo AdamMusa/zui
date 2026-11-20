@@ -200,8 +200,8 @@ class QmlContractTest < Minitest::Test
   # The row and column delegates anchor their loader to the parent's edges. A
   # Repeater takes a delegate out of its parent before it destroys it, which
   # re-evaluates every anchor binding with `parent` null, and `parent.top` then
-  # throws "Cannot read property 'verticalCenter' of null" -- four of them while
-  # the Content page was replaced, two for Buttons, two more for Inputs.
+  # throws "Cannot read property 'verticalCenter' of null" -- four on the
+  # Buttons page, two on Inputs, and 'left' twice on Navigation.
   def test_row_and_column_delegates_survive_losing_their_parent
     router = File.read(File.join(ROOT, "ControlNode.qml"), encoding: "UTF-8")
     bindings = router.lines.grep(/^\s*anchors\.(?!fill|centerIn)\w+:/)
