@@ -230,6 +230,7 @@ module Zui
     settings: [%i[category file_name values sync_revision visible], %i[loaded change synced error], false],
     standard_paths: [%i[location locate_file executable refresh_revision visible], %i[resolved error], false],
     system_tray_icon: [%i[visible tooltip icon_source icon_name menu_items message_title message_text message_icon message_timeout command command_revision], %i[state activated message_click menu_trigger error], false],
+    surface_metrics: [%i[interval refresh_revision visible], %i[change], false],
     system_info: [%i[refresh_revision visible], %i[information error], false],
     network_status: [%i[refresh_revision watch visible], %i[information change error], false],
     virtual_keyboard: [%i[active external_language_switch width y z visible], %i[active_change language_switch error], false],

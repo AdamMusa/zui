@@ -425,6 +425,58 @@ class QmlContractTest < Minitest::Test
     assert_match(/to: driver\.vectorValue\([^)]*\), 1\)/, qml)
   end
 
+  # An application had no way to find out how much room it had been given. An
+  # `app` surface is a plain container rather than an application_window, so no
+  # resize ever reached Ruby, and safe_area reports only the platform's insets.
+  # Every dimension therefore had to be a constant, and a resized window either
+  # clipped the layout or left dead space beside it.
+  def test_an_application_can_learn_the_room_its_surface_gives_it
+    schema = Zui::DEFAULT_COMPONENTS.protocol_schema.fetch("surface_metrics")
+
+    assert_equal "SurfaceMetrics.qml", schema.fetch("qml")
+    assert_equal ["change"], schema.fetch("events")
+    assert_includes schema.fetch("properties"), "interval"
+    assert_includes schema.fetch("properties"), "refresh_revision"
+    refute schema.fetch("container"), "surface_metrics draws nothing and holds nothing"
+
+    assert_respond_to Zui::Application.new { app { text "probe" } }.instance_variable_get(:@builder),
+                      :surface_metrics
+
+    qml = File.read(File.join(ROOT, "Components", "Builtins", "SurfaceMetrics.qml"),
+                    encoding: "UTF-8")
+
+    %w[width height window_width window_height pixel_ratio orientation].each do |field|
+      assert_includes qml, "#{field}:", "surface_metrics does not report #{field}"
+    end
+    assert_includes qml, "visible: false"
+    assert_match(/onContentWidthChanged: settle\.restart\(\)/, qml,
+                 "a resize has to reach Ruby")
+    assert_match(/onContentHeightChanged: settle\.restart\(\)/, qml)
+  end
+
+  # The shell is the only thing that knows the inset it applied, so it is the
+  # only thing that can say how much room the root control actually has.
+  def test_the_shell_publishes_the_room_it_leaves_for_the_root_control
+    shell = File.read(File.join(ROOT, "Desktop.qml"), encoding: "UTF-8")
+
+    assert_includes shell, "readonly property real zuiContentWidth: renderer.width"
+    assert_includes shell, "readonly property real zuiContentHeight: renderer.height"
+  end
+
+  # Filling the window is the right default for a view at the root of an
+  # application, and it was the only thing responsive_view could do: an
+  # explicit width or height was ignored, so it could never be nested beside a
+  # sidebar or inside a card.
+  def test_a_responsive_view_honours_an_explicit_size
+    qml = File.read(File.join(ROOT, "Components", "Builtins", "ResponsiveView.qml"),
+                    encoding: "UTF-8")
+
+    assert_match(/width: renderer && renderer\.hasProp\("width"\)/, qml)
+    assert_match(/height: renderer && renderer\.hasProp\("height"\)/, qml)
+    assert_includes qml, "hostWindow ? hostWindow.width"
+    assert_includes qml, "hostWindow ? hostWindow.height"
+  end
+
   def test_gpu_adapters_ship_native_effects_particles_and_precompiled_shaders
     shader = source("Components/Builtins/ShaderEffect.qml")
     effect = source("Components/Builtins/MultiEffect.qml")

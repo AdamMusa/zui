@@ -620,6 +620,11 @@ module Zui
       node
     end
 
+    def surface_metrics(id: nil, **props, &handler)
+      node = component(:surface_metrics, id:, **props)
+      @application.register_handler(node.id, :change, handler) if handler
+      node
+    end
     def system_info(id: nil, **props, &handler)
       node = component(:system_info, id:, **props)
       @application.register_handler(node.id, :information, handler) if handler
