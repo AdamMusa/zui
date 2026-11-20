@@ -47,8 +47,8 @@ Item {
     preferredPositioningMethods: root.preferredMethods()
     name: String(renderer.prop("name", ""))
     onPositionChanged: root.publish()
-    onActiveChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "active_change", { value: active })
-    onSupportedPositioningMethodsChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "methods_change", { value: Number(supportedPositioningMethods) })
+    onActiveChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "active_change", { value: active })
+    onSupportedPositioningMethodsChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "methods_change", { value: Number(supportedPositioningMethods) })
     onSourceErrorChanged: if (sourceError !== Positioning.PositionSource.NoError) renderer.componentError("position_source_failed", "The native positioning backend reported an error", { native_code: Number(sourceError) })
   }
   Connections { target: renderer; function onNodeChanged() { root.refresh() } }

@@ -42,7 +42,7 @@ TextEdit {
         if (format === "markdown") return TextEdit.MarkdownText
         return TextEdit.PlainText
       }
-      onSelectedTextChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "selection", {
+      onSelectedTextChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "selection", {
         start: selectionStart, end: selectionEnd, text: selectedText
       })
       onLinkActivated: function(link) { renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "link", { value: link }) }

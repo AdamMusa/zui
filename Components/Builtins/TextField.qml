@@ -15,5 +15,5 @@ ZuiControls.TextField {
       onTextEdited: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "input", { value: text })
       onEditingFinished: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "change", { value: text })
       onAccepted: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "submit", { value: text })
-      onActiveFocusChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, activeFocus ? "focus" : "blur", { value: text })
+      onActiveFocusChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, activeFocus ? "focus" : "blur", { value: text })
     }

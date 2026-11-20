@@ -11,5 +11,5 @@ QQC.ScrollIndicator {
   active: renderer && renderer.prop("active", false) === true
   minimumSize: Number(renderer ? renderer.prop("minimum_size", 0) : 0)
   implicitWidth: Number(renderer ? renderer.prop("width", orientation === Qt.Vertical ? 6 : 160) : 6); implicitHeight: Number(renderer ? renderer.prop("height", orientation === Qt.Vertical ? 160 : 6) : 160)
-  onActiveChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "active_change", { value: active })
+  onActiveChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "active_change", { value: active })
 }

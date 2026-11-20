@@ -18,7 +18,7 @@ Lottie.LottieAnimation {
   implicitHeight: Number(renderer.prop("height", 240))
   visible: renderer.prop("visible", true) !== false
   onStatusChanged: {var name=statusName(status);renderer.bridge.sendEvent(renderer.surfaceName,renderer.controlId,"status",{value:name,native_status:Number(status),start_frame:startFrame,end_frame:endFrame,duration:getDuration()});if(name==="error")renderer.componentError("lottie_load_failed","The Lottie animation could not be loaded",{source:String(source)})}
-  onFinished: renderer.bridge.sendEvent(renderer.surfaceName,renderer.controlId,"finished",{})
+  onFinished: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName,renderer.controlId,"finished",{})
   Component.onCompleted: processCommand()
   Connections { target: renderer; function onNodeChanged(){root.processCommand()} }
 }

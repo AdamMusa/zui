@@ -25,7 +25,7 @@ Shape {
     PathSvg { path: String(renderer.prop("data", "")) }
   }
 
-  onStatusChanged: if (renderer.subscribed("status")) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "status", { value: status, renderer: rendererType })
+  onStatusChanged: if (renderer && renderer.subscribed("status")) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "status", { value: status, renderer: rendererType })
   MouseArea {
     anchors.fill: parent
     hoverEnabled: renderer.subscribed("hover")

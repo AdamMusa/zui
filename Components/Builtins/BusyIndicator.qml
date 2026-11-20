@@ -17,8 +17,8 @@ QQC.BusyIndicator {
   Accessible.name: String(renderer.prop("accessible_name", "Loading"))
   Accessible.role: Accessible.Indicator
 
-  onRunningChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
+  onRunningChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
     "running_change", { value: running })
-  onVisibleChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
+  onVisibleChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
     visible ? "show" : "hide", {})
 }

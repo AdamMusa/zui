@@ -39,5 +39,5 @@ QQC.ToolButton {
       onToggled: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "change", { value: checked })
       onPressed: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "press", {})
       onReleased: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "release", {})
-      onHoveredChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "hover", { value: hovered })
+      onHoveredChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "hover", { value: hovered })
     }

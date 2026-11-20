@@ -41,5 +41,5 @@ QQC.DelayButton {
       }
       onPressed: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "press", {})
       onReleased: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "release", {})
-      onCanceled: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "cancel", {})
+      onCanceled: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "cancel", {})
     }

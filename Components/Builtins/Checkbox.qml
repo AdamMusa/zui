@@ -18,7 +18,7 @@ QQC.CheckBox {
     onToggled: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "change", {
         "value": checked
     })
-    onHoveredChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "hover", {
+    onHoveredChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "hover", {
         "value": hovered
     })
 

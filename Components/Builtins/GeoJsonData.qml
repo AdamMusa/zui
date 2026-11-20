@@ -30,7 +30,7 @@ Item {
   Location.GeoJsonData {
     id: nativeData
     model: root.renderer.prop("model", null)
-    onModelChanged: root.renderer.bridge.sendEvent(root.renderer.surfaceName, root.renderer.controlId,
+    onModelChanged: if (root.renderer && root.renderer.bridge) root.renderer.bridge.sendEvent(root.renderer.surfaceName, root.renderer.controlId,
       "change", { value: model, source: String(sourceUrl) })
   }
 

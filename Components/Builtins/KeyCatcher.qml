@@ -10,10 +10,10 @@ ZuiControls.PanelKeyCatcher {
       implicitWidth: keyContent.implicitWidth
       implicitHeight: keyContent.implicitHeight
       onMoveRequested: function(dx, dy) { renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "move", { dx: dx, dy: dy }) }
-      onActivateRequested: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "activate", {})
-      onReturnRequested: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "return", {})
-      onCloseRequested: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "close", {})
-      onDeleteRequested: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "delete", {})
+      onActivateRequested: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "activate", {})
+      onReturnRequested: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "return", {})
+      onCloseRequested: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "close", {})
+      onDeleteRequested: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "delete", {})
       onTabRequested: function(direction) { renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "tab", { direction: direction }) }
       onTextKey: function(text) { renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "text", { text: text }) }
       Column {

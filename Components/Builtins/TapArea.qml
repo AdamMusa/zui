@@ -24,8 +24,8 @@ Item {
     longPressThreshold: Number(renderer.prop("long_press_threshold", 0.8))
     onTapped: function(point, button) { renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "tap", root.payload(button)) }
     onDoubleTapped: function(point, button) { renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "double_tap", root.payload(button)) }
-    onLongPressed: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "long_press", root.payload(0))
-    onPressedChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, pressed ? "press" : "release", root.payload(0))
-    onCanceled: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "cancel", root.payload(0))
+    onLongPressed: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "long_press", root.payload(0))
+    onPressedChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, pressed ? "press" : "release", root.payload(0))
+    onCanceled: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "cancel", root.payload(0))
   }
 }

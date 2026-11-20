@@ -37,7 +37,7 @@ Item {
       if (!active && target) { var snapX=Number(renderer.prop("snap_x",0));var snapY=Number(renderer.prop("snap_y",0));if(snapX>0)target.x=Math.round(target.x/snapX)*snapX;if(snapY>0)target.y=Math.round(target.y/snapY)*snapY;payload.target_x=target.x;payload.target_y=target.y }
       renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, active ? "drag_start" : "drag_end", payload)
     }
-    onTranslationChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "drag", { x: translation.x, y: translation.y, centroid_x: centroid.position.x, centroid_y: centroid.position.y })
-    onCanceled: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "cancel", {})
+    onTranslationChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "drag", { x: translation.x, y: translation.y, centroid_x: centroid.position.x, centroid_y: centroid.position.y })
+    onCanceled: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "cancel", {})
   }
 }

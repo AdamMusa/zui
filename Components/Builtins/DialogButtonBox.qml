@@ -132,6 +132,6 @@ QQC.DialogButtonBox {
     renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "click", box.buttonPayload(button))
   }
   onAccepted: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "accept", {})
-  onRejected: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "reject", {})
-  onHelpRequested: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "help", {})
+  onRejected: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "reject", {})
+  onHelpRequested: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "help", {})
 }

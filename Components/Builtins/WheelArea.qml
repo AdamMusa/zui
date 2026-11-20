@@ -14,6 +14,6 @@ Item {
     blocking: renderer.prop("blocking", true) !== false
     acceptedDevices: root.devices(renderer.prop("accepted_devices", ["mouse", "touch_pad"]))
     onWheel: function(event) { renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "wheel", { angle_x: event.angleDelta.x, angle_y: event.angleDelta.y, pixel_x: event.pixelDelta.x, pixel_y: event.pixelDelta.y, x: event.position.x, y: event.position.y, modifiers: Number(event.modifiers) }) }
-    onActiveChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "active_change", { value: active })
+    onActiveChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "active_change", { value: active })
   }
 }
