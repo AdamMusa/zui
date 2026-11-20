@@ -125,4 +125,52 @@ class ClientIndexTest < Minitest::Test
       assert_client_matches(app)
     end
   end
+
+  # The outer dynamic used to compare its rebuild with a copy of its children
+  # taken the last time it changed itself, which cannot know what the inner one
+  # did since. Putting the inner part back the way the copy had it compared
+  # equal and sent nothing, with the client still showing the inner change.
+  def test_an_outer_rebuild_that_restores_what_an_inner_dynamic_changed_is_still_sent
+    app = Zui::Application.new do
+      state :outer, 0
+      state :inner, 1
+      panel :main do
+        dynamic(id: :outer) do
+          state.outer
+          dynamic(id: :inner) { text "inner=#{state.inner}" }
+        end
+      end
+    end
+    connect(app)
+
+    app.state.inner = 2
+    assert_client_matches(app)
+
+    app.state.transaction do
+      app.state.outer = 1
+      app.state.inner = 1
+    end
+    assert_client_matches(app)
+    assert_equal "inner=1", @client.tree.dig("main", "children", 0, "children", 0, "children", 0, "props", "text")
+  end
+
+  def test_a_rebuild_that_raised_is_replaced_outright_the_next_time
+    app = Zui::Application.new do
+      state :n, 0
+      panel :main do
+        dynamic(id: :rows) do
+          raise "renderer boom" if state.n == 1
+
+          (state.n + 1).times { |index| text "row #{index}" }
+        end
+      end
+    end
+    connect(app)
+
+    assert_raises(RuntimeError) { app.state.n = 1 }
+    app.state.n = 2
+
+    assert_client_matches(app)
+    assert_equal 3, @client.tree.dig("main", "children", 0, "children").length
+  end
 end

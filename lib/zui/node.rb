@@ -63,14 +63,16 @@ module Zui
   end
 
   class StructuralBinding
-    attr_accessor :last_children, :reads
+    # `diverged` is set while a rebuild is under way and cleared once the client
+    # has been told its result, so it is still set after a rebuild that raised.
+    attr_accessor :reads, :diverged
     attr_reader :node, :renderer
 
-    def initialize(node:, renderer:, last_children:, reads: [])
+    def initialize(node:, renderer:, reads: [])
       @node = node
       @renderer = renderer
-      @last_children = last_children
       @reads = reads
+      @diverged = false
     end
 
     def reads_any?(keys)
