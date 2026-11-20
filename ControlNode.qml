@@ -534,9 +534,9 @@ Loader {
     Loader {
       required property var modelData
       readonly property string crossAlignment: String(root.prop("alignment", "center"))
-      anchors.top: crossAlignment === "start" || crossAlignment === "top" ? parent.top : undefined
-      anchors.verticalCenter: crossAlignment === "center" ? parent.verticalCenter : undefined
-      anchors.bottom: crossAlignment === "end" || crossAlignment === "bottom" ? parent.bottom : undefined
+      anchors.top: crossAlignment === "start" || crossAlignment === "top" ? (parent ? parent.top : undefined) : undefined
+      anchors.verticalCenter: crossAlignment === "center" ? (parent ? parent.verticalCenter : undefined) : undefined
+      anchors.bottom: crossAlignment === "end" || crossAlignment === "bottom" ? (parent ? parent.bottom : undefined) : undefined
       source: Qt.resolvedUrl("ControlNode.qml")
       onLoaded: {
         item.renderDepth = root.renderDepth + 1
@@ -580,9 +580,9 @@ Loader {
     Loader {
       required property var modelData
       readonly property string crossAlignment: String(root.prop("alignment", "start"))
-      anchors.left: crossAlignment === "start" || crossAlignment === "left" ? parent.left : undefined
-      anchors.horizontalCenter: crossAlignment === "center" ? parent.horizontalCenter : undefined
-      anchors.right: crossAlignment === "end" || crossAlignment === "right" ? parent.right : undefined
+      anchors.left: crossAlignment === "start" || crossAlignment === "left" ? (parent ? parent.left : undefined) : undefined
+      anchors.horizontalCenter: crossAlignment === "center" ? (parent ? parent.horizontalCenter : undefined) : undefined
+      anchors.right: crossAlignment === "end" || crossAlignment === "right" ? (parent ? parent.right : undefined) : undefined
       source: Qt.resolvedUrl("ControlNode.qml")
       onLoaded: {
         item.renderDepth = root.renderDepth + 1
