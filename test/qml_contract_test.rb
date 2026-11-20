@@ -223,8 +223,8 @@ class QmlContractTest < Minitest::Test
   TINTED_ADAPTERS = %w[BarIconButton WidgetButton].freeze
 
   def test_clickable_adapters_paint_their_own_press
-    renderer = File.read(File.join(ROOT, "ControlNode.qml"))
-    style = File.read(File.join(ROOT, "Theme", "Style.qml"))
+    renderer = File.read(File.join(ROOT, "ControlNode.qml"), encoding: "UTF-8")
+    style = File.read(File.join(ROOT, "Theme", "Style.qml"), encoding: "UTF-8")
 
     assert_includes style, "function pressedFillFor(resting, accent)"
     assert_includes style, "function pressedTintFor(accent)"
@@ -234,7 +234,7 @@ class QmlContractTest < Minitest::Test
     assert_includes renderer, 'prop("pressed_foreground", resting)'
 
     PRESSED_ADAPTERS.each do |adapter, pressed|
-      qml = File.read(File.join(ROOT, "Components", "Builtins", "#{adapter}.qml"))
+      qml = File.read(File.join(ROOT, "Components", "Builtins", "#{adapter}.qml"), encoding: "UTF-8")
 
       assert_includes qml, "color: #{pressed} ? renderer.pressedBackground(restingColor) : restingColor",
                       "#{adapter}.qml does not paint its own press"
@@ -243,19 +243,19 @@ class QmlContractTest < Minitest::Test
     end
 
     TINTED_ADAPTERS.each do |adapter|
-      qml = File.read(File.join(ROOT, "Components", "Builtins", "#{adapter}.qml"))
+      qml = File.read(File.join(ROOT, "Components", "Builtins", "#{adapter}.qml"), encoding: "UTF-8")
 
       assert_includes qml, 'pressedBackground: renderer.prop("pressed_background", Style.pressedTintFor(',
                       "#{adapter}.qml cannot be given a pressed fill"
     end
 
-    action = File.read(File.join(ROOT, "Components", "Builtins", "ActionButton.qml"))
+    action = File.read(File.join(ROOT, "Components", "Builtins", "ActionButton.qml"), encoding: "UTF-8")
     assert_includes action, "pressedBackground: renderer.pressedBackground(actionButton.background)"
     assert_includes action, "pressedForeground: renderer.pressedForeground(actionButton.foreground)"
   end
 
   def test_shared_controls_carry_a_pressed_appearance_of_their_own
-    button = File.read(File.join(ROOT, "Controls", "Button.qml"))
+    button = File.read(File.join(ROOT, "Controls", "Button.qml"), encoding: "UTF-8")
 
     assert_includes button, "property color pressedBackground: Style.pressedFillFor("
     assert_includes button, "property color pressedForeground:"
@@ -263,7 +263,7 @@ class QmlContractTest < Minitest::Test
     refute_includes button, "opacity: mouse.pressed ? 0.78"
 
     %w[BarIconButton WidgetButton].each do |control|
-      qml = File.read(File.join(ROOT, "Controls", "#{control}.qml"))
+      qml = File.read(File.join(ROOT, "Controls", "#{control}.qml"), encoding: "UTF-8")
 
       assert_includes qml, "property color pressedBackground: Style.pressedTintFor(Color.accent)"
       assert_includes qml, "visible: pointer.pressed"
@@ -319,7 +319,9 @@ class QmlContractTest < Minitest::Test
   def test_no_builtin_adapter_can_resolve_its_own_file_as_a_type
     offenders = adapter_sources.filter_map do |path, qml|
       own = File.basename(path, ".qml")
-      next unless qml.match?(/(?<![\w.])#{Regexp.escape(own)}(?=\s*\{|\.)/)
+      # A comment is free to name the type the file adapts; only code resolves it.
+      code = qml.gsub(%r{^\s*//.*$}, "")
+      next unless code.match?(/(?<![\w.])#{Regexp.escape(own)}(?=\s*\{|\.)/)
 
       "#{path} refers to #{own} as a type, which resolves to itself"
     end

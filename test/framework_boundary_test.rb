@@ -81,7 +81,7 @@ class FrameworkBoundaryTest < Minitest::Test
     # that was there instead of failing. ComponentRegistry#register never sees
     # the collision, and the replaced adapter keeps its file while answering to
     # another component's schema.
-    source = File.read(File.join(ROOT, "lib", "zui", "components.rb"))
+    source = File.read(File.join(ROOT, "lib", "zui", "components.rb"), encoding: "UTF-8")
     body = source[/COMPONENTS = \{(.*?)\n  \}\.freeze/m, 1]
     declared = body.to_s.scan(/^    ([a-z0-9_]+):/).flatten
 

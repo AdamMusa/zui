@@ -53,14 +53,14 @@ class RuntimeEntryTest < Minitest::Test
   # command.rb, went unregistered and only a Windows CI run found it — so the
   # autoload table is checked against what the files actually define.
   def test_every_constant_a_deferred_file_defines_is_registered
-    table = File.read(File.join(ROOT, "lib", "zui.rb"))
+    table = File.read(File.join(ROOT, "lib", "zui.rb"), encoding: "UTF-8")
                 .scan(/autoload :(\w+), lazy\["(\w+)"\]/)
                 .each_with_object({}) { |(constant, file), map| (map[file] ||= []) << constant }
 
     refute_empty table
 
     unregistered = table.flat_map do |file, constants|
-      source = File.read(File.join(ROOT, "lib", "zui", "#{file}.rb"))
+      source = File.read(File.join(ROOT, "lib", "zui", "#{file}.rb"), encoding: "UTF-8")
       defined = source.scan(/^  (?:class|module)\s+([A-Z]\w*)/).flatten +
                 source.scan(/^  ([A-Z]\w*)\s*=/).flatten
       (defined.uniq - constants).map { |constant| "Zui::#{constant} (zui/#{file})" }
@@ -105,7 +105,7 @@ class RuntimeEntryTest < Minitest::Test
   # pulls in has to be on both lists or the application crashes on launch with
   # an uninitialized constant — which is how lib/zui/trace.rb was caught.
   def test_the_packaged_and_lite_runtimes_ship_every_file_the_entrypoint_requires
-    required = File.read(File.join(ROOT, "lib", "zui", "runtime_entry.rb"))
+    required = File.read(File.join(ROOT, "lib", "zui", "runtime_entry.rb"), encoding: "UTF-8")
                    .scan(/require_relative "([a-z_]+)"/).flatten
 
     refute_empty required
