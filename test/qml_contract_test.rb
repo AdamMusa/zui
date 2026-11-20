@@ -250,6 +250,57 @@ class QmlContractTest < Minitest::Test
     assert_empty missing, missing.join("\n")
   end
 
+  # A relative asset path is relative to the directory holding the
+  # application's main.rb, because that is the only directory the author of the
+  # application knows about. ControlNode.assetUrl is where that is done. An
+  # adapter that hands a path straight to QML instead gets it resolved against
+  # the adapter's own directory inside the framework checkout, and asks for a
+  # file that was never there:
+  #
+  #   AnimatedImage.qml: Error Reading Animated Image File
+  #     file://<framework>/Components/Builtins/demos/nova_pour/assets/future-pour-bar.webp
+  #
+  # A URL property whose value is not an asset — a WebSocket endpoint, say —
+  # may be read raw, and is listed here so the exemption has to be deliberate.
+  URL_PROPERTIES = %w[source icon_source base_url folder output_location fragment_shader].freeze
+  RAW_URL_EXEMPTIONS = {
+    "Components/Builtins/WebSocket.qml" => %w[url],
+    "Components/Builtins/WebSocketServer.qml" => %w[url]
+  }.freeze
+
+  def test_every_adapter_resolves_an_asset_path_against_the_application
+    offenders = adapter_sources.flat_map do |path, qml|
+      exempt = RAW_URL_EXEMPTIONS.fetch(path, [])
+      (URL_PROPERTIES - exempt).flat_map do |property|
+        qml.scan(/^.*\brenderer\.prop\("#{property}",[^\n]*$/).filter_map do |line|
+          next unless line.match?(/(?:^|[\s.])(?:source|url|baseUrl|folder|outputLocation|fragmentShader)\s*:/)
+          next if line.include?("assetUrl") || line.include?("shaderUrl")
+
+          "#{path}: #{line.strip}"
+        end
+      end
+    end
+
+    assert_empty offenders,
+                 "these resolve an asset path against the framework, not the application:\n#{offenders.join("\n")}"
+  end
+
+  # Two corrections the move to assetUrl also had to make: a bare absolute path
+  # used to come back as a URL with no scheme, which QML resolved against the
+  # adapter's base URL and only happened to come out right on Unix; and a
+  # Windows drive letter was taken for a URL scheme, so "C:/..." was passed
+  # through as a "c:" URL and never opened.
+  def test_asset_resolution_emits_a_file_url_and_knows_a_drive_letter
+    router = File.read(File.join(ROOT, "ControlNode.qml"))
+
+    assert_includes router, "function assetUrl(value)"
+    assert_includes router, "function fileUrl(value)"
+    assert_includes router, "function windowsPath(value)"
+    assert_match(/windowsPath\(source\)\) return fileUrl\(source\)/, router)
+    assert_match(/\^\[a-zA-Z\]:\\\//, router)
+    refute_match(/return "file:\/\/" \+ source/, router)
+  end
+
   def test_gpu_adapters_ship_native_effects_particles_and_precompiled_shaders
     shader = source("Components/Builtins/ShaderEffect.qml")
     effect = source("Components/Builtins/MultiEffect.qml")
@@ -843,7 +894,7 @@ class QmlContractTest < Minitest::Test
 
     assert_dynamic_component_route(renderer, "markdown")
     assert_includes renderer, "textFormat: Text.MarkdownText"
-    assert_includes renderer, 'baseUrl: String(root.prop("base_url", ""))'
+    assert_includes renderer, 'baseUrl: root.assetUrl(root.prop("base_url", ""))'
   end
 
   def test_selectable_text_has_a_specific_native_selection_renderer

@@ -8,7 +8,7 @@ import "../../Controls" as ZuiControls
 Quick.BorderImage {
   required property var renderer
       id: nativeBorderImage
-      source: String(renderer.prop("source", ""))
+      source: renderer.assetUrl(renderer.prop("source", ""))
       width: Number(renderer.prop("width", sourceSize.width > 0 ? sourceSize.width : 160))
       height: Number(renderer.prop("height", sourceSize.height > 0 ? sourceSize.height : 100))
       border.left: Number(renderer.prop("border_left", 0))

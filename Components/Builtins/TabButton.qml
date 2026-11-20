@@ -17,7 +17,7 @@ QQC.TabButton {
   implicitWidth: Number(renderer.prop("width", 140))
   implicitHeight: Number(renderer.prop("height", 44))
   icon.name: String(renderer.prop("icon", ""))
-  icon.source: String(renderer.prop("icon_source", ""))
+  icon.source: renderer.assetUrl(renderer.prop("icon_source", ""))
   icon.color: renderer.prop("icon_color", renderer.prop("foreground", renderer.foreground))
   icon.width: Number(renderer.prop("icon_width", Style.font.body))
   icon.height: Number(renderer.prop("icon_height", Style.font.body))
@@ -30,7 +30,7 @@ QQC.TabButton {
 
     Image {
       visible: source.toString().length > 0
-      source: String(renderer.prop("icon_source", ""))
+      source: renderer.assetUrl(renderer.prop("icon_source", ""))
       width: Number(renderer.prop("icon_width", Style.font.body))
       height: Number(renderer.prop("icon_height", Style.font.body))
       sourceSize.width: Util.scalableImageSourceSize(source, -1, width, Screen.devicePixelRatio)

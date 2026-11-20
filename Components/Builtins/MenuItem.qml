@@ -26,7 +26,7 @@ QQC.MenuItem {
   implicitWidth: Number(renderer.prop("width", 240))
   implicitHeight: Number(renderer.prop("height", 42))
   icon.name: String(renderer.prop("icon", ""))
-  icon.source: String(renderer.prop("icon_source", ""))
+  icon.source: renderer.assetUrl(renderer.prop("icon_source", ""))
   icon.color: renderer.prop("icon_color", highlighted
     ? renderer.prop("highlighted_foreground", renderer.prop("accent", Color.accent))
     : renderer.prop("foreground", renderer.foreground))

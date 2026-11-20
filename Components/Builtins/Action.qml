@@ -28,7 +28,7 @@ Item {
     checked: renderer.prop("checked", false) === true
     shortcut: renderer.prop("shortcut", "")
     icon.name: String(renderer.prop("icon", ""))
-    icon.source: String(renderer.prop("icon_source", ""))
+    icon.source: renderer.assetUrl(renderer.prop("icon_source", ""))
     icon.color: renderer.prop("icon_color", "transparent")
     icon.width: Number(renderer.prop("icon_width", 0))
     icon.height: Number(renderer.prop("icon_height", 0))

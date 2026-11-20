@@ -69,7 +69,7 @@ QQC.ItemDelegate {
       Layout.preferredHeight: Number(renderer.prop("icon_size", 22))
       Layout.alignment: Qt.AlignVCenter
       visible: source.toString().length > 0
-      source: String(renderer.prop("icon_source", ""))
+      source: renderer.assetUrl(renderer.prop("icon_source", ""))
       sourceSize.width: width
       sourceSize.height: height
       fillMode: Image.PreserveAspectFit
