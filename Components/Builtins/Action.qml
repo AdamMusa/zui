@@ -37,7 +37,7 @@ Item {
       "trigger", actionRoot.payload())
     onToggled: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
       "toggle", actionRoot.payload())
-    onCheckedChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
+    onCheckedChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
       "change", actionRoot.payload())
   }
 }

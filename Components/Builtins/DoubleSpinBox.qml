@@ -43,7 +43,7 @@ QQC.SpinBox {
     return Math.round(Number.fromLocaleString(locale, numeric) * scaleFactor)
   }
 
-  onValueModified: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
+  onValueModified: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
     "change", { value: realValue })
   up.onPressedChanged: {
     if (up.pressed)

@@ -14,7 +14,7 @@ Item {
     function payload(drag) { return { x: drag.x, y: drag.y, keys: drag.keys, formats: drag.formats, text: drag.hasText ? drag.text : null, urls: drag.hasUrls ? drag.urls.map(String) : [] } }
     onEntered: function(drag) { renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "enter", payload(drag)) }
     onPositionChanged: function(drag) { renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "move", payload(drag)) }
-    onExited: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "exit", {})
+    onExited: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "exit", {})
     onDropped: function(drop) { renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "drop", payload(drop)); drop.acceptProposedAction() }
   }
 }

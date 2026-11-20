@@ -34,9 +34,9 @@ Multimedia.Video {
     if (mode === "stretch") return VideoOutput.Stretch
     return VideoOutput.PreserveAspectFit
   }
-  onPlaying: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "play", {})
-  onPaused: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "pause", {})
-  onStopped: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "stop", {})
+  onPlaying: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "play", {})
+  onPaused: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "pause", {})
+  onStopped: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "stop", {})
   onErrorOccurred: function(error, message) {
     renderer.componentError("video_playback_failed", message, { native_code: error, source: String(source) })
   }

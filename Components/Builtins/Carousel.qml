@@ -69,7 +69,7 @@ Rectangle {
       renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "input", payload)
       renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "change", payload)
     }
-    onMovementStarted: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "movement_start", {})
-    onMovementEnded: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "movement_end", { value: currentIndex })
+    onMovementStarted: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "movement_start", {})
+    onMovementEnded: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "movement_end", { value: currentIndex })
   }
 }

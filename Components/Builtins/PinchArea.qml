@@ -15,9 +15,9 @@ Item {
     xAxis.minimum: Number(renderer ? renderer.prop("minimum_x", -Infinity) : -Infinity); xAxis.maximum: Number(renderer ? renderer.prop("maximum_x", Infinity) : Infinity)
     yAxis.minimum: Number(renderer ? renderer.prop("minimum_y", -Infinity) : -Infinity); yAxis.maximum: Number(renderer ? renderer.prop("maximum_y", Infinity) : Infinity)
     function payload() { return { scale: activeScale, rotation: activeRotation, translation_x: activeTranslation.x, translation_y: activeTranslation.y, centroid_x: centroid.position.x, centroid_y: centroid.position.y } }
-    onActiveChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, active ? "pinch_start" : "pinch_end", payload())
-    onActiveScaleChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "pinch", payload())
-    onActiveRotationChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "pinch", payload())
-    onCanceled: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "cancel", {})
+    onActiveChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, active ? "pinch_start" : "pinch_end", payload())
+    onActiveScaleChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "pinch", payload())
+    onActiveRotationChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "pinch", payload())
+    onCanceled: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "cancel", {})
   }
 }

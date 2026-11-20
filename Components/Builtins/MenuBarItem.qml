@@ -27,6 +27,6 @@ QQC.MenuBarItem {
   onClicked: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "click", {})
   onPressed: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "press", {})
   onReleased: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "release", {})
-  onHoveredChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "hover", { value: hovered })
-  onHighlightedChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "highlight", { value: highlighted })
+  onHoveredChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "hover", { value: hovered })
+  onHighlightedChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "highlight", { value: highlighted })
 }

@@ -17,7 +17,7 @@ Item {
     accept: root.renderer.prop("accept", true) !== false
     onClientConnected: function(socket){root.attach(socket)}
     onErrorStringChanged: if(errorString!=="")renderer.componentError("web_socket_server_failed",errorString,{})
-    onListenChanged: renderer.bridge.sendEvent(renderer.surfaceName,renderer.controlId,"listen_change",{value:listen,host:host,port:port})
-    onUrlChanged: renderer.bridge.sendEvent(renderer.surfaceName,renderer.controlId,"url_change",{value:String(url)})
+    onListenChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName,renderer.controlId,"listen_change",{value:listen,host:host,port:port})
+    onUrlChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName,renderer.controlId,"url_change",{value:String(url)})
   }
 }

@@ -115,6 +115,6 @@ QQC.Control {
   onRingThicknessChanged: ringCanvas.requestPaint()
   onStartAngleChanged: ringCanvas.requestPaint()
   onClockwiseChanged: ringCanvas.requestPaint()
-  onVisibleChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
+  onVisibleChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
     visible ? "show" : "hide", {})
 }

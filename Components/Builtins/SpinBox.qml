@@ -32,7 +32,7 @@ QQC.SpinBox {
         if (suffix.length > 0 && numeric.lastIndexOf(suffix) === numeric.length - suffix.length) numeric = numeric.slice(0, -suffix.length)
         return Number.fromLocaleString(locale, numeric)
       }
-      onValueModified: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "change", { value: value })
+      onValueModified: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "change", { value: value })
       up.onPressedChanged: {
         if (up.pressed) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "increase", { value: value })
       }

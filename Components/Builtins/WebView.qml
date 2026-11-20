@@ -67,9 +67,9 @@ WebViews.WebView {
     renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "navigation", { can_go_back: canGoBack, can_go_forward: canGoForward })
     if (name === "failed") renderer.componentError("web_view_load_failed", request.errorString, payload)
   }
-  onLoadProgressChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "progress", { value: loadProgress })
-  onTitleChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "title", { value: title })
-  onUrlChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "url_change", { value: String(url) })
+  onLoadProgressChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "progress", { value: loadProgress })
+  onTitleChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "title", { value: title })
+  onUrlChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "url_change", { value: String(url) })
   onCookieAdded: function(domain, name) { renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "cookie", { action: "added", domain: domain, name: name }) }
   onCookieRemoved: function(domain, name) { renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "cookie", { action: "removed", domain: domain, name: name }) }
   Component.onCompleted: scheduleSynchronize()

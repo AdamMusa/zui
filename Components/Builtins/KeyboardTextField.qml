@@ -23,7 +23,7 @@ QQC.TextField {
   enabled: renderer.prop("enabled", true) !== false
   visible: renderer.prop("visible", true) !== false
   onTextEdited: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "input", { value: text })
-  onTextChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "change", { value: text })
+  onTextChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "change", { value: text })
   onAccepted: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "accept", { value: text })
   Keys.onPressed: function(event) {
     renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "key",

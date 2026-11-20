@@ -90,18 +90,18 @@ QQC.Drawer {
 
   Component.onCompleted: syncOpenState()
   onRequestedOpenChanged: syncOpenState()
-  onOpened: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "open",
+  onOpened: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "open",
     { value: true, position: position })
-  onClosed: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "close",
+  onClosed: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "close",
     { value: false, position: position })
-  onAboutToShow: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "about_to_show", {})
-  onAboutToHide: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "about_to_hide", {})
+  onAboutToShow: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "about_to_show", {})
+  onAboutToHide: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "about_to_hide", {})
   onPositionChanged: {
     if (renderer.subscribed("position_change"))
       renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "position_change", { value: position })
   }
-  onVisibleChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
+  onVisibleChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
     visible ? "show" : "hide", {})
-  onActiveFocusChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
+  onActiveFocusChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId,
     activeFocus ? "focus" : "blur", {})
 }

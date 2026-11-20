@@ -42,7 +42,7 @@ Item {
       dashOffset: Number(renderer.prop("dash_offset", 0))
       PathSvg { path: String(renderer.prop("path", "")) }
     }
-    onStatusChanged: if (renderer.subscribed("status")) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "status", { value: status, renderer: rendererType })
+    onStatusChanged: if (renderer && renderer.subscribed("status")) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "status", { value: status, renderer: rendererType })
   }
 
   MouseArea {

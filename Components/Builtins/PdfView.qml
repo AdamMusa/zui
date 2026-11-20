@@ -15,8 +15,8 @@ Item {
     source: root.renderer.assetUrl(root.renderer.prop("source", ""))
     password: String(root.renderer.prop("password", ""))
     onStatusChanged: {var name=root.statusName(status);renderer.bridge.sendEvent(renderer.surfaceName,renderer.controlId,"status",{value:name,native_status:Number(status),title:title,page_count:pageCount});if(name==="error")renderer.componentError("pdf_load_failed",error,{source:String(source)})}
-    onPageCountChanged: renderer.bridge.sendEvent(renderer.surfaceName,renderer.controlId,"page_count",{value:pageCount})
-    onPasswordRequired: renderer.bridge.sendEvent(renderer.surfaceName,renderer.controlId,"password_required",{})
+    onPageCountChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName,renderer.controlId,"page_count",{value:pageCount})
+    onPasswordRequired: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName,renderer.controlId,"password_required",{})
   }
   PdfMultiPageView {
     id: nativeView
@@ -25,9 +25,9 @@ Item {
     renderScale: Number(root.renderer.prop("zoom", 1))
     pageRotation: Number(root.renderer.prop("rotation", 0))
     searchString: String(root.renderer.prop("search", ""))
-    onCurrentPageChanged: renderer.bridge.sendEvent(renderer.surfaceName,renderer.controlId,"page_change",{value:currentPage,page_count:nativeDocument.pageCount})
-    onSelectedTextChanged: renderer.bridge.sendEvent(renderer.surfaceName,renderer.controlId,"selection",{text:selectedText})
-    onSearchStringChanged: renderer.bridge.sendEvent(renderer.surfaceName,renderer.controlId,"search_change",{value:searchString})
+    onCurrentPageChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName,renderer.controlId,"page_change",{value:currentPage,page_count:nativeDocument.pageCount})
+    onSelectedTextChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName,renderer.controlId,"selection",{text:selectedText})
+    onSearchStringChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName,renderer.controlId,"search_change",{value:searchString})
   }
   Component.onCompleted: processCommand()
   Connections { target: renderer; function onNodeChanged(){root.processCommand()} }

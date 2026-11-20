@@ -50,7 +50,7 @@ Grid {
             verticalAlignment: Text.AlignVCenter
           }
           onClicked: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "change", { value: optionValue, index: index })
-          onHoveredChanged: renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "hover", { value: optionValue, index: index, hovered: hovered })
+          onHoveredChanged: if (renderer && renderer.bridge) renderer.bridge.sendEvent(renderer.surfaceName, renderer.controlId, "hover", { value: optionValue, index: index, hovered: hovered })
         }
       }
     }
