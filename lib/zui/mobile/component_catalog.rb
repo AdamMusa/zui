@@ -116,6 +116,16 @@ module Zui
       PDF = %w[PdfDocument PdfMultiPageView PdfPageView PdfScrollablePageView PdfPageImage
                PdfPageNavigator PdfSearchModel PdfSelection].to_h { |name| [name, :pdf_view] }.freeze
 
+      # QtQuick.Particles. The GPU particle system and the shapes that fill an
+      # emitter or affector area.
+      PARTICLES_CORE = {
+        "ParticleSystem" => :particle_system,
+        "EllipseShape" => :ellipse_shape,
+        "RectangleShape" => :rectangle_shape,
+        "LineShape" => :line_shape,
+        "MaskShape" => :mask_shape
+      }.freeze
+
       TOUCH_INTERACTION = {
         "TapHandler" => :tap_area, "PointHandler" => :point_handler,
         "MultiPointTouchArea" => :multi_touch_area, "WheelHandler" => :wheel_area,
@@ -127,7 +137,7 @@ module Zui
       ALL = CORE.merge(PERMISSIONS).merge(DEVICE_INFORMATION).merge(VIRTUAL_KEYBOARD)
                 .merge(SENSORS).merge(POSITIONING).merge(LOCATION)
                 .merge(TEXT_TO_SPEECH).merge(WEB).merge(WEB_SOCKETS).merge(LOTTIE)
-                .merge(PDF).merge(TOUCH_INTERACTION).freeze
+                .merge(PDF).merge(TOUCH_INTERACTION).merge(PARTICLES_CORE).freeze
     end
   end
 end

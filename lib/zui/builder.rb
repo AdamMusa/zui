@@ -399,6 +399,11 @@ module Zui
       component(:particle_system, id:, **props)
     end
 
+    PARTICLE_SHAPE_COMPONENTS = %i[ellipse_shape rectangle_shape line_shape mask_shape].freeze
+    PARTICLE_SHAPE_COMPONENTS.each do |type|
+      define_method(type) { |id: nil, **props| component(type, id:, **props) }
+    end
+
     def selection_rectangle(target, id: nil, **props) = component(:selection_rectangle, id:, target: node_id(target), **props)
     def scroll_bar(target = nil, id: nil, **props)
       props = props.merge(target: node_id(target)) unless target.nil?
