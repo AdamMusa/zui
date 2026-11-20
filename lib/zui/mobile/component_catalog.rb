@@ -98,6 +98,9 @@ module Zui
         "MapItemView" => :map_item_view, "Plugin" => :map,
         "PluginParameter" => :map, "GeocodeModel" => :geocode_model,
         "RouteModel" => :route_model, "RouteQuery" => :route_model,
+        # RouteManeuver is isCreatable: false and reaches QML only as a route segment's
+        # maneuver, so it is part of the route payload.
+        "RouteManeuver" => :route_model,
         "MapCopyrightNotice" => :map_copyright, "GeoJsonData" => :geo_json_data,
         "PlaceSearchModel" => :place_search,
         "PlaceSearchSuggestionModel" => :place_suggestions,
