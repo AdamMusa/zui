@@ -229,6 +229,7 @@ module Zui
     folder_list_model: [%i[folder root_folder name_filters show_files show_dirs show_dirs_first show_dot_and_dot_dot show_hidden show_only_readable sort_field sort_reversed case_sensitive revision visible], %i[count_change folder_change status error change], false],
     settings: [%i[category file_name values sync_revision visible], %i[loaded change synced error], false],
     standard_paths: [%i[location locate_file executable refresh_revision visible], %i[resolved error], false],
+    surface_metrics: [%i[interval refresh_revision visible], %i[change], false],
     system_info: [%i[refresh_revision visible], %i[information error], false],
     network_status: [%i[refresh_revision watch visible], %i[information change error], false],
     virtual_keyboard: [%i[active external_language_switch width y z visible], %i[active_change language_switch error], false],

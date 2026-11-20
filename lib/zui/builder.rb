@@ -614,6 +614,11 @@ module Zui
     def folder_list_model(folder = "", id: nil, **props) = component(:folder_list_model, id:, folder: folder.to_s, **props)
     def settings(values = {}, id: nil, **props) = component(:settings, id:, values:, **props)
     def standard_paths(location = :home, id: nil, **props) = component(:standard_paths, id:, location: location.to_s, **props)
+    def surface_metrics(id: nil, **props, &handler)
+      node = component(:surface_metrics, id:, **props)
+      @application.register_handler(node.id, :change, handler) if handler
+      node
+    end
     def system_info(id: nil, **props, &handler)
       node = component(:system_info, id:, **props)
       @application.register_handler(node.id, :information, handler) if handler
