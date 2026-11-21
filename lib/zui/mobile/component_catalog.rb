@@ -136,7 +136,8 @@ module Zui
         "TapHandler" => :tap_area, "PointHandler" => :point_handler,
         "MultiPointTouchArea" => :multi_touch_area, "WheelHandler" => :wheel_area,
         "DragHandler" => :drag_area, "PinchHandler" => :pinch_area,
-        "HoverHandler" => :hover_area, "DropArea" => :drop_area
+        "HoverHandler" => :hover_area, "DropArea" => :drop_area,
+        "MouseArea" => :mouse_area
       }.freeze
 
       CORE = QUICK_CONTROLS.merge(QUICK_DIALOGS).merge(QUICK_LAYOUTS).freeze
