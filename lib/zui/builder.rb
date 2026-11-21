@@ -786,6 +786,28 @@ module Zui
       @application.register_handler(node.id, :page_change, handler) if handler
       node
     end
+    def pdf_document(source, id: nil, **props, &handler)
+      node = component(:pdf_document, id:, source: source.to_s, **props)
+      @application.register_handler(node.id, :status, handler) if handler
+      node
+    end
+    %i[pdf_multi_page_view pdf_page_view pdf_scrollable_page_view].each do |type|
+      define_method(type) do |id: nil, **props, &handler|
+        node = component(type, id:, **normalize_pdf_document_source(props))
+        @application.register_handler(node.id, :page_change, handler) if handler
+        node
+      end
+    end
+    def pdf_page_image(id: nil, **props, &handler)
+      node = component(:pdf_page_image, id:, **normalize_pdf_document_source(props))
+      @application.register_handler(node.id, :status, handler) if handler
+      node
+    end
+    def pdf_page_navigator(id: nil, **props, &handler)
+      node = component(:pdf_page_navigator, id:, **props)
+      @application.register_handler(node.id, :change, handler) if handler
+      node
+    end
 
     def animate(node, properties, duration: 200, easing: :in_out_quad, delay: 0)
       transition = Animation.new(duration:, easing:, delay:)
@@ -827,6 +849,14 @@ module Zui
       node = component(type, id:, **props)
       @application.register_handler(node.id, :click, handler) if handler
       node
+    end
+
+    # document_source names a pdf_document, so the natural way to write it is to pass the
+    # node that builder returned, the way the animation builders take their target.
+    def normalize_pdf_document_source(props)
+      return props unless props.key?(:document_source)
+
+      props.merge(document_source: node_id(props.fetch(:document_source)))
     end
 
     def node_id(value)
