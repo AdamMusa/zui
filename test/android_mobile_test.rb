@@ -117,6 +117,14 @@ class AndroidMobileTest < Minitest::Test
   end
 
   def test_android_configuration_exposes_the_project_native_hook
+    # create_dependencies writes extension-less tool stubs and these two tests drive the
+    # builder through File.executable? on them with a simulated POSIX host
+    # (host_platform: os: :macos). Windows derives executability from PATHEXT, so an
+    # extension-less stub is never executable there and chmod 0755 is a no-op: the check the
+    # test exercises cannot be represented on this filesystem. A real Windows host resolves
+    # ninja.exe/apksigner.exe via executable_name, which is covered on the Windows runner by
+    # the tests that do not depend on the fixture's executable bit.
+    skip "POSIX host fixture: Windows cannot mark extension-less tool stubs executable" if Gem.win_platform?
     Dir.mktmpdir do |directory|
       project = File.join(directory, "project")
       dependencies = create_dependencies(directory)
@@ -176,6 +184,14 @@ class AndroidMobileTest < Minitest::Test
   end
 
   def test_android_signing_omits_unused_incremental_signature_sidecar
+    # create_dependencies writes extension-less tool stubs and these two tests drive the
+    # builder through File.executable? on them with a simulated POSIX host
+    # (host_platform: os: :macos). Windows derives executability from PATHEXT, so an
+    # extension-less stub is never executable there and chmod 0755 is a no-op: the check the
+    # test exercises cannot be represented on this filesystem. A real Windows host resolves
+    # ninja.exe/apksigner.exe via executable_name, which is covered on the Windows runner by
+    # the tests that do not depend on the fixture's executable bit.
+    skip "POSIX host fixture: Windows cannot mark extension-less tool stubs executable" if Gem.win_platform?
     Dir.mktmpdir do |directory|
       project = File.join(directory, "project")
       dependencies = create_dependencies(directory)
