@@ -35,6 +35,7 @@ require_relative "zui/reproducible_build"
 require_relative "zui/distribution"
 require_relative "zui/dist_packager"
 require_relative "zui/mobile"
+require_relative "zui/readme_counts"
 
 module Zui
   VERSION = "0.0.10"
