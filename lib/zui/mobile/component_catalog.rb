@@ -52,6 +52,14 @@ module Zui
         "MicrophonePermission" => :microphone_permission
       }.freeze
 
+      # Qt.labs.qmlmodels. DelegateChoice, DelegateChooser and the
+      # AbstractDelegateComponent base select application-authored QML delegates,
+      # which Zui applications do not write, so they have no component here.
+      LABS_QML_MODELS = {
+        "TableModel" => :table_model,
+        "TableModelColumn" => :table_model_column
+      }.freeze
+
       DEVICE_INFORMATION = {
         "SystemInformation" => :system_info,
         "NetworkInformation" => :network_status
@@ -140,7 +148,7 @@ module Zui
       }.freeze
 
       CORE = QUICK_CONTROLS.merge(QUICK_DIALOGS).merge(QUICK_LAYOUTS).freeze
-      ALL = CORE.merge(PERMISSIONS).merge(DEVICE_INFORMATION).merge(VIRTUAL_KEYBOARD)
+      ALL = CORE.merge(LABS_QML_MODELS).merge(PERMISSIONS).merge(DEVICE_INFORMATION).merge(VIRTUAL_KEYBOARD)
                 .merge(SENSORS).merge(POSITIONING).merge(LOCATION)
                 .merge(TEXT_TO_SPEECH).merge(WEB).merge(WEB_SOCKETS).merge(LOTTIE)
                 .merge(PDF).merge(TOUCH_INTERACTION).merge(PLATFORM_INTEGRATION).freeze
